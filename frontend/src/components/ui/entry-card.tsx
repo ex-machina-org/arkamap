@@ -1,0 +1,5 @@
+import { RiArrowRightUpLine } from "@remixicon/react";
+
+export function EntryCard({ eyebrow, title, description, href, meta }: { eyebrow?: string; title: string; description: string; href: string; meta?: string }) {
+  return <a href={href} className="group block rounded-[16px] border border-border-button-default bg-background-primary-default p-5 shadow-xs transition-[border-color,box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:border-accent-500/50 hover:shadow-md focus-visible:outline-2 focus-visible:outline-accent-500 motion-reduce:transform-none motion-reduce:transition-none"><div className="flex items-start justify-between gap-3"><div>{eyebrow && <p className="text-xs font-semibold uppercase tracking-wide text-accent-500">{eyebrow}</p>}<h3 className="mt-1 text-base font-semibold text-text-primary">{title}</h3></div><RiArrowRightUpLine className="size-4 shrink-0 text-text-tertiary group-hover:text-accent-500" aria-hidden /></div><p className="mt-2 text-sm leading-6 text-text-secondary">{description}</p>{meta && <p className="mt-4 text-xs text-text-tertiary">{meta}</p>}</a>;
+}
