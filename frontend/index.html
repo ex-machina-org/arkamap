@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="id" class="light">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ffffff" />
+    <script>
+      try {
+        if (localStorage.getItem("joints-theme") === "dark") {
+          document.documentElement.classList.add("dark");
+          document.querySelector('meta[name="theme-color"]').content = "#242424";
+        }
+      } catch { /* Storage can be unavailable in a private context. */ }
+    </script>
+    <meta name="description" content="Platform Intelijen Spasial Lingkungan Arkamap." />
+    <title>Arkamap — Platform Intelijen Spasial Lingkungan</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
