@@ -1,0 +1,1 @@
+export function FadeDivider({ className = "" }: { className?: string }) { return <div role="separator" className={`h-px w-full ${className}`} style={{ background: "linear-gradient(90deg, transparent, var(--color-border-button-default), transparent)" }} />; }
