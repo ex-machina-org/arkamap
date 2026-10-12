@@ -1,0 +1,321 @@
+@import 'tailwindcss';
+@import 'shadcn/tailwind.css';
+@import '@fontsource-variable/inter';
+@import "tw-animate-css";
+@import './styles/theme.css';
+@import './styles/typography.css';
+@import './styles/globals.css';
+
+@custom-variant dark (&:is(.dark *));
+
+.joints-command {
+  animation: cmdk-scale-in 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+[cmdk-overlay] {
+  animation: cmdk-fade-in 150ms ease-out forwards;
+}
+
+.joints-command [cmdk-item] {
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.joints-command [cmdk-item][data-selected="true"] {
+  background-color: var(--color-button-ghost-background);
+  color: var(--color-button-ghost-foreground);
+}
+
+@keyframes cmdk-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes cmdk-scale-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .joints-command,
+  [cmdk-overlay] {
+    animation: none !important;
+  }
+}
+
+@theme {
+  --color-neutral-100: #f7f7f7;
+  --color-neutral-200: #ebebeb;
+  --color-neutral-925: #121212;
+  --color-blue-400: #3392ff;
+  /* BoardUI's accent ramp is retinted to the green in the supplied export. */
+  --color-accent-50: #ecfdf5;
+  --color-accent-100: #d1fae5;
+  --color-accent-200: #a7f3d0;
+  --color-accent-300: #6ee7b7;
+  --color-accent-400: #34d399;
+  --color-accent-500: #00bc7d;
+  --color-accent-600: #009966;
+  --color-accent-700: #047857;
+  --color-accent-800: #065f46;
+  --color-accent-900: #064e3b;
+  --color-accent-950: #022c22;
+}
+
+:root {
+  font-family: 'Inter Variable', Inter, ui-sans-serif, system-ui, sans-serif;
+  font-optical-sizing: auto;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  --font-sans: 'Inter Variable', Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-heading: 'Inter Variable', Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-inter: 'Inter Variable';
+  --font-mono-source: ui-monospace;
+  /* BoardUI export foundations. The export is light-only; dark values below are adaptations. */
+  --board-white: #ffffff;
+  --board-canvas: #ffffff;
+  --board-surface-subtle: #f7f7f7;
+  --board-surface-muted: #ebebeb;
+  --board-surface-strong: #d4d4d4;
+  --board-ink: #0a0a0a;
+  --board-text-secondary: #737373;
+  --board-text-tertiary: #a1a1a1;
+  --board-border-subtle: #0000000d;
+  --board-green: #00bc7d;
+  --board-green-strong: #009966;
+  --board-primary-gradient: linear-gradient(180deg, var(--board-green) 0%, var(--board-green-strong) 100%);
+  --board-blue: #2b7fff;
+  --board-blue-soft: #bedbff;
+  --board-lime: #9ae600;
+  --board-lime-soft: #d8f999;
+  --board-purple: #c27aff;
+  --board-success: #00c950;
+  --board-success-soft: #dcfce7;
+  --board-yellow: #fff085;
+  --board-danger: #e7000b;
+  --board-space-1: 4px;
+  --board-space-2: 6px;
+  --board-space-3: 8px;
+  --board-space-4: 10px;
+  --board-space-5: 12px;
+  --board-space-6: 16px;
+  --board-space-7: 20px;
+  --board-space-8: 24px;
+  --board-space-9: 32px;
+  --board-radius-sm: 4px;
+  --board-radius-md: 6px;
+  --board-radius-lg: 8px;
+  --board-radius-xl: 10px;
+  --board-radius-2xl: 12px;
+  --board-radius-card: 16px;
+  --board-radius-pill: 9999px;
+  --board-shadow-subtle: 0 1px 2px #0000000d;
+  --board-shadow-panel: 0 1px 0 #00000005, 0 1px 12px #0000000f, 0 0 1px #00000052;
+  --background: var(--color-background-full);
+  --foreground: var(--color-text-primary);
+  --card: var(--color-background-primary-default);
+  --card-foreground: var(--color-text-primary);
+  --popover: var(--color-background-primary-default);
+  --popover-foreground: var(--color-text-primary);
+  --primary: var(--color-accent-500);
+  --primary-foreground: var(--color-white);
+  --secondary: var(--color-background-tertiary-default);
+  --secondary-foreground: var(--color-text-primary);
+  --muted: var(--color-background-supporting-default);
+  --muted-foreground: var(--color-text-secondary);
+  --accent: var(--color-background-primary-hover);
+  --accent-foreground: var(--color-text-primary);
+  --selection: var(--color-accent-500);
+  --selection-strong: var(--color-accent-600);
+  --destructive: var(--color-red-400);
+  --border: var(--color-border-button-default);
+  --input: var(--color-border-button-default);
+  --ring: var(--color-accent-500);
+  --success: var(--color-green-400);
+  --info: var(--color-blue-400);
+  --warning: var(--color-yellow-400);
+  --chart-1: var(--board-blue);
+  --chart-2: var(--board-success);
+  --chart-3: var(--board-lime);
+  --chart-4: var(--board-purple);
+  --chart-5: var(--board-yellow);
+  --radius: var(--board-radius-xl);
+  --sidebar: var(--color-background-secondary-default);
+  --sidebar-foreground: var(--color-text-primary);
+  --sidebar-primary: var(--color-accent-600);
+  --sidebar-primary-foreground: var(--color-white);
+  --sidebar-accent: var(--color-background-primary-hover);
+  --sidebar-accent-foreground: var(--color-text-primary);
+  --sidebar-border: var(--color-border-button-default);
+  --sidebar-ring: var(--color-accent-500);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+::selection {
+  color: var(--primary-foreground);
+  background: var(--primary);
+}
+
+
+@theme inline {
+  --font-heading: 'Inter Variable', Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Inter Variable', Inter, ui-sans-serif, system-ui, sans-serif;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-selection: var(--selection);
+  --color-selection-strong: var(--selection-strong);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-info: var(--info);
+  --color-warning: var(--warning);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+.dark {
+  --background: var(--color-background-full);
+  --foreground: var(--color-text-primary);
+  --card: var(--color-background-primary-default);
+  --card-foreground: var(--color-text-primary);
+  --popover: var(--color-background-primary-default);
+  --popover-foreground: var(--color-text-primary);
+  --primary: var(--color-accent-500);
+  --primary-foreground: var(--color-white);
+  --secondary: var(--color-background-tertiary-default);
+  --secondary-foreground: var(--color-text-primary);
+  --muted: var(--color-background-supporting-default);
+  --muted-foreground: var(--color-text-secondary);
+  --accent: var(--color-background-primary-hover);
+  --accent-foreground: var(--color-text-primary);
+  --destructive: var(--color-red-400);
+  --border: var(--color-border-button-default);
+  --input: var(--color-border-button-default);
+  --ring: var(--color-accent-500);
+  --success: var(--color-green-400);
+  --info: var(--color-blue-400);
+  --warning: var(--color-yellow-400);
+  --sidebar: var(--color-background-secondary-default);
+  --sidebar-foreground: var(--color-text-primary);
+  --sidebar-primary: var(--color-accent-600);
+  --sidebar-primary-foreground: var(--color-white);
+  --sidebar-accent: var(--color-background-primary-hover);
+  --sidebar-accent-foreground: var(--color-text-primary);
+  --sidebar-border: var(--color-border-button-default);
+  --sidebar-ring: var(--color-accent-500);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    letter-spacing: var(--tracking-heading);
+  }
+  h1 {
+    font-size: 2rem;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+  }
+  h2 {
+    font-size: 1.5rem;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+  h3 {
+    font-size: 1.25rem;
+    line-height: 1.25;
+  }
+  h4 {
+    font-size: 1rem;
+    line-height: 1.3;
+  }
+  .maplibregl-popup-content {
+    @apply bg-transparent! shadow-none! p-0! rounded-none!;
+  }
+  .maplibregl-popup-tip {
+    @apply hidden!;
+  }
+  .maplibregl-ctrl-attrib {
+    @apply bg-background! text-muted-foreground! border-border! rounded-md! border! shadow-sm!;
+  }
+  .maplibregl-ctrl-attrib a {
+    @apply text-muted-foreground!;
+  }
+  .maplibregl-ctrl-attrib a:hover {
+    @apply text-foreground!;
+  }
+  .maplibregl-ctrl-attrib-button {
+    @apply bg-transparent! dark:invert;
+  }
+}
