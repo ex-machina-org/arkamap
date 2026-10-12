@@ -1,0 +1,10 @@
+**/node_modules
+frontend/dist
+frontend/.qa
+backend
+mosquitto
+.git
+.venv
+.env
+.env.*
+**/*.local
