@@ -2,11 +2,11 @@
 import time
 from collections import defaultdict, deque
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from psycopg import errors
 from pydantic import BaseModel, Field
 
-from ..auth import hash_password, make_token, verify_password
+from ..auth import current_user, hash_password, make_token, verify_password
 from ..config import ADMIN_EMAILS
 from ..db import query_one
 from .schemas import AuthOut, ErrorResponse
@@ -25,6 +25,11 @@ class Signup(BaseModel):
 class Login(BaseModel):
     email: str = Field(max_length=254)
     password: str = Field(max_length=128)
+
+
+class PasswordChange(BaseModel):
+    old_password: str = Field(max_length=128)
+    new_password: str = Field(min_length=8, max_length=128)
 
 
 # ── helpers ─────────────────────────────────────────────────────────────
@@ -74,3 +79,25 @@ def login(body: Login, request: Request) -> dict:
     if not u or not verify_password(body.password, u.pop("password_hash")):
         raise HTTPException(401, "email atau password salah")
     return {"token": make_token(u["id"], u.pop("token_version")), "user": u}
+
+
+def _set_password(user_id: int, new: str) -> int:
+    """Store a new password and bump token_version, which logs out every
+    session issued before. Returns the new version."""
+    return query_one("UPDATE app_user SET password_hash = %s, token_version = token_version + 1"
+                     " WHERE id = %s RETURNING token_version",
+                     (hash_password(new), user_id))["token_version"]
+
+
+@router.post("/me/password", response_model=AuthOut,
+             responses={400: {"model": ErrorResponse}, 401: {"model": ErrorResponse}})
+def change_password(body: PasswordChange, request: Request, user: dict = Depends(current_user)) -> dict:
+    """Change your own password. Every other session is logged out; the
+    token in this response is the new one to keep using."""
+    _login_limit(client_ip(request))   # guessing the old password counts as a login attempt
+    row = query_one("SELECT password_hash FROM app_user WHERE id = %s", (user["id"],))
+    if not verify_password(body.old_password, row["password_hash"]):
+        raise HTTPException(400, "password lama salah")
+    if body.new_password == body.old_password:
+        raise HTTPException(400, "password baru harus berbeda")
+    return {"token": make_token(user["id"], _set_password(user["id"], body.new_password)), "user": user}
