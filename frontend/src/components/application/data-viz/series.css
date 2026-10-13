@@ -1,0 +1,21 @@
+/*
+ * Categorical series colors for charts, in fixed order (never cycled).
+ * Steps come from the same Tailwind ramps as BoardUI's chart tokens, but BoardUI's
+ * chart-1..9 order fails colorblind separation (blue/purple adjacent) and its lime/yellow
+ * sit outside the light band. This order passed the data-viz palette validator:
+ * light = 500 steps on white; dark = its own steps on neutral-900 (teal/sky/emerald 600).
+ * Light contrast is below 3:1, so every chart also shows values as text and offers a table.
+ */
+:root {
+  --color-series-1: oklch(70.4% 0.14 182.503);  /* teal-500 */
+  --color-series-2: oklch(62.7% 0.265 303.9);   /* purple-500 */
+  --color-series-3: oklch(65.6% 0.241 354.308); /* pink-500 */
+  --color-series-4: oklch(68.5% 0.169 237.323); /* sky-500 */
+  --color-series-5: oklch(69.6% 0.17 162.48);   /* emerald-500 */
+}
+
+.dark {
+  --color-series-1: oklch(60% 0.118 184.704);   /* teal-600 */
+  --color-series-4: oklch(58.8% 0.158 241.966); /* sky-600 */
+  --color-series-5: oklch(59.6% 0.145 163.225); /* emerald-600 */
+}
