@@ -1,7 +1,7 @@
 """Response shapes. Kept explicit so the frontend can rely on them."""
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class SourceInfo(BaseModel):
@@ -30,3 +30,16 @@ class HealthReport(BaseModel):
 
 class ErrorResponse(BaseModel):
     detail: str
+
+
+# ── accounts ─────────────────────────────────────────────────────────────
+class UserOut(BaseModel):
+    id: int
+    email: str
+    name: str
+    is_admin: bool
+
+
+class AuthOut(BaseModel):
+    token: str = Field(description="JWT; kirim sebagai header Authorization: Bearer <token>")
+    user: UserOut
