@@ -3,3 +3,5 @@ uvicorn[standard]==0.34.0
 psycopg[binary,pool]==3.2.3
 pydantic==2.12.5
 PyJWT==2.10.1
+langchain-core==1.6.5
+langchain-google-genai==4.4.0
