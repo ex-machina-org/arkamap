@@ -1,0 +1,40 @@
+# Arkamap stack: docker compose up --build, then open http://localhost:8000/docs
+# Defaults are for local evaluation only; set real secrets in .env before exposing it.
+name: arkamap
+
+x-backend: &backend
+  build: ./backend
+  env_file: [{ path: .env, required: false }]
+  environment:
+    DATABASE_URL: postgresql://arkamap:${POSTGRES_PASSWORD:-arkamap}@db:5432/arkamap
+    CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: arkamap
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-arkamap}
+      POSTGRES_DB: arkamap
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arkamap -d arkamap"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  api:
+    <<: *backend
+    ports: ["127.0.0.1:8000:8000"]
+    depends_on:
+      db: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  pgdata:
