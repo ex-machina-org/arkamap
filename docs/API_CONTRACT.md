@@ -79,7 +79,7 @@ Bentuknya selalu `{"detail": "pesan"}`. Error validasi (422) berisi `detail` ber
 | `POST /api/admin/refresh?with_regions=` | Admin | — | ringkasan proses |
 | `POST /api/admin/refresh-buildings` | Admin | — | ringkasan proses |
 
-Catatan: saat ini `/api/admin/*` baru dilindungi kunci aplikasi. Pembatasan ke akun admin dikerjakan di #27.
+Catatan: endpoint kunci aplikasi menolak akun selain admin (403). `/api/admin/refresh` dan `/api/admin/refresh-buildings` menjalankan proses pengambilan data, jadi keduanya hadir bersama proses itu di #29, juga khusus akun admin.
 
 ## Akun dan profil
 
