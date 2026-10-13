@@ -1,13 +1,14 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .api.public import router as public_router
 from .api.routes import router
 from .api.users import router as users_router
 from .db import apply_schema, close_pool, init_pool
+from .clients import require_app_key
 from .config import CORS_ORIGINS
 
 logging.basicConfig(
@@ -37,6 +38,8 @@ app = FastAPI(
     ),
     version="0.6.0",
     lifespan=lifespan,
+    # every /api/* call needs an app key when REQUIRE_API_KEY=1 (see clients.py)
+    dependencies=[Depends(require_app_key)],
 )
 
 app.add_middleware(
