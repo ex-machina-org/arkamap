@@ -1,14 +1,17 @@
 import { useSession } from "@/hooks/use-session";
-import { OnboardingScreen } from "@/features/onboarding/onboarding-screen";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { Agentation } from "agentation";
 import { toast } from "sonner";
 import { SessionGate } from "@/components/application/auth/session-gate";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppToaster } from "@/components/ui/toaster";
-import LandingPage from "./app/landing/page";
-import StoreLocatorPage from "./app/store-locator/page";
+import { installLinkNavigation, navigate } from "@/lib/navigate";
 import "./route-transition.css";
+
+const OnboardingScreen = lazy(() => import("@/features/onboarding/onboarding-screen").then(m => ({ default: m.OnboardingScreen })));
+const LandingPage = lazy(() => import("./app/landing/page"));
+const StoreLocatorPage = lazy(() => import("./app/store-locator/page"));
+// The annotation toolbar is a development aid; production builds never load it.
+const Agentation = import.meta.env.DEV ? lazy(() => import("agentation").then(m => ({ default: m.Agentation }))) : null;
 
 const DesignSystemPage = lazy(() => import("./app/design-system/page"));
 const EnvironmentalDashboardPage = lazy(() => import("./app/dashboard/page"));
@@ -28,18 +31,11 @@ function isProtectedPath(path: string) {
   return path === "/dashboard" || path === "/app-shell" || path === "/chat" || path === "/devices" || path.startsWith("/devices/") || path === "/sources" || path === "/alerts";
 }
 
-function navigate(path: string) {
-  window.history.pushState({}, "", path);
-  window.dispatchEvent(new PopStateEvent("popstate"));
-}
-
 export default function App() {
   const session = useSession();
+  useEffect(() => installLinkNavigation(), []);
   useEffect(() => {
-    const open = () => {
-      window.history.pushState({}, "", "/onboarding");
-      window.dispatchEvent(new PopStateEvent("popstate"));
-    };
+    const open = () => navigate("/onboarding");
     window.addEventListener("arkamap-profile-open", open);
     return () => {
       window.removeEventListener("arkamap-profile-open", open);
@@ -80,16 +76,14 @@ export default function App() {
   }, [session.me]);
   useEffect(() => {
     if (!blocked) return;
-    window.history.replaceState({}, "", "/");
-    window.dispatchEvent(new PopStateEvent("popstate"));
+    navigate("/", { replace: true });
     // A deliberate sign-out needs no explanation.
     if (!wasSignedIn.current) toast.error("Masuk terlebih dahulu untuk mengakses dashboard.");
     wasSignedIn.current = false;
   }, [blocked]);
   useEffect(() => {
     if (needsOnboarding && currentPath !== "/onboarding") {
-      window.history.replaceState({}, "", "/onboarding");
-      window.dispatchEvent(new PopStateEvent("popstate"));
+      navigate("/onboarding", { replace: true });
     }
   }, [currentPath, session.me, needsOnboarding]);
 
@@ -98,7 +92,9 @@ export default function App() {
       <AppToaster />
       <div className="route-page" data-arriving={arriving}>
         {routePath === "/onboarding" || needsOnboarding ? (
-          <OnboardingScreen me={session.me} loading={session.loading} error={session.error} onLogout={session.logout} />
+          <Suspense fallback={<div className="min-h-dvh bg-background-full" />}>
+            <OnboardingScreen me={session.me} loading={session.loading} error={session.error} onLogout={session.logout} />
+          </Suspense>
         ) : protectedRoute && session.loading ? (
           <div className="flex min-h-dvh items-center justify-center bg-background-full text-text-secondary" role="status">Memuat Profil Pantauan...</div>
         ) : protectedRoute && !session.me && session.error ? (
@@ -130,14 +126,14 @@ export default function App() {
         ) : routePath === "/login" ? (
           <Suspense fallback={<div className="min-h-dvh bg-background-primary-default" />}><LoginPage /></Suspense>
         ) : routePath === "/prototype" ? (
-          <StoreLocatorPage />
+          <Suspense fallback={<div className="min-h-dvh bg-background-full" />}><StoreLocatorPage /></Suspense>
         ) : routePath === "/welcome" ? (
-          <LandingPage />
+          <Suspense fallback={<div className="min-h-dvh bg-background-full" />}><LandingPage /></Suspense>
         ) : (
           <Suspense fallback={<div className="min-h-dvh bg-background-full" />}><MapPage /></Suspense>
         )}
       </div>
-      <Agentation />
+      {Agentation && <Suspense fallback={null}><Agentation /></Suspense>}
     </TooltipProvider>
   );
 }

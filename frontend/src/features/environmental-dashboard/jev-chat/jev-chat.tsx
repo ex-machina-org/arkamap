@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { navigate as goTo } from "@/lib/navigate";
 import { toast } from "sonner";
 import { AgentChat } from "@/components/application/agent-chat/agent-chat";
 import { DashboardSidebar, type DashboardNavItem } from "@/components/application/dashboard/dashboard-sidebar";
@@ -51,7 +52,7 @@ const COPY = {
 };
 
 function navigate(id: string) {
-  window.location.assign(id === "sensors" ? "/devices" : "/dashboard");
+  goTo(id === "sensors" ? "/devices" : "/dashboard");
 }
 
 /** The Kodama page: the BoardUI chat starter answering through the Jev model. */

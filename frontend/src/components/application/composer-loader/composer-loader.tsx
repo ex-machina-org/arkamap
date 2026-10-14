@@ -107,6 +107,19 @@ export function ComposerLoader({
   const gradientId = `bui-cl-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
   const clipRef = useRef<HTMLSpanElement>(null);
   const [box, setBox] = useState({ w: 640, h: 52 });
+  // The animation stays mounted through the fade-out, then is dropped so an idle composer runs no infinite animation.
+  const [faded, setFaded] = useState(!active);
+  const [previous, setPrevious] = useState(active);
+  if (active !== previous) {
+    setPrevious(active);
+    if (active) setFaded(false);
+  }
+  useEffect(() => {
+    if (active) return;
+    const timer = setTimeout(() => setFaded(true), 450);
+    return () => clearTimeout(timer);
+  }, [active]);
+  const running = active || !faded;
 
   useEffect(() => {
     const el = clipRef.current;
@@ -220,7 +233,7 @@ export function ComposerLoader({
           mixBlendMode: blend,
         }}
       >
-        <svg
+        {running && <svg
           width="100%"
           height="100%"
           viewBox={`0 0 ${box.w} ${box.h}`}
@@ -243,7 +256,7 @@ export function ComposerLoader({
           {!bloomOnly && stroke(line * 3.2, 6, 0.8, band * 0.95, 10)}
           {/* crisp refraction line, tip leading */}
           {!bloomOnly && stroke(line, CRISP_BLUR, 1, band, 0)}
-        </svg>
+        </svg>}
       </span>
 
       <div className="relative">{children}</div>

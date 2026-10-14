@@ -11,7 +11,7 @@ import { Divider } from "@/components/base/divider/divider";
 import { Input } from "@/components/base/input/input";
 import { SocialButton } from "@/components/base/social-button/social-button";
 import { cx } from "@/utils/cx";
-import loginCoverImg from "@/assets/login-page.png";
+import loginCoverImg from "@/assets/login-page.webp";
 
 /** Public demo account shown on the sign-in view so visitors can try the app without registering. */
 const DEMO_ACCOUNT = { email: "arkamap.test@example.com", password: "arkamap123" } as const;
