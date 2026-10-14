@@ -183,6 +183,11 @@
   --color-input-disabled-text:  var(--color-neutral-300);
   --color-text-white:           var(--color-white);
 
+  /* Scrollbar thumb: a quiet overlay that strengthens on hover and drag. */
+  --color-scrollbar-thumb:        rgb(0 0 0 / 0.08);
+  --color-scrollbar-thumb-hover:  rgb(0 0 0 / 0.12);
+  --color-scrollbar-thumb-active: rgb(0 0 0 / 0.16);
+
   /* Background */
   --color-background-full:              var(--color-white);
   --color-background-primary-default:   var(--color-white);
@@ -402,6 +407,11 @@
   --color-text-disabled: var(--color-neutral-800);
   --color-text-error-primary: var(--color-red-400);
   --color-input-disabled-text: color-mix(in srgb, var(--color-neutral-500) 40%, transparent);
+
+  /* Scrollbar thumb: a quiet overlay that strengthens on hover and drag. */
+  --color-scrollbar-thumb:        rgb(255 255 255 / 0.08);
+  --color-scrollbar-thumb-hover:  rgb(255 255 255 / 0.12);
+  --color-scrollbar-thumb-active: rgb(255 255 255 / 0.16);
 
   /* Background */
   --color-background-full:              var(--color-neutral-925);
