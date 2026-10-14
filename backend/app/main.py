@@ -16,7 +16,7 @@ from .api.isochrone import router as isochrone_router
 from .api.reports import router as reports_router
 from .api.public import router as public_router
 from .api.routes import router
-from .api.users import router as users_router
+from .api.users import purge_test_devices, router as users_router
 from .auth import admin_user
 from .db import apply_schema, close_pool, init_pool
 from .clients import require_app_key
@@ -68,6 +68,11 @@ async def lifespan(app: FastAPI):
         # sensor fields laid out/categorised by rules while the AI was down
         scheduler.add_job(
             retry_rule_layouts, IntervalTrigger(minutes=30), id="iot_retry", replace_existing=True,
+            max_instances=1, next_run_time=datetime.now(),
+        )
+        # test devices delete themselves, with everything they received
+        scheduler.add_job(
+            purge_test_devices, IntervalTrigger(minutes=10), id="test_devices", replace_existing=True,
             max_instances=1, next_run_time=datetime.now(),
         )
         scheduler.start()

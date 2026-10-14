@@ -23,7 +23,7 @@ from ..iot import quickstart
 from ..iot.categories import Category, majority
 from ..iot import relevance
 from .schemas import (
-    AuthOut, DeviceAlert, DeviceCreated, DeviceOut, ErrorResponse,
+    AuthOut, DeviceAlert, DeviceCreated, DeviceEvent, DeviceOut, ErrorResponse,
     IngestOut, KeyRotated, MeOut, Quickstart, Readings, ReadingsDeleted, Stream, WidgetSpec,
 )
 
@@ -419,6 +419,47 @@ def delete_device(device_id: int, user: dict = Depends(current_user)) -> None:
 def _remove_device(device_id: int) -> None:
     broker.remove_device(device_id)   # broker first: never leave a login for a deleted device
     execute("DELETE FROM device WHERE id = %s", (device_id,))
+
+
+# ── test device: a sandbox with a real key that deletes itself ──────────
+
+TEST_TTL_HOURS = 2
+
+
+@router.get("/me/test-device", response_model=DeviceOut | None, responses={401: {"model": ErrorResponse}})
+def get_test_device(user: dict = Depends(current_user)) -> dict | None:
+    d = query_one(f"SELECT {_DEVICE_COLS} FROM device d LEFT JOIN region r ON r.id = d.region_id"
+                  " WHERE d.user_id = %s AND d.test_expires_at > now() ORDER BY d.id DESC LIMIT 1", (user["id"],))
+    return _public(d) if d else None
+
+
+@router.post("/me/test-device", status_code=201, response_model=DeviceCreated, responses={401: {"model": ErrorResponse}})
+def start_test_device(user: dict = Depends(current_user)) -> dict:
+    """A fresh sandbox: the previous test device and everything it received go, a new key comes."""
+    for old in query("SELECT id FROM device WHERE user_id = %s AND test_expires_at IS NOT NULL", (user["id"],)):
+        delete_device(old["id"], user)
+    created = create_device(DeviceIn(name="Alat Uji"), user)
+    device_id = created["device"]["id"]
+    execute("UPDATE device SET test_expires_at = now() + make_interval(hours => %s) WHERE id = %s",
+            (TEST_TTL_HOURS, device_id))
+    return {**created, "device": _public(_own_device(user, device_id))}
+
+
+def purge_test_devices() -> None:
+    """Scheduled: expired test devices go with all their data."""
+    for d in query("SELECT id FROM device WHERE test_expires_at < now()"):
+        try:
+            _remove_device(d["id"])
+        except broker.BrokerError as exc:   # tried again next run
+            log.warning("hapus alat uji %s gagal: %s", d["id"], exc)
+
+
+@router.get("/me/devices/{device_id}/events", response_model=list[DeviceEvent], responses={401: {"model": ErrorResponse}})
+def list_events(device_id: int, user: dict = Depends(current_user)) -> list[dict]:
+    """Newest first. Only test devices record events."""
+    _own_device(user, device_id)
+    return query("SELECT id, at, kind, message FROM device_event WHERE device_id = %s ORDER BY id DESC LIMIT 100",
+                 (device_id,))
 
 
 @router.post("/me/devices/{device_id}/key", response_model=KeyRotated, responses={401: {"model": ErrorResponse}})

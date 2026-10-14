@@ -829,3 +829,12 @@ class Stream(BaseModel):
     reading_count: int
     created_at: datetime
     last_seen_at: datetime
+
+
+# ── test devices ──────────────────────────────────────────────────────
+class DeviceEvent(BaseModel):
+    """One line in a test device's log."""
+    id: int
+    at: datetime
+    kind: Literal["diterima", "ulang", "tabel_baru", "versi_baru", "peringatan", "bahaya", "ditolak", "nama_diganti", "digabung", "dihapus"]
+    message: str
