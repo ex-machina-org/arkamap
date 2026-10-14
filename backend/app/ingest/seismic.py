@@ -200,7 +200,7 @@ def dedupe_quakes() -> int:
       by up to ~2 minutes (BMKG vs EMSC); a similar magnitude keeps two real
       quakes a minute apart from being merged.
     Order-independent, so it doesn't matter which catalogue was ingested first."""
-    # ponytail: fixed windows (60 s / 0.15° same catalogue; 120 s / 1° / 1 magnitude across);
+    # Limit: fixed windows (60 s / 0.15° same catalogue; 120 s / 1° / 1 magnitude across);
     # tighten if two real quakes ever get merged
     revisions = execute(
         """

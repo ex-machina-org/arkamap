@@ -63,7 +63,7 @@ def _indicators() -> list[dict]:
                    bool_or(l.is_modelled) AS modelled, max(l.unit) AS unit
             FROM indicator_latest l JOIN region r ON r.id = l.region_id GROUP BY l.metric),
         periods AS (
-            -- ponytail: scans the whole history; keep a per-metric summary table if it grows large
+            -- Limit: scans the whole history; keep a per-metric summary table if it grows large
             SELECT metric, count(DISTINCT period) AS periods, min(period) AS first_period,
                    max(period) AS last_period
             FROM indicator GROUP BY metric)

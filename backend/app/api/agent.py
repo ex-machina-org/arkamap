@@ -24,7 +24,7 @@ class ChatRequest(BaseModel):
 
 
 RATE_WINDOW = 60  # seconds
-# ponytail: in-memory sliding windows, per process; use Redis if the API runs several workers
+# Limit: in-memory sliding windows, per process; use Redis if the API runs several workers
 _hits: dict[str, deque] = defaultdict(deque)
 _EVERYONE = "*"
 

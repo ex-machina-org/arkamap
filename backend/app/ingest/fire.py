@@ -6,6 +6,7 @@ shape: fetch → observation rows → aggregate into indicator rows.
 import csv
 import io
 import logging
+import time
 from datetime import datetime, timedelta, timezone
 
 import httpx
@@ -206,7 +207,7 @@ SATELLITES = {"N": "VIIRS S-NPP", "N20": "VIIRS NOAA-20", "N21": "VIIRS NOAA-21"
 def refresh_static_cells() -> int:
     """Rebuild static_heat_cell from every stored non-low hotspot of the
     lookback period, all satellites. Returns the number of static cells."""
-    # ponytail: full scan of the period's hotspots twice a day; keep a running
+    # Limit: full scan of the period's hotspots twice a day; keep a running
     # per-cell tally if the observation table outgrows that
     with conn() as c, c.cursor() as cur:
         cur.execute("DELETE FROM static_heat_cell")
@@ -231,7 +232,23 @@ def refresh_static_cells() -> int:
     return n
 
 
+# Hotspots change only when FIRMS is ingested (a few times a day), yet /notifications is polled
+# every 30-60 s by every open dashboard and map: the answer is kept for a few minutes.
+# Per-process cache: several API workers would each keep their own (a shared cache would fix that).
+CACHE_SECONDS = 300
+_cache: dict[tuple[str | None, int], tuple[float, list[dict]]] = {}
+
+
 def possible_fires(region_id: str | None = None, hours: int = FIRE_WINDOW_HOURS) -> list[dict]:
+    """Possible fires (see _possible_fires), reused for CACHE_SECONDS. Each caller gets its own copies."""
+    key, now = (region_id, hours), time.monotonic()
+    hit = _cache.get(key)
+    if not hit or now - hit[0] >= CACHE_SECONDS:
+        hit = _cache[key] = (now, _possible_fires(region_id, hours))
+    return [dict(f) for f in hit[1]]
+
+
+def _possible_fires(region_id: str | None = None, hours: int = FIRE_WINDOW_HOURS) -> list[dict]:
     """Possible fires per kabkota: clusters of non-low hotspots away from
     static heat and thermal power plants, seen on at least two passes within
     `hours`. `confirmed` = a GDACS wildfire is reported within 0.5°.

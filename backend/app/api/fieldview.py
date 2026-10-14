@@ -78,7 +78,7 @@ def ranking(field: dict, region: dict | None, top: int = 5) -> dict:
 
 
 def alerts(field: dict, region: dict | None) -> dict:
-    n = routes.notifications()
+    n = routes.snapshot(fires=False)   # fire_alerts are not on the dashboard
     in_scope = (lambda rid: True) if not region else (
         lambda rid: rid == region["id"] or rid in {r["id"] for r in query(
             "SELECT id FROM region WHERE parent_id = %s", (region["id"],))})
@@ -97,7 +97,7 @@ def alerts(field: dict, region: dict | None) -> dict:
 def felt_radius_km(mag: float) -> float:
     """How far a quake is roughly felt, from magnitude alone:
     10^(0.5 M - 0.6) km (M5 ~ 80 km, M6 ~ 250 km, M7 ~ 500 km, capped).
-    ponytail: ignores depth and soil; a real shaking map (BMKG/USGS
+    Limit: ignores depth and soil; a real shaking map (BMKG/USGS
     ShakeMap) would replace this if ingested."""
     return min(10 ** (0.5 * mag - 0.6), 500.0)
 

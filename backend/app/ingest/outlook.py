@@ -60,7 +60,7 @@ def ingest_seasonal() -> int:
 
 
 PERFORMANCE_RATIO = 0.8   # losses: heat, inverter, wiring, dirt; a common default
-_solar_cache: dict[tuple, tuple[float, dict]] = {}   # ponytail: per-process, 1 hour
+_solar_cache: dict[tuple, tuple[float, dict]] = {}   # per-process, 1 hour
 SOLAR_TTL_S = 3600
 
 

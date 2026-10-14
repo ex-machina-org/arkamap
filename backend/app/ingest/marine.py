@@ -80,7 +80,7 @@ def ingest_marine() -> int:
     return len(rows)
 
 
-_point_cache: dict[tuple, tuple[float, dict]] = {}   # ponytail: per-process, 1 hour
+_point_cache: dict[tuple, tuple[float, dict]] = {}   # per-process, 1 hour
 POINT_TTL_S = 3600
 
 

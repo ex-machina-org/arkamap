@@ -264,7 +264,7 @@ def ingest_buildings() -> dict:
                 )
             upserted += len(rows)
             # Marked done even for an empty tile (open sea or forest between
-            # cities is a real, permanent finding). jev_used is a legacy
+            # cities is a real, permanent finding). jev_used is an unused
             # column, kept so existing rows stay valid.
             cur.execute(
                 """

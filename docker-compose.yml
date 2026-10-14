@@ -8,6 +8,7 @@ x-backend: &backend
   environment:
     DATABASE_URL: postgresql://arkamap:${POSTGRES_PASSWORD:-arkamap}@db:5432/arkamap
     CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
+    JWT_SECRET: ${JWT_SECRET:-local-demo-secret-change-me}
     REQUIRE_API_KEY: ${REQUIRE_API_KEY:-0}
     PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8000}
     MQTT_HOST: mosquitto

@@ -1314,7 +1314,7 @@ def _write(primary, backup_system, history: list[dict], q: str, results: list[di
     deadline = time.monotonic() + LLM_DEADLINE_S
     writers = [("gemini", lambda: primary)] if primary is not None else []
     for p in backup.providers():
-        # ponytail: a backup after a slow Gemini can push the turn past the 30 s
+        # Limit: a backup after a slow Gemini can push the turn past the 30 s
         # proxy limit; quota errors (the usual case) fail fast and leave it time
         writers.append((p[0], lambda p=p: backup.stream(p, backup_system(), history, q, "".join(shown),
                                                         max(deadline - time.monotonic(), 8))))

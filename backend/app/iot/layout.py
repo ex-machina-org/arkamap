@@ -214,7 +214,7 @@ def provisional(device: dict) -> list[dict]:
     return finalize([old.get(f["key"]) or rule_layout([f])[0] for f in fields], fields)
 
 
-# ponytail: per-process guard; the API and the MQTT bridge may each plan
+# Limit: per-process guard; the API and the MQTT bridge may each plan
 # the same device once, which only costs one extra AI call
 _planning: set[int] = set()
 _lock = threading.Lock()

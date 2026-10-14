@@ -622,6 +622,12 @@ def notifications(region_id: str | None = None) -> dict:
     indicators of it and its child regions, warnings touching it, possible
     fires detected inside it (ingest/fire.py possible_fires).
     """
+    return snapshot(region_id)
+
+
+def snapshot(region_id: str | None = None, fires: bool = True) -> dict:
+    """The body of /notifications. fires=False skips fire detection (about a second
+    nationwide) for callers that never show fire_alerts: the dashboard, the public overview."""
     since = datetime.now(timezone.utc) - timedelta(days=7)
     quake_alerts = query(
         """
@@ -680,7 +686,7 @@ def notifications(region_id: str | None = None) -> dict:
     )
 
     from ..ingest.fire import possible_fires   # late: ingest modules load the HTTP clients
-    fire_alerts = possible_fires(region_id)
+    fire_alerts = possible_fires(region_id) if fires else []
 
     source_alerts = query(
         "SELECT id, title, last_error, last_ok_at FROM source WHERE last_error IS NOT NULL"
