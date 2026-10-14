@@ -1,12 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Feature, FeatureCollection, MultiPolygon, Position } from "geojson";
+import type { ExpressionSpecification } from "maplibre-gl";
 import { toast } from "sonner";
+import { RiArrowDownSLine } from "@remixicon/react";
 import { MapGeoJSON, MapMarker, MarkerContent, useMap } from "@/components/ui/map";
-import { Button } from "@/components/base/buttons/button";
 import { StatusDot } from "@/components/base/badges/status-dot";
 import { api, type DTO } from "@/lib/api/client";
 import { outsideMask } from "@/hooks/use-region-boundary";
 import { geoJSON } from "@/lib/api/geojson";
+import { cx } from "@/utils/cx";
+import { OVERLAY_RAMPS, aspectOf, fmt, isHotspotMetric, isQuakeMetric, rampAt, rampStopsFor, type Basemap, type MapLayer } from "./atlas";
+import { HeatLayer } from "./heat-layer";
+import { HEAT_RAMP_CSS, HEAT_RANGE, hasTemperature } from "./heat-ramp";
+import { PointOverlays } from "./point-overlays";
+import { WindLayer } from "./wind-layer";
 
 export interface DockStatus {
   loading: boolean;
@@ -56,17 +63,80 @@ function bounds(feature: Feature): [[number, number], [number, number]] | null {
   return Number.isFinite(w) ? [[w, s], [e, n]] : null;
 }
 
-// Low to high relative attention. Hue differs from the hazard pin colours so a region fill is never read as a hazard type.
-const CHOROPLETH_RAMP = ["#fde68a", "#f472b6", "#7c3aed"] as const;
+// Thick enough that the index colour reads as a band, but thin when zoomed out so 519 kab/kota do not turn into a mesh.
+const REGION_LINE_WIDTH: ExpressionSpecification = ["interpolate", ["linear"], ["zoom"], 4, 1, 7, 1.8, 11, 2.6];
 
-export function SpatialLayers({ warnings, choropleth, buildings, events, focus, boundary, nationalMask, status, selectedRegionId, onSelectRegion, onRegionCenter }: {
-  warnings?: FeatureCollection; choropleth: ChoroplethSpec | null; buildings: boolean; events?: FeatureCollection; focus?: number[]; boundary?: FeatureCollection; nationalMask?: Feature<MultiPolygon>; status: DockStatus;
+/** The legend's one section per layer actually drawn, so nothing on the map goes unexplained. */
+function Legend({ layer, label, showData, hotspots, quakes, heat, wind, windTime }: {
+  layer?: MapLayer; label?: string; showData: boolean; hotspots: boolean; quakes: boolean; heat: boolean; wind: boolean; windTime?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const metric = layer?.metric;
+  const metricShown = showData && !heat && Boolean(metric);
+  if (!metricShown && !heat && !wind) return null;
+  const stops = metric ? rampStopsFor(metric.metric, aspectOf(metric.aspect)) : [];
+  const highGood = metric?.polarity === "high_good";
+  const title = metricShown ? label ?? metric?.label : heat ? "Suhu permukaan" : "Arah angin";
+  const section = "mt-2.5 border-t border-border-button-default pt-2.5";
+  const heading = "text-caption-1-medium text-text-secondary";
+  return (
+    <div className={cx("pointer-events-auto w-60 rounded-2lg bg-background-primary-default/95 p-3 shadow-card backdrop-blur-md max-md:w-52 max-md:p-2.5", open ? "max-h-[60svh] overflow-y-auto" : "overflow-hidden")}>
+      {/* Phones collapse the key to its title, so it does not cover the map. */}
+      <button type="button" aria-expanded={open} onClick={() => setOpen(value => !value)} className="flex w-full items-center gap-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring md:pointer-events-none">
+        <span className="min-w-0 flex-1 truncate text-body-2-medium text-text-primary">{title}</span>
+        <RiArrowDownSLine aria-hidden="true" className={cx("size-4 shrink-0 text-foreground-icon-secondary transition-transform md:hidden", open && "rotate-180")} />
+      </button>
+      <div className={cx(!open && "max-md:hidden")}>
+        {metricShown && metric && <>
+          {metric.description && <p className="mt-1 line-clamp-3 text-caption-1-regular text-text-secondary">{metric.description}</p>}
+          <div className="mt-2 h-2 rounded-full" style={{ backgroundImage: `linear-gradient(to right, ${stops.join(", ")})` }} />
+          <div className="mt-1 flex justify-between text-caption-1-regular tabular-nums text-text-secondary">
+            <span>{fmt(highGood ? metric.scale_max : metric.scale_min)}</span>
+            <span>{fmt(highGood ? metric.scale_min : metric.scale_max)} {metric.unit && !metric.unit.startsWith("indeks") ? metric.unit : ""}</span>
+          </div>
+          <p className={cx(section, "text-caption-1-regular text-text-tertiary")}>
+            Warna pekat berarti paling perlu perhatian{highGood ? ", yaitu nilai paling sedikit" : ""}. Skor relatif antarwilayah, bukan probabilitas bencana. Wilayah tanpa data tidak diwarnai.
+          </p>
+        </>}
+        {/* Hotspots and quakes use their own warm palette, so they get their own key. */}
+        {metricShown && (hotspots || quakes) && (
+          <div className={section}>
+            <p className={heading}>{hotspots ? "Titik panas (di atas peta)" : "Gempa (di atas peta)"}</p>
+            <div className="mt-1.5 h-2 rounded-full" style={{ backgroundImage: `linear-gradient(to right, ${(hotspots ? OVERLAY_RAMPS.hotspot : OVERLAY_RAMPS.quake).join(", ")})` }} />
+            <p className="mt-1.5 text-caption-1-regular text-text-tertiary">{hotspots ? "Makin pekat, titik panas makin rapat. Dibobot dengan kekuatan api (FRP)." : "Lingkaran makin besar dan pekat, magnitudo makin tinggi. 30 hari terakhir, M4 ke atas."}</p>
+          </div>
+        )}
+        {heat && (
+          <div className={metricShown ? section : "mt-2"}>
+            {metricShown && <p className={heading}>Suhu permukaan</p>}
+            <div className="mt-1.5 h-2 rounded-full" style={{ backgroundImage: `linear-gradient(to right, ${HEAT_RAMP_CSS.join(", ")})` }} />
+            <div className="mt-1 flex justify-between text-caption-1-regular tabular-nums text-text-secondary"><span>{HEAT_RANGE[0]}°C</span><span>{HEAT_RANGE[1]}°C</span></div>
+            <p className="mt-1.5 text-caption-1-regular text-text-tertiary">Suhu tanah dan atap, jauh lebih panas dari suhu udara. Warna wilayah disembunyikan selama lapisan ini tampil.</p>
+          </div>
+        )}
+        {wind && (
+          <div className={metricShown || heat ? section : "mt-2"}>
+            {(metricShown || heat) && <p className={heading}>Arah angin</p>}
+            <p className="mt-1.5 text-caption-1-regular text-text-tertiary">
+              Garis mengalir mengikuti arah angin bertiup, ke mana asap kebakaran terbawa. Biru muda berarti pelan, makin putih dan cepat berarti makin kencang. Grid sekitar 85 km{windTime ? `, data ${new Date(windTime).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}` : ""}.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function SpatialLayers({ warnings, choropleth, layer, layerError, showData, basemap, wind, buildings, events, focus, boundary, nationalMask, status, selectedRegionId, onSelectRegion, onRegionCenter }: {
+  warnings?: FeatureCollection; choropleth: ChoroplethSpec | null; layer?: MapLayer; layerError?: string; showData: boolean; basemap: Basemap; wind: boolean;
+  buildings: boolean; events?: FeatureCollection; focus?: number[]; boundary?: FeatureCollection; nationalMask?: Feature<MultiPolygon>; status: DockStatus;
   selectedRegionId?: string | null; onSelectRegion?: (pick: RegionPick) => void;
   /** The selected region's middle, for a selection made outside the map. */
   onRegionCenter?: (center: [number, number]) => void;
 }) {
   const mask = useMemo(() => (boundary ? outsideMask(boundary) : nationalMask), [boundary, nationalMask]);
-  const { map, isLoaded } = useMap();
+  const { map, isLoaded, resolvedTheme } = useMap();
+  const dark = resolvedTheme === "dark";
   // The mask is added after the data layers it dims around, so it would otherwise cover clusters and regions.
   // Keep it directly beneath the first data layer, above the basemap.
   useEffect(() => {
@@ -75,20 +145,19 @@ export function SpatialLayers({ warnings, choropleth, buildings, events, focus, 
     const sink = () => {
       const ids = map.getStyle().layers.map(item => item.id);
       const own = ids.indexOf(fillId);
-      const first = ids.findIndex(id => id !== fillId && /^(geojson-|clusters-|cluster-count-|unclustered-)/.test(id));
+      const first = ids.findIndex(id => id !== fillId && /^(geojson-|clusters-|cluster-count-|unclustered-|overlay-)/.test(id));
       if (own > first && first >= 0) map.moveLayer(fillId, ids[first]);
     };
     sink();
     map.on("styledata", sink);
     return () => { map.off("styledata", sink); };
   }, [map, isLoaded, mask]);
-  const [layer, setLayer] = useState<FeatureCollection>();
   const [footprints, setFootprints] = useState<FeatureCollection>();
-  const [wind, setWind] = useState<DTO<"WindGrid">>();
-  const [windEnabled, setWindEnabled] = useState(false);
+  const heat = basemap === "heat";
+  const [grid, setGrid] = useState<DTO<"WindGrid">>();
+  const [gridError, setGridError] = useState<string>();
   const [error, setError] = useState<string>();
   const [mapError, setMapError] = useState<string>();
-  const canvas = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     if (!map) return;
     const failed = () => setMapError("Sebagian peta dasar/layer tidak tersedia. Periksa koneksi atau ganti basemap; data API tetap ada di panel.");
@@ -99,21 +168,35 @@ export function SpatialLayers({ warnings, choropleth, buildings, events, focus, 
   useEffect(() => {
     if (map && isLoaded && focus?.length === 4) map.fitBounds([[focus[0], focus[1]], [focus[2], focus[3]]], { padding: 64, maxZoom: 11, duration: 700 });
   }, [map, isLoaded, focus]);
-  const metric = choropleth?.metric;
-  const level = choropleth?.level;
-  const parentId = choropleth?.parentId;
-  useEffect(() => {
-    const controller = new AbortController(); setLayer(undefined); setError(undefined);
-    if (metric && level) api(`/map/${encodeURIComponent(metric)}?level=${level}&simplify=0.02`, "MapLayer", { signal: controller.signal })
-      .then(value => {
-        if (controller.signal.aborted) return;
-        const all = geoJSON(value);
-        setLayer(parentId ? { ...all, features: all.features.filter(feature => feature.properties?.parent_id === parentId) } : all);
-      }).catch(cause => { if (!controller.signal.aborted) setError(cause.message); });
-    return () => controller.abort();
-  }, [metric, level, parentId]);
+
+  const metric = layer?.metric;
+  const satellite = basemap === "satellite";
+  // Each region carries its own colour, so the outline can show the index while the basemap inside stays readable.
+  const regions = useMemo<FeatureCollection | undefined>(() => {
+    if (!layer) return undefined;
+    const stops = rampStopsFor(layer.metric.metric, aspectOf(layer.metric.aspect));
+    const all = geoJSON(layer);
+    return {
+      ...all,
+      features: all.features.map(feature => {
+        const t = numberProp(feature, "normalised");
+        return t == null ? feature : { ...feature, properties: { ...feature.properties, color: rampAt(stops, t / 100) } };
+      }),
+    };
+  }, [layer]);
+  // The temperature surface already colours the map, and a fill under it left nothing legible.
+  const dataOn = showData && !heat;
+  const fillPaint = useMemo(() => dataOn
+    ? { "fill-color": ["coalesce", ["get", "color"], "#cfcfcf"] as ExpressionSpecification, "fill-opacity": ["case", ["has", "color"], satellite ? 0.38 : 0.5, 0] as ExpressionSpecification }
+    // Off, the fill stays as a faint click target so regions can still be picked against the plain basemap.
+    : { "fill-color": dark ? "#ffffff" : "#5a646a", "fill-opacity": 0.04 }, [dataOn, satellite, dark]);
+  const fillHoverPaint = useMemo(() => ({ "fill-opacity": dataOn ? (satellite ? 0.52 : 0.62) : 0.16 }), [dataOn, satellite]);
+  const linePaint = useMemo(() => dataOn
+    ? { "line-color": ["coalesce", ["get", "color"], dark ? "rgba(255,255,255,0.35)" : "rgba(80,90,96,0.45)"] as ExpressionSpecification, "line-width": REGION_LINE_WIDTH, "line-opacity": 0.95 }
+    : { "line-color": dark ? "rgba(255,255,255,0.18)" : "rgba(90,100,106,0.3)", "line-width": 0.7, "line-opacity": 1 }, [dataOn, dark]);
+
   // Regions ordered from most to least attention, so a map pick can say where it stands.
-  const ordered = useMemo(() => [...(layer?.features ?? [])].sort((a, b) => (numberProp(b, "normalised") ?? -1) - (numberProp(a, "normalised") ?? -1)), [layer]);
+  const ordered = useMemo(() => [...(regions?.features ?? [])].sort((a, b) => (numberProp(b, "normalised") ?? -1) - (numberProp(a, "normalised") ?? -1)), [regions]);
   const selected = useMemo(() => ordered.find(feature => feature.properties?.region_id === selectedRegionId), [ordered, selectedRegionId]);
   const onCenter = useRef(onRegionCenter);
   onCenter.current = onRegionCenter;
@@ -139,14 +222,19 @@ export function SpatialLayers({ warnings, choropleth, buildings, events, focus, 
       anchor,
     });
   }
+
+  // Wind particles and the temperature surface read the same grid, so turning either on loads it once.
+  const needGrid = wind || heat;
   useEffect(() => {
-    const controller = new AbortController(); setWind(undefined);
-    if (windEnabled) api("/windgrid", "WindGrid", { signal: controller.signal }).then(value => {
+    if (!needGrid || grid) return;
+    const controller = new AbortController();
+    api("/windgrid", "WindGrid", { signal: controller.signal }).then(value => {
       if (value.direction.length !== value.nx * value.ny || value.speed.length !== value.direction.length) throw new Error("Grid angin tidak valid.");
-      if (!controller.signal.aborted) setWind(value);
-    }).catch(cause => { if (!controller.signal.aborted) setError(cause.message); });
+      if (!controller.signal.aborted) { setGrid(value); setGridError(undefined); }
+    }).catch(cause => { if (!controller.signal.aborted) setGridError(cause.message); });
     return () => controller.abort();
-  }, [windEnabled]);
+  }, [needGrid, grid]);
+
   useEffect(() => {
     if (!map || !isLoaded || !buildings) { setFootprints(undefined); return; }
     let active: AbortController;
@@ -161,62 +249,43 @@ export function SpatialLayers({ warnings, choropleth, buildings, events, focus, 
     load(); map.on("moveend", load);
     return () => { active?.abort(); map.off("moveend", load); };
   }, [map, isLoaded, buildings]);
-  useEffect(() => {
-    const element = canvas.current;
-    if (!map || !wind || !element || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const context = element.getContext("2d"); if (!context) return;
-    const particles = Array.from({ length: 180 }, (_, index) => ({ x: (index * 0.61803398875) % 1, y: (index * 0.41421356237) % 1 }));
-    let frame = 0; let previous = performance.now();
-    const draw = (time: number) => {
-      const rect = map.getContainer().getBoundingClientRect();
-      if (element.width !== rect.width || element.height !== rect.height) { element.width = rect.width; element.height = rect.height; }
-      const dt = Math.min((time - previous) / 1000, 0.1); previous = time;
-      context.clearRect(0, 0, element.width, element.height);
-      context.strokeStyle = getComputedStyle(element).color; context.lineWidth = 1.5;
-      for (const point of particles) {
-        const col = Math.min(wind.nx - 1, Math.floor(point.x * wind.nx)); const row = Math.min(wind.ny - 1, Math.floor(point.y * wind.ny));
-        const index = row * wind.nx + col; const speed = wind.speed[index]; const direction = (wind.direction[index] + 180) * Math.PI / 180;
-        const lon = wind.west + point.x * (wind.east - wind.west); const lat = wind.south + point.y * (wind.north - wind.south);
-        const a = map.project([lon, lat]);
-        point.x = (point.x + Math.sin(direction) * speed * dt / 1000 + 1) % 1;
-        point.y = (point.y + Math.cos(direction) * speed * dt / 1000 + 1) % 1;
-        const b = map.project([wind.west + point.x * (wind.east - wind.west), wind.south + point.y * (wind.north - wind.south)]);
-        if (Math.abs(a.x - b.x) < 30 && Math.abs(a.y - b.y) < 30) { context.beginPath(); context.moveTo(a.x, a.y); context.lineTo(b.x, b.y); context.stroke(); }
-      }
-      frame = requestAnimationFrame(draw);
-    };
-    frame = requestAnimationFrame(draw); return () => cancelAnimationFrame(frame);
-  }, [map, wind]);
+
+  const showHotspots = dataOn && isHotspotMetric(metric?.metric);
+  const showQuakes = dataOn && isQuakeMetric(metric?.metric);
+  const heatMissing = heat && (gridError || (grid && !hasTemperature(grid)));
+  const problem = layerError || error || mapError || (wind && gridError);
+
   return <>
     {mask && <MapGeoJSON id="profile-outside" data={mask} fillPaint={{ "fill-color": "#0a0a0a", "fill-opacity": boundary ? 0.45 : 0.7, "fill-antialias": false }} linePaint={false} />}
     {boundary && <MapGeoJSON id="profile-boundary" data={boundary} fillPaint={false} linePaint={{ "line-color": "#3b82f6", "line-width": 2 }} />}
     {warnings && <MapGeoJSON id="api-warnings" data={warnings} fillPaint={{ "fill-opacity": 0.2, "fill-color": ["match", ["get", "severity"], "Severe", "#f43f5e", "Extreme", "#f43f5e", "#f59e0b"] }} interactive onClick={({ feature }) => toast.info(String(feature.properties?.headline ?? "Peringatan BMKG"), { description: String(feature.properties?.description ?? "") })} />}
-    {layer && <MapGeoJSON id="api-choropleth" data={layer} fillPaint={{ "fill-color": ["interpolate", ["linear"], ["coalesce", ["get", "normalised"], 0], 0, CHOROPLETH_RAMP[0], 50, CHOROPLETH_RAMP[1], 100, CHOROPLETH_RAMP[2]], "fill-opacity": ["case", ["==", ["get", "value"], null], 0, 0.42] }} linePaint={{ "line-color": "#ffffff", "line-width": 0.6, "line-opacity": 0.6 }} interactive onClick={({ feature, longitude, latitude }) => pick(feature, [longitude, latitude])} />}
-    {selected && <MapGeoJSON id="selected-region" data={{ type: "FeatureCollection", features: [selected] }} fillPaint={false} linePaint={{ "line-color": "#ffffff", "line-width": 3 }} />}
+    {regions && <MapGeoJSON id="api-choropleth" data={regions} promoteId="region_id" fillPaint={fillPaint} fillHoverPaint={fillHoverPaint} linePaint={linePaint} interactive onClick={({ feature, longitude, latitude }) => pick(feature, [longitude, latitude])} />}
+    {selected && <MapGeoJSON id="selected-region" data={{ type: "FeatureCollection", features: [selected] }} fillPaint={false} linePaint={{ "line-color": dark || satellite ? "#ffffff" : "#1f2933", "line-width": 3 }} />}
+    <PointOverlays hotspots={showHotspots} quakes={showQuakes} />
     {footprints && <MapGeoJSON id="api-buildings" data={footprints} fillPaint={{ "fill-opacity": 0.55 }} />}
     {events && <MapGeoJSON id="jev-events" data={events} fillPaint={{ "fill-opacity": 0.3 }} />}
     {events?.features.map((feature, i) => feature.geometry.type === "Point" ? <MapMarker key={i} longitude={feature.geometry.coordinates[0]} latitude={feature.geometry.coordinates[1]}><MarkerContent><span className="rounded-lg border border-border-button-default bg-background-primary-default px-2 py-1 text-caption-1-medium text-text-primary shadow-2xs">Kodama: {String(feature.properties?.name ?? feature.properties?.kind ?? "Kejadian tercatat")}</span></MarkerContent></MapMarker> : null)}
-    <canvas ref={canvas} aria-hidden className="pointer-events-none absolute inset-0 z-10 text-foreground-icon-primary" />
+    <HeatLayer grid={grid} visible={heat} />
+    <WindLayer grid={grid} visible={wind} />
+    {heatMissing && (
+      <p role="status" className="pointer-events-none absolute bottom-3 left-1/2 z-20 -translate-x-1/2 rounded-lg bg-background-primary-default/95 px-3 py-1.5 text-caption-1-medium text-text-secondary shadow-2xs backdrop-blur-md">
+        Data suhu belum siap di server ini. Jalankan ulang ingest.
+      </p>
+    )}
     <div className="pointer-events-none absolute bottom-3 left-3 z-20 flex max-w-[calc(100%-4.5rem)] flex-col items-start gap-2">
-      {layer && <div className="pointer-events-auto w-60 rounded-2lg max-md:w-48 max-md:p-2.5 bg-background-primary-default/95 p-3 shadow-card backdrop-blur-md">
-        <p className="text-body-2-medium text-text-primary">{choropleth?.label ?? "Perhatian relatif wilayah"}</p>
-        <div className="mt-2 h-2 rounded-full" style={{ backgroundImage: `linear-gradient(to right, ${CHOROPLETH_RAMP.join(", ")})` }} />
-        <div className="mt-1 flex justify-between text-caption-1-regular text-text-secondary"><span>Perlu perhatian rendah</span><span>Tinggi</span></div>
-        <p className="mt-1.5 text-caption-1-regular text-text-tertiary max-md:hidden">Skor relatif antarwilayah, bukan probabilitas bencana. Wilayah tanpa data tidak diwarnai.</p>
-      </div>}
-      <div className="pointer-events-auto flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-border-button-default bg-background-primary-default/95 p-1.5 shadow-2xs backdrop-blur-md">
-        <Button variant={windEnabled ? "primary" : "secondary"} size="xs" aria-pressed={windEnabled} onClick={() => setWindEnabled(value => !value)}>{windEnabled ? "Sembunyikan angin" : "Arah angin"}</Button>
-        <span className="flex items-center gap-1.5 pr-1.5 text-caption-1-medium text-text-secondary" role="status">
+      <Legend layer={layer} label={choropleth?.label} showData={showData} hotspots={showHotspots} quakes={showQuakes} heat={heat} wind={wind} windTime={grid?.observed_at} />
+      <div className="pointer-events-auto flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-border-button-default bg-background-primary-default/95 px-2.5 py-1.5 shadow-2xs backdrop-blur-md">
+        <span className="flex items-center gap-1.5 text-caption-1-medium text-text-secondary" role="status">
           <StatusDot color={status.loading || status.degraded ? "yellow" : "green"} />
           {status.loading ? "Memuat data..." : status.degraded ? `${status.count} kejadian, sebagian sumber tidak tersedia` : `${status.count} kejadian dari API`}
         </span>
-        {!status.loading && status.note && <span className="basis-full px-1 text-caption-1-regular text-text-tertiary max-md:hidden">{status.note}</span>}
+        {!status.loading && status.note && <span className="basis-full text-caption-1-regular text-text-tertiary max-md:hidden">{status.note}</span>}
       </div>
-      {(wind || buildings || error || mapError) && <div className="pointer-events-auto max-w-xs rounded-lg border border-border-button-default bg-background-primary-default/95 px-2.5 py-1.5 text-caption-1-regular text-text-secondary shadow-2xs backdrop-blur-md">
-        {wind && <p>Angin {new Date(wind.observed_at).toLocaleString("id-ID")}. Gerak partikel hanya ilustrasi.</p>}
+      {(buildings || problem) && <div className="pointer-events-auto max-w-xs rounded-lg border border-border-button-default bg-background-primary-default/95 px-2.5 py-1.5 text-caption-1-regular text-text-secondary shadow-2xs backdrop-blur-md">
         {buildings && <p>Bangunan tampil mulai zoom 14. Sumber: OSM.</p>}
-        {(error || mapError) && <p role="alert" className="text-status-rose-text">{error || mapError}</p>}
+        {problem && <p role="alert" className="text-status-rose-text">{problem}</p>}
       </div>}
     </div>
   </>;
 }
+
