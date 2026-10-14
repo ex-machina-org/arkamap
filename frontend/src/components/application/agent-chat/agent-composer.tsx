@@ -15,7 +15,6 @@ import { VoiceBeam, useMicrophone } from "voice-glow";
 import { ComposerLoader } from "@/components/application/composer-loader/composer-loader";
 import { useThemeMode } from "@/components/application/theme/theme-toggle";
 import { MENU_ITEM, MENU_ITEM_ACTIVE, MENU_ITEM_INTERACTIVE, MENU_POPOVER_SURFACE } from "@/components/base/dropdown/menu-styles";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useSpeechInput } from "@/hooks/use-speech-input";
 import { cx } from "@/utils/cx";
 
@@ -62,13 +61,11 @@ function mentionAt(text: string, caret: number) {
   return match ? { start: caret - match[1].length - 1, query: match[1].toLowerCase() } : null;
 }
 
-/** One model behind the assistant, shown in the status row with the part it plays. */
+/** One model named in the status row, with its own mark; `title` says what it does. */
 export interface ComposerProvider {
-  id: string;
   name: string;
-  /** What this model does, in a short phrase; shown in the tooltip. */
-  role: string;
   icon: typeof RiInfinityLine;
+  title?: string;
 }
 
 export interface AgentComposerProps {
@@ -80,10 +77,8 @@ export interface AgentComposerProps {
   /** Model id reported by the runtime, e.g. "openai/gpt-5-nano". */
   model?: string | null;
   provider?: string | null;
-  /** Several models in place of the single `provider` label; below `sm` only their icons show. */
+  /** Several models instead of one `provider`, each with its own mark; names hide on phones, marks stay. */
   providers?: ComposerProvider[];
-  /** Added to every provider's tooltip, e.g. where the answer's data comes from. */
-  providersNote?: string;
   messageCount: number;
   placeholder?: string;
   /** The attachment button. Off when the backend cannot take files. */
@@ -109,7 +104,6 @@ export function AgentComposer({
   model,
   provider,
   providers,
-  providersNote,
   messageCount,
   placeholder = "Ask me anything",
   showAttachment = true,
@@ -358,9 +352,14 @@ export function AgentComposer({
       </ComposerLoader>
       </VoiceBeam>
 
-      {showStatus && <div className="flex h-[26px] w-full items-center justify-between">
-        <div className="flex items-center gap-3">
-          {providers?.length ? <ProviderList providers={providers} note={providersNote} /> : <StatusItem icon={RiInfinityLine} label={provider ?? "Not configured"} />}
+      {showStatus && <div className="flex h-6.5 w-full items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          {providers?.length ? (
+            <span className="flex min-w-0 items-center gap-2.5" aria-label={`Dijawab oleh ${providers.map(item => item.name).join(", ")}`}
+              title="Angka dan data selalu dari basis data Arkamap, bukan dari model">
+              {providers.map(item => <StatusItem key={item.name} icon={item.icon} label={item.name} title={item.title} compact />)}
+            </span>
+          ) : <StatusItem icon={RiInfinityLine} label={provider ?? "Not configured"} />}
           {speech.error && (
             <span role="alert" className="text-caption-1-regular text-text-error-primary">
               {speech.error}
@@ -403,39 +402,22 @@ function SpokenText({ typed, value, className }: { typed: string; value: string;
   );
 }
 
-function ProviderList({ providers, note }: { providers: ComposerProvider[]; note?: string }) {
-  return (
-    <ul className="flex items-center gap-3" aria-label="Model yang menjawab">
-      {providers.map(({ id, name, role, icon: Icon }) => (
-        <li key={id}>
-          <Tooltip>
-            <TooltipTrigger render={<span tabIndex={0} className="flex items-center gap-1 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-border-button-default" aria-label={`${name}: ${role}`} />}>
-              <Icon className="size-4 shrink-0 text-foreground-icon-secondary" aria-hidden />
-              <span className="hidden whitespace-nowrap text-body-2-medium text-text-secondary sm:inline">{name}</span>
-            </TooltipTrigger>
-            <TooltipContent>
-              <span className="block font-medium">{name}</span>
-              <span className="block">{role}</span>
-              {note && <span className="mt-1 block text-text-tertiary">{note}</span>}
-            </TooltipContent>
-          </Tooltip>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 function StatusItem({
   icon: Icon,
   label,
+  title,
+  compact = false,
 }: {
   icon: typeof RiInfinityLine;
   label: string;
+  title?: string;
+  /** The name hides below sm, leaving the mark (and the title on hover). */
+  compact?: boolean;
 }) {
   return (
-    <span className="flex items-center gap-1">
+    <span className="flex min-w-0 items-center gap-1" title={title}>
       <Icon className="size-4 shrink-0 text-foreground-icon-secondary" aria-hidden />
-      <span className="whitespace-nowrap text-body-2-medium text-text-secondary">{label}</span>
+      <span className={cx("truncate whitespace-nowrap text-body-2-medium text-text-secondary", compact && "hidden sm:inline")}>{label}</span>
     </span>
   );
 }

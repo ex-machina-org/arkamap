@@ -347,7 +347,7 @@ function AccountMenu({ threads }: { threads: ChatThreadSummary[] }) {
       <DropdownPopover
         aria-label="Account menu"
         placement="top start"
-        className="w-[248px] p-2.5"
+        className="w-62 p-2.5"
         dialogClassName="gap-[7px]"
       >
         <DropdownGroup>
@@ -570,7 +570,7 @@ function ThreadRow({
             "text-caption-1-regular text-text-tertiary transition-opacity",
             menuOpen
               ? "opacity-0"
-              : "opacity-100 group-hover/row:opacity-0 group-has-[:focus-visible]/slot:opacity-0",
+              : "opacity-100 group-hover/row:opacity-0 group-has-focus-visible/slot:opacity-0",
           )}
         >
           {relativeTime(thread.updatedAt)}
@@ -584,7 +584,7 @@ function ThreadRow({
             "absolute inset-0 flex -translate-x-px items-center justify-center transition-opacity",
             menuOpen
               ? "opacity-100"
-              : "opacity-0 group-hover/row:opacity-100 group-has-[:focus-visible]/slot:opacity-100",
+              : "opacity-0 group-hover/row:opacity-100 group-has-focus-visible/slot:opacity-100",
           )}
         >
           <RowMenu
@@ -661,7 +661,7 @@ function RowMenu({
         <RiMore2Fill className="size-4 shrink-0" aria-hidden />
       </DropdownTrigger>
 
-      <DropdownPopover aria-label={label} placement="bottom end" className="w-[220px] p-2.5 overflow-hidden">
+      <DropdownPopover aria-label={label} placement="bottom end" className="w-55 p-2.5 overflow-hidden">
         <DropdownGroup>
           <DropdownItem onSelect={choose(onTogglePin)} className="px-2 py-1.5">
             {thread.pinned ? <RiPushpinFill className={icon} aria-hidden /> : <RiPushpinLine className={icon} aria-hidden />}

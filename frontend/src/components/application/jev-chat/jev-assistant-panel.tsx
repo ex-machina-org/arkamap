@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useChat } from "@ai-sdk/react";
 import { RiCloseLine, RiEditBoxLine, RiExpandDiagonalLine } from "@remixicon/react";
-import { KODAMA_DATA_NOTE, KODAMA_PROVIDERS } from "./kodama-providers";
 import { AgentComposer } from "@/components/application/agent-chat/agent-composer";
 import { useMentions } from "./use-mentions";
+import { KODAMA_MODELS } from "./kodama-models";
 import { saveThread } from "@/components/application/agent-chat/thread-store";
 import { Tooltip, TooltipTrigger } from "@/components/base/tooltip/tooltip";
 import { cx } from "@/utils/cx";
@@ -99,7 +99,7 @@ export function JevAssistantPanel({ onClose, className, request, onEvents, varia
 
   const floating = variant === "floating";
   const composer = <AgentComposer value={input} onValueChange={setInput} onSubmit={() => submit(input)} onStop={stop} busy={busy}
-    placeholder={placeholder} provider="Jev" providers={KODAMA_PROVIDERS} providersNote={KODAMA_DATA_NOTE} showAttachment={false} voiceLanguage="id-ID" mentions={mentions} messageCount={messages.length}
+    placeholder={placeholder} provider="Jev" providers={KODAMA_MODELS} showAttachment={false} voiceLanguage="id-ID" mentions={mentions} messageCount={messages.length}
     showStatus={!floating} autoFocus={floating} leading={floating ? <KodamaMark className="size-7" /> : undefined} />;
   const conversation = <>
     {messages.map((message, index) => message.role === "user"
@@ -130,14 +130,14 @@ export function JevAssistantPanel({ onClose, className, request, onEvents, varia
           <HeaderAction label="Buka halaman penuh" icon={RiExpandDiagonalLine} href={`/chat?thread=${encodeURIComponent(threadId)}`} />
           <HeaderAction label="Tutup" icon={RiCloseLine} onClick={onClose} />
         </header>
-        <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto scrollbar-none [&::-webkit-scrollbar]:hidden">
+        <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="flex flex-col gap-4 px-4 pt-1 pb-3">{conversation}</div>
         </div>
       </> : (
         // Questions about what the map shows right now; the first one is the likeliest to be asked.
         // Outlined, not filled, so they stay a step behind the composer; the row fades out instead of cutting a word.
         <div className="flex items-center gap-1 pt-2 pr-1.5 pl-2.5">
-          <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pr-6 scrollbar-none [mask-image:linear-gradient(to_right,black_calc(100%-2rem),transparent)]">
+          <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pr-6 [scrollbar-width:none] [mask-image:linear-gradient(to_right,black_calc(100%-2rem),transparent)]">
             {suggestions.map(suggestion => <button key={suggestion} type="button" onClick={() => submit(suggestion)}
               className="h-7 shrink-0 cursor-pointer whitespace-nowrap rounded-full border border-border-button-default px-2.5 text-body-2-regular text-text-secondary outline-none transition-colors hover:border-transparent hover:bg-background-primary-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring">{suggestion}</button>)}
           </div>
@@ -162,7 +162,7 @@ export function JevAssistantPanel({ onClose, className, request, onEvents, varia
       <HeaderAction label="Tutup" icon={RiCloseLine} onClick={onClose} />
     </header>
 
-    <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto scrollbar-none [&::-webkit-scrollbar]:hidden">
+    <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <div className={cx("flex flex-col gap-5 px-4 py-5", messages.length === 0 && "min-h-full justify-center")}>
         {messages.length === 0 ? <div className="flex flex-col items-center gap-4 text-center">
           <div className="flex flex-col gap-1">
