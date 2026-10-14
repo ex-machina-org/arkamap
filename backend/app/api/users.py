@@ -52,7 +52,7 @@ class ProfileIn(BaseModel):
     role: str = Field(min_length=2, max_length=200,
                       description="siapa Anda / pekerjaan, mis. 'anggota damkar Kota Palangka Raya'")
     goals: str | None = Field(None, max_length=500,
-                              description="apa yang ingin dipantau, mis. 'titik api dan arah angin'")
+                              description="masalah yang ingin diatasi, mis. 'kebakaran lahan saat kemarau, asapnya sampai ke permukiman'")
     region_id: str | None = Field(None, description="wilayah minat; dari GET /api/regions")
     mode: Literal["protected", "responden", "plan"] | None = Field(
         None, description="kosong = AI memilih dari penjelasan; lihat GET /api/modes")

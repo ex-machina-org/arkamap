@@ -51,7 +51,7 @@ Chat Agent juga bisa di mode publik (`POST /api/agent/chat/stream`, lihat bagian
 | Isian | Contoh | Field |
 |---|---|---|
 | Siapa Anda / pekerjaan | "anggota damkar Kota Palangka Raya" | `role` (wajib) |
-| Apa yang ingin dipantau | "titik api dan arah angin di sekitar kota" | `goals` |
+| Masalah yang ingin diatasi | "kebakaran lahan saat kemarau, asapnya sampai ke permukiman" | `goals` |
 | Wilayah (opsional) | pencarian `GET /api/regions?q=` | `region_id` |
 | Mode (opsional) | pilihan dari `GET /api/modes`: Protected / Responden / Plan, atau "biar AI yang menentukan" | `mode` |
 

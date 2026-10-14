@@ -102,7 +102,7 @@ def read_profile(role: str, goals: str | None, mode: str | None = None) -> dict:
                 "tampilan yang paling cocok, metrik yang relevan, dan JUJUR sebutkan kebutuhan yang tidak "
                 "bisa kami jawab. Jangan memaksakan kecocokan: bila bidangnya tidak ada atau datanya "
                 "kurang nyambung, katakan begitu.\n"
-                f"Penjelasan pengguna:\nPeran: {role}\nIngin memantau / tujuan: {goals or '-'}\n\n"
+                f"Penjelasan pengguna:\nPeran: {role}\nMasalah yang ingin diatasi: {goals or '-'}\n\n"
                 + (f"Mode DITETAPKAN pengguna: {mode} ({modes.get(mode)['title']}). Isi mode dengan itu dan "
                    "pilih metrik yang cocok untuk mode tersebut.\n" if mode else
                    "Tentukan mode yang paling cocok dari penjelasannya.\n")

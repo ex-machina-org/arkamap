@@ -4541,7 +4541,7 @@
                 "type": "null"
               }
             ],
-            "description": "apa yang ingin dipantau, mis. 'titik api dan arah angin'",
+            "description": "masalah yang ingin diatasi, mis. 'kebakaran lahan saat kemarau, asapnya sampai ke permukiman'",
             "title": "Goals"
           },
           "mode": {

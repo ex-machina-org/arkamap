@@ -98,7 +98,7 @@ Catatan: semua endpoint di bagian ini menolak akun selain admin (403) dan permin
 | `GET /api/modes` | Aplikasi | — | `ModeInfo[]` |
 | `GET /api/fields` | Aplikasi | — | `FieldInfo[]` |
 
-Profil aktif menentukan bidang dan mode (lensa waktu) yang dipakai dashboard dan agen.
+Profil aktif menentukan bidang dan mode (lensa waktu) yang dipakai dashboard dan agen. Di `ProfileIn`, `role` adalah peran atau pekerjaan pengguna dan `goals` adalah masalah yang ingin diatasi (teks bebas, hingga 500 karakter); AI membaca keduanya untuk memilih bidang, mode, dan metrik.
 
 ## Data publik dan peta
 

@@ -28,7 +28,7 @@ Pergantian sesi membersihkan data privat, dialog, dan giliran chat. Pengecekan s
 
 Setelah signup atau login, klien masuk ke `/onboarding`. `GET /api/me` mengarahkan akun yang sudah punya profil aktif ke dashboard; akun tanpa profil aktif tetap di onboarding, termasuk saat membuka dashboard langsung.
 
-Langkah pertama mengisi peran (2–200 karakter) dan tujuan opsional (hingga 500 karakter). Langkah kedua mencari wilayah lewat `GET /api/regions`, menawarkan mode dari `GET /api/modes`, lalu menyimpan lewat `PUT /api/me/profile`. Mode otomatis dan wilayah/tujuan yang dikosongkan dikirim sebagai `null`. `MeOut.profile` yang dikembalikan menjadi ringkasan konfirmasi: mode yang dipilih, catatan AI, dan kebutuhan yang belum didukung. Profil tambahan dibuat lewat `POST /api/me/profiles` dari dialog profil, hingga tiga profil.
+Langkah pertama mengisi peran (2–200 karakter) dan masalah yang ingin diatasi (opsional, hingga 500 karakter, dikirim sebagai `goals`). Langkah kedua mencari wilayah lewat `GET /api/regions`, menawarkan mode dari `GET /api/modes`, lalu menyimpan lewat `PUT /api/me/profile`. Mode otomatis dan wilayah/masalah yang dikosongkan dikirim sebagai `null`. `MeOut.profile` yang dikembalikan menjadi ringkasan konfirmasi: mode yang dipilih, catatan AI, dan kebutuhan yang belum didukung. Profil tambahan dibuat lewat `POST /api/me/profiles` dari dialog profil, hingga tiga profil.
 
 Onboarding tidak bisa dilewati sebelum profil ada. Pengguna tetap bisa keluar; sesi kedaluwarsa menawarkan login dan coba lagi.
 
