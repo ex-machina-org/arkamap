@@ -6,7 +6,7 @@ const BLOCK_HIDDEN = { opacity: 0, filter: "blur(5px)", y: 4 };
 const BLOCK_SHOWN = { opacity: 1, filter: "blur(0px)", y: 0 };
 const BLOCK_TRANSITION = { duration: 0.42, ease: [0.22, 0.61, 0.36, 1] } as const;
 
-// ponytail: covers the Markdown subset Gemini answers use (paragraphs, headings, lists, bold,
+// Limit: covers the Markdown subset Gemini answers use (paragraphs, headings, lists, bold,
 // italic, inline code); tables/links stay plain text. Swap in a parser if answers need more.
 function inline(text: string, key: string): ReactNode[] {
   return text.split(/(\*\*[^*]+\*\*|`[^`]+`|\*[^*\s][^*]*\*)/g).filter(Boolean).map((part, index) => {
