@@ -1,13 +1,16 @@
 import { authenticate } from "@/lib/api/auth";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { LoginModal } from "@/components/application/auth/login-modal";
 import Rays from "@/components/ui/light-rays";
 
 export default function LoginPage() {
   const [isOpen, setIsOpen] = useState(true);
+  // The modal routes a successful sign-in itself; closing must not send the user back to the map.
+  const signedIn = useRef(false);
 
   function handleClose() {
     setIsOpen(false);
+    if (signedIn.current) return;
     setTimeout(() => {
       window.history.pushState({}, "", "/");
       window.dispatchEvent(new PopStateEvent("popstate"));
@@ -28,12 +31,7 @@ export default function LoginPage() {
         authenticate={authenticate}
         isOpen={isOpen}
         onClose={handleClose}
-        onSuccess={() => {
-          setTimeout(() => {
-            window.history.pushState({}, "", "/dashboard");
-            window.dispatchEvent(new PopStateEvent("popstate"));
-          }, 350);
-        }}
+        onSuccess={() => { signedIn.current = true; }}
       />
     </div>
   );

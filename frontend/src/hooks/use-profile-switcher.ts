@@ -17,14 +17,18 @@ export function useProfileSwitcher() {
     active: profile.id === activeId,
   }));
 
+  /** Resolves true once the profile is active, including when it already was. */
   async function select(id: string) {
-    if (busy || id === String(activeId)) return;
+    if (id === String(activeId)) return true;
+    if (busy) return false;
     setBusy(true);
     try {
       await api(`/me/profiles/${id}/activate`, "MeOut", { method: "POST", ...jsonBody({}) });
       notifySession();
+      return true;
     } catch (cause) {
       toast.error(cause instanceof Error ? cause.message : "Profil gagal dialihkan.");
+      return false;
     } finally {
       setBusy(false);
     }
