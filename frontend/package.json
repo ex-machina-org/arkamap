@@ -21,8 +21,7 @@
     "api:check": "node scripts/python.mjs scripts/export-openapi.py --check && node scripts/generate-api-types.mjs --check",
     "test:api": "node --test scripts/api-contract.test.mjs",
     "backend:dev": "node scripts/python.mjs -m uvicorn app.main:app --app-dir backend --env-file .env.local --host 127.0.0.1 --port 8000 --no-proxy-headers",
-    "backend:test": "node scripts/python.mjs backend/test_iot.py && node scripts/python.mjs backend/test_agent.py && node scripts/python.mjs backend/test_bmkg.py",
-    "preservation:check": "node scripts/check-preservation.mjs"
+    "backend:test": "node scripts/python.mjs backend/test_iot.py && node scripts/python.mjs backend/test_agent.py && node scripts/python.mjs backend/test_bmkg.py"
   },
   "dependencies": {
     "@ai-sdk/react": "^4.0.119",
