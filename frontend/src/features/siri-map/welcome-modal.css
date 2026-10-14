@@ -1,0 +1,70 @@
+.welcome-art-front {
+  transform: translateY(24px) rotate(-3deg);
+  transform-origin: bottom center;
+}
+
+.welcome-art-back {
+  transform: translateY(10px) rotate(4deg);
+  transform-origin: bottom center;
+}
+
+.welcome-art-front,
+.welcome-art-back,
+.welcome-art-pin {
+  transition: transform 250ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .welcome-media:hover .welcome-art-front {
+    transform: translateY(4px) rotate(-1deg);
+  }
+
+  .welcome-media:hover .welcome-art-back {
+    transform: translateY(6px) rotate(6deg);
+  }
+
+  .welcome-media:hover .welcome-art-pin {
+    transform: translateY(-3px);
+  }
+
+  .welcome-media:hover .welcome-art-pin-secondary {
+    transform: translateY(-5px);
+  }
+}
+
+.welcome-step-indicator,
+.welcome-step-indicator:hover,
+.welcome-step-indicator:active {
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.welcome-step-indicator > span {
+  padding: 0;
+}
+
+.welcome-step {
+  animation: welcome-next 200ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.welcome-step[data-direction="previous"] {
+  animation-name: welcome-previous;
+}
+
+@keyframes welcome-next {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes welcome-previous {
+  from { opacity: 0; transform: translateX(-12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-step { animation: none; }
+  .welcome-art-front,
+  .welcome-art-back,
+  .welcome-art-pin { transition: none; }
+}
