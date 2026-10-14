@@ -572,8 +572,16 @@
       "CommunityDevice": {
         "properties": {
           "category": {
-            "title": "Category",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "petunjuk opsional dari pemilik; kategori sebenarnya per field",
+            "title": "Category"
           },
           "id": {
             "title": "Id",
@@ -675,7 +683,6 @@
         "required": [
           "id",
           "name",
-          "category",
           "latest"
         ],
         "title": "CommunityDevice",

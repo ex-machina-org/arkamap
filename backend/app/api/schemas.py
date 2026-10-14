@@ -1008,7 +1008,7 @@ class Dashboard(BaseModel):
 class CommunityDevice(BaseModel):
     id: int
     name: str
-    category: str
+    category: str | None = Field(None, description="petunjuk opsional dari pemilik; kategori sebenarnya per field")
     region_id: str | None = None
     region_name: str | None = None
     lat: float | None = None
