@@ -9,7 +9,7 @@ import {
   RiSparklingLine,
   RiStopFill,
 } from "@remixicon/react";
-import { useRef, type FormEvent, type KeyboardEvent } from "react";
+import { useRef, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 
 import { ComposerLoader } from "@/components/application/composer-loader/composer-loader";
 import { useSpeechInput } from "@/hooks/use-speech-input";
@@ -48,6 +48,11 @@ export interface AgentComposerProps {
   showAttachment?: boolean;
   /** Dictation into the field, in this BCP 47 language (e.g. "id-ID"). Hidden where the browser has no speech recognition. */
   voiceLanguage?: string;
+  /** The provider and message-count row under the pill; compact hosts drop it. */
+  showStatus?: boolean;
+  /** Mark shown at the pill's start in place of the attachment button, e.g. the assistant's avatar. */
+  leading?: ReactNode;
+  autoFocus?: boolean;
   className?: string;
 }
 
@@ -63,6 +68,9 @@ export function AgentComposer({
   placeholder = "Ask me anything",
   showAttachment = true,
   voiceLanguage,
+  showStatus = true,
+  leading,
+  autoFocus,
   className,
 }: AgentComposerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -116,6 +124,8 @@ export function AgentComposer({
             </button>
           )}
 
+          {leading && <span className="flex size-9 shrink-0 items-center justify-center">{leading}</span>}
+
           <label className="sr-only" htmlFor="agent-composer-input">
             Message
           </label>
@@ -128,10 +138,11 @@ export function AgentComposer({
             onKeyDown={onKeyDown}
             placeholder={placeholder}
             autoComplete="off"
+            autoFocus={autoFocus}
             className={cx(
               "h-5 min-w-0 flex-1 bg-transparent text-body-regular text-text-primary caret-text-primary outline-none placeholder:text-text-tertiary",
               // Without the 36px attachment circle the text would sit 8px from the pill's curve.
-              !showAttachment && "pl-3",
+              !showAttachment && !leading && "pl-3",
             )}
           />
 
@@ -188,7 +199,7 @@ export function AgentComposer({
         </form>
       </ComposerLoader>
 
-      <div className="flex h-[26px] w-full items-center justify-between">
+      {showStatus && <div className="flex h-[26px] w-full items-center justify-between">
         <div className="flex items-center gap-3">
           <StatusItem icon={RiInfinityLine} label={provider ?? "Not configured"} />
           {speech.error && (
@@ -203,7 +214,10 @@ export function AgentComposer({
             label={messageCount === 0 ? "New chat" : `${messageCount} messages`}
           />
         </div>
-      </div>
+      </div>}
+      {!showStatus && speech.error && (
+        <span role="alert" className="px-3 text-caption-1-regular text-text-error-primary">{speech.error}</span>
+      )}
     </div>
   );
 }
