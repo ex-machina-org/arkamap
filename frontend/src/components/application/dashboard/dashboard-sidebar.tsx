@@ -496,8 +496,6 @@ export interface DashboardSidebarProps {
   identity?: { name: string; role: string };
   onAccountAction?: (label: string) => void;
   profiles?: ProfileOption[];
-  onProfileSelect?: (id: string) => void;
-  maxProfiles?: number;
 }
 
 export function DashboardSidebar({
@@ -513,7 +511,7 @@ export function DashboardSidebar({
   appSubtitle: _appSubtitle = "JOINTS 2026",
   onSuperintelligenceClick,
   onNavigate,
-  className, identity, onAccountAction, profiles, onProfileSelect, maxProfiles,
+  className, identity, onAccountAction, profiles,
 }: DashboardSidebarProps = {}) {
   const [collapsedState, setCollapsed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -627,8 +625,6 @@ export function DashboardSidebar({
           identity={identity}
           onAction={onAccountAction}
           profiles={profiles}
-          onProfileSelect={onProfileSelect}
-          maxProfiles={maxProfiles}
           showTheme={showThemeToggle}
           onSettings={identity ? (page) => setAppSettings(page ?? "account") : undefined}
           collapsed={collapsed}

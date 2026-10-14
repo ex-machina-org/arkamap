@@ -84,13 +84,11 @@ export function JointsAppShell({
   onSuperintelligenceClick,
   assistant,
   onAskAssistant,
-  children, identity, onAccountAction, profiles, onProfileSelect, maxProfiles,
+  children, identity, onAccountAction, profiles,
 }: {
   identity?: { name: string; role: string };
   onAccountAction?: (label: string) => void;
   profiles?: ProfileOption[];
-  onProfileSelect?: (id: string) => void;
-  maxProfiles?: number;
   navigation: AppShellNavItem[];
   activeId: string;
   onNavigate: (id: string) => void;
@@ -258,8 +256,6 @@ export function JointsAppShell({
         identity={identity}
         onAccountAction={onAccountAction}
         profiles={profiles}
-        onProfileSelect={onProfileSelect}
-        maxProfiles={maxProfiles}
         items={dashboardItems}
         selected={activeId}
         activeMode={activeMode}
@@ -278,8 +274,6 @@ export function JointsAppShell({
         identity={identity}
         onAccountAction={onAccountAction}
         profiles={profiles}
-        onProfileSelect={onProfileSelect}
-        maxProfiles={maxProfiles}
               mobile
               items={dashboardItems}
               selected={activeId}

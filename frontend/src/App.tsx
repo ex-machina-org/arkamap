@@ -1,6 +1,7 @@
 import { useSession } from "@/hooks/use-session";
 import { goTo } from "@/lib/navigate";
-import { OnboardingScreen } from "@/features/onboarding/onboarding-screen";
+import { OnboardingScreen } from "@/features/profiles/onboarding-screen";
+import { ProfilePickerScreen } from "@/features/profiles/profile-picker-screen";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { SessionGate } from "@/components/application/auth/session-gate";
@@ -26,7 +27,7 @@ const ChatPage = lazy(() => import("./app/chat/page"));
 
 // Signed-out visitors may only use the public map; every workspace route needs a session.
 function isProtectedPath(path: string) {
-  return path === "/dashboard" || path === "/app-shell" || path === "/chat" || path === "/devices" || path.startsWith("/devices/") || path === "/sources" || path === "/alerts";
+  return path === "/dashboard" || path === "/profiles" || path === "/app-shell" || path === "/chat" || path === "/devices" || path.startsWith("/devices/") || path === "/sources" || path === "/alerts";
 }
 
 
@@ -116,6 +117,8 @@ export default function App() {
           <div className="flex min-h-dvh items-center justify-center bg-background-full text-text-secondary" role="status">Memuat Profil Pantauan...</div>
         ) : protectedRoute && !session.me && session.error ? (
           <SessionGate error={session.error} onRetry={() => void session.reload()} onLeave={() => goTo("/")} />
+        ) : routePath === "/profiles" ? (
+          <ProfilePickerScreen />
         ) : routePath === "/" || routePath === "/map" || routePath === "/siri-map" || routePath === "/atlas" || routePath === "/map-ai" || routePath === "/siri" ? (
           <Suspense fallback={<div className="min-h-dvh bg-background-full" />}><MapPage /></Suspense>
         ) : routePath === "/design-system" || routePath.startsWith("/design-system/") ? (
