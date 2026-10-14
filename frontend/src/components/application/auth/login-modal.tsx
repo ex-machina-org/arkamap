@@ -113,7 +113,8 @@ export function LoginModal({
       const user = await authenticate(authMode, { ...credentials, remember_me: rememberMe });
       toast.success(`Selamat datang, ${user.name}`);
       onSuccess?.(user); onClose();
-      window.history.pushState({}, "", "/onboarding");
+      // The picker forwards accounts without a profile to onboarding.
+      window.history.pushState({}, "", "/profiles");
       window.dispatchEvent(new PopStateEvent("popstate"));
     } catch (cause) { toast.error(cause instanceof Error ? cause.message : "Autentikasi gagal."); }
     finally { setIsSubmitting(false); }

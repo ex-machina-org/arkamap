@@ -100,8 +100,6 @@ export function JevChat() {
         else window.dispatchEvent(new Event("arkamap-profile-open"));
       }}
       profiles={profileSwitcher.options}
-      onProfileSelect={profileSwitcher.select}
-      maxProfiles={profileSwitcher.maxProfiles}
       className="h-full"
     />}
   />;

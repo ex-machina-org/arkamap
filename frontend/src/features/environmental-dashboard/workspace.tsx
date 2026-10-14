@@ -376,8 +376,6 @@ export default function EnvironmentalDashboardWorkspace({ devicePage, deviceId, 
         identity={preview ? undefined : { name: session.me?.user.name ?? "Pengunjung", role: session.me?.profile?.role ?? "Map publik" }}
         onAccountAction={preview ? undefined : label => { if (label === "Keluar" && session.me) void session.logout().catch(cause => toast.error(cause.message)); else window.dispatchEvent(new Event("arkamap-profile-open")); }}
         profiles={preview ? undefined : profileSwitcher.options}
-        onProfileSelect={profileSwitcher.select}
-        maxProfiles={profileSwitcher.maxProfiles}
         activeMode={preview ? selectedMode : session.me?.profile?.mode === "protected" ? "protect" : session.me?.profile?.mode === "responden" ? "responder" : session.me?.profile?.mode === "plan" ? "plan" : "all"}
         onModeChange={(m) => {
           setSelectedMode(m);

@@ -2,16 +2,14 @@
 
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import {
-  RiAddLine,
   RiBroadcastLine,
-  RiCheckLine,
   RiContrastLine,
   RiLogoutBoxRLine,
   RiMore2Line,
   RiNotification3Line,
   RiSettings4Line,
   RiShieldUserLine,
-  RiUserSettingsLine,
+  RiUserSharedLine,
 } from "@remixicon/react";
 import {
   Button as AriaButton,
@@ -24,6 +22,7 @@ import { ThemeToggle } from "@/components/application/theme/theme-toggle";
 import { Avatar } from "@/components/base/avatar/avatar";
 import { Badge } from "@/components/base/badges/badge";
 import type { ProfileOption } from "@/hooks/use-profile-switcher";
+import { goTo } from "@/lib/navigate";
 import { cx } from "@/utils/cx";
 import { initialsOf } from "@/utils/initials";
 
@@ -108,21 +107,17 @@ export function DashboardTeamMenu({
   identity,
   onAction,
   profiles,
-  onProfileSelect,
-  maxProfiles = 3,
   placement,
   onSettings,
   showTheme = true,
 }: {
   identity?: { name: string; role: string };
   onAction?: (label: string) => void;
-  /** Monitoring profiles of the signed-in account; each one carries its own mode. */
+  /** Monitoring profiles of the signed-in account; when there are any, the menu links to the profile picker. */
   profiles?: ProfileOption[];
-  onProfileSelect?: (id: string) => void;
-  maxProfiles?: number;
   /** Where the menu opens. Defaults to above the card in an open sidebar, beside it when collapsed. */
   placement?: "right bottom" | "bottom end" | "top";
-  /** Opens the product's settings, at the profiles page for "Kelola profil". Without it the item says it is still a preview. */
+  /** Opens the product's settings. Without it the item says it is still a preview. */
   onSettings?: (page?: "profiles") => void;
   /** The light/dark switch inside the menu. */
   showTheme?: boolean;
@@ -131,7 +126,6 @@ export function DashboardTeamMenu({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const atLimit = (profiles?.length ?? 0) >= maxProfiles;
   const resolvedPlacement = isMobile ? "bottom start" : placement ?? (collapsed ? "right bottom" : "top");
 
   useEffect(() => {
@@ -220,51 +214,15 @@ export function DashboardTeamMenu({
           {identity ? (
             <>
               {profiles && profiles.length > 0 && (
-                <div className="flex w-full flex-col gap-0.5 pt-1">
-                  <span className="px-2 pb-0.5 text-caption-1-medium text-text-tertiary">Profil pantauan</span>
-                  {/* One line per profile: the name, then its mode and area, truncated. */}
-                  {profiles.map((profile) => (
-                    <button
-                      key={profile.id}
-                      type="button"
-                      aria-current={profile.active ? "true" : undefined}
-                      title={`${profile.title} · ${profile.detail}`}
-                      onClick={() => { setIsOpen(false); onProfileSelect?.(profile.id); }}
-                      className={cx(
-                        "flex h-8 w-full cursor-pointer items-center gap-2 rounded-lg px-2 text-left outline-none transition-colors",
-                        "hover:bg-background-primary-hover focus-visible:bg-background-primary-hover",
-                        profile.active && "bg-background-primary-hover",
-                      )}
-                    >
-                      <span className="min-w-0 flex-1 truncate text-body-regular">
-                        <span className="text-text-primary">{profile.title}</span>
-                        <span className="text-text-tertiary"> · {profile.detail}</span>
-                      </span>
-                      {profile.active && <RiCheckLine className="size-4 shrink-0 text-foreground-icon-secondary" aria-hidden />}
-                    </button>
-                  ))}
-                  {onSettings ? (
-                    // Adding a profile needs an explanation first, so it lives in settings.
-                    <button
-                      type="button"
-                      onClick={() => { setIsOpen(false); onSettings("profiles"); }}
-                      className="flex h-8 w-full cursor-pointer items-center gap-2 rounded-lg px-2 text-left text-body-regular text-text-secondary outline-none transition-colors hover:bg-background-primary-hover hover:text-text-primary focus-visible:bg-background-primary-hover"
-                    >
-                      <RiUserSettingsLine className="size-4 shrink-0" aria-hidden />
-                      <span className="truncate">Kelola profil</span>
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={atLimit}
-                      title={atLimit ? `Maksimal ${maxProfiles} profil. Hapus salah satu untuk menambah.` : undefined}
-                      onClick={() => { setIsOpen(false); onAction?.("Tambah profil"); }}
-                      className="flex h-8 w-full cursor-pointer items-center gap-2 rounded-lg px-2 text-left text-body-regular text-text-secondary outline-none transition-colors hover:bg-background-primary-hover hover:text-text-primary focus-visible:bg-background-primary-hover disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-text-secondary"
-                    >
-                      <RiAddLine className="size-4 shrink-0" aria-hidden />
-                      <span className="truncate">{atLimit ? `Tambah profil (maks. ${maxProfiles})` : "Tambah profil"}</span>
-                    </button>
-                  )}
+                // Switching, adding and removing profiles all live on the picker, so the menu only links to it.
+                <div className="flex w-full flex-col gap-0.5">
+                  <MenuRow
+                    item={{ icon: RiUserSharedLine, label: "Ganti profil" }}
+                    onSelect={() => {
+                      setIsOpen(false);
+                      goTo("/profiles");
+                    }}
+                  />
                   <div className="-mx-2.5 my-1 h-px bg-border-button-default" />
                 </div>
               )}

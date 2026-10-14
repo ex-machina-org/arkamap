@@ -21,8 +21,6 @@ export function AccountMenu() {
         placement="bottom end"
         identity={{ name: me.user.name, role: me.profile?.role ?? "Belum ada profil" }}
         profiles={profileSwitcher.options}
-        onProfileSelect={profileSwitcher.select}
-        maxProfiles={profileSwitcher.maxProfiles}
         onSettings={page => setSettings(page ?? "account")}
         onAction={label => {
           if (label === "Keluar") void logout().catch(cause => toast.error(cause.message));
