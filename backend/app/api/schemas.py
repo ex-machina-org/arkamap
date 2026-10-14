@@ -570,3 +570,94 @@ class BuildingCollection(BaseModel):
     count: int
     by_kind: dict[str, int]
     features: list[BuildingFeature]
+
+
+class ClassificationStats(BaseModel):
+    building: dict[str, int]
+    quake_urgency: dict[str, int]
+    total_buildings: int
+    total_quakes_classified: int
+
+
+class HistoryBucket(BaseModel):
+    bucket: datetime
+    urgency: str | None = None
+    count: int
+
+
+class EventHistory(BaseModel):
+    metric: Literal["quake", "hotspot", "disaster"]
+    bucket: Literal["day", "week"]
+    buckets: list[HistoryBucket]
+
+
+class SourceFreshness(BaseModel):
+    id: str
+    title: str
+    cadence: str
+    is_modelled: bool
+    last_ok_at: datetime | None = None
+    stale: bool = Field(description="true = lebih lama dari jadwal pembaruannya")
+
+
+class EventSummary(BaseModel):
+    count: int
+    max_value: float | None = Field(None, description="quake: magnitudo terbesar; hotspot: FRP tertinggi (MW)")
+
+
+class RegionReport(BaseModel):
+    generated_at: datetime
+    days: int = Field(description="rentang kejadian yang dirangkum")
+    region: RegionSummary
+    events: dict[Literal["quake", "hotspot", "disaster"], EventSummary]
+    disasters: list[DisasterProps] = Field(description="bencana GDACS/EONET di wilayah ini")
+    alerts: list[RegionAlert] = Field(description="indikator wilayah ini di atas ambang perhatian")
+    sources: list[SourceFreshness]
+
+
+class IsochroneFeature(BaseModel):
+    type: Literal["Feature"] = "Feature"
+    properties: dict[str, Any]
+    geometry: Geometry
+
+
+class Isochrone(BaseModel):
+    type: Literal["FeatureCollection"] = "FeatureCollection"
+    features: list[IsochroneFeature]
+    area_km2: float | None = Field(None, description="luas area terjangkau")
+    minutes: int
+    mode: Literal["auto", "pedestrian", "bicycle"]
+    cached: bool
+    created_at: datetime | None = Field(None, description="waktu hasil cache dibuat")
+
+
+class IndicatorTable(BaseModel):
+    level: Literal["provinsi", "kabkota"]
+    parent: str | None = None
+    columns: list[IndicatorInfo]
+    rows: list[dict[str, Any]] = Field(description="satu baris per wilayah: region_id, name, level, parent_id, "
+                                                   "population, lalu nilai terbaru tiap metrik di `columns`")
+    total: int = Field(description="jumlah wilayah yang cocok sebelum limit/offset")
+    limit: int
+    offset: int
+
+
+class HistoryPoint(BaseModel):
+    period: date
+    value: float
+    is_modelled: bool
+
+
+class HistorySeries(BaseModel):
+    region_id: str
+    name: str
+    metric: str
+    label: str
+    unit: str
+    internal: bool
+    source_id: str | None = None
+    points: list[HistoryPoint]
+
+
+class IndicatorHistory(BaseModel):
+    series: list[HistorySeries]

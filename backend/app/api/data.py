@@ -2,19 +2,25 @@
 
   /catalog               what exists: every indicator with its coverage and periods,
                          every observation layer, and the endpoint that serves each dataset
+  /indicators            indicators as a region x metric table (JSON or CSV)
+  /indicators/history    one or more regions' values per period
   /observations          any observation layer (power plants, transit stops, quakes, ...) as GeoJSON
 
 Indicators without a metric_def row (humidity_mean, wind_max, wind_direction)
 are included and flagged `internal`: they are stored data, only not map layers
 (see ingest/runner.py).
 """
-from datetime import datetime
+import csv
+import io
+from datetime import date, datetime
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import Response
 
 from ..db import query
 from . import routes
-from .schemas import Catalog, ErrorResponse, ObservationCollection
+from .schemas import Catalog, ErrorResponse, IndicatorHistory, IndicatorTable, ObservationCollection
 
 router = APIRouter()
 # An explicit description: FastAPI otherwise uses Python's phrase for 422, which
@@ -84,6 +90,94 @@ def catalog() -> dict:
             "observations": [{**layer, "endpoint": f"/api/observations?metric={layer['metric']}"}
                              for layer in layers],
             "datasets": _DATASETS}
+
+
+def _metrics(requested: str | None, level: str) -> list[dict]:
+    """The table's columns: the requested metrics in that order, else every metric with data at this level."""
+    known = {m["metric"]: m for m in _indicators()}
+    if requested:
+        names = [m.strip() for m in requested.split(",") if m.strip()]
+        if unknown := [m for m in names if m not in known]:
+            raise HTTPException(422, f"metrik tidak dikenal: {', '.join(unknown)}; lihat /api/catalog")
+        return [known[m] for m in names]
+    return [m for m in known.values() if m[level]]
+
+
+@router.get("/indicators", response_model=IndicatorTable,
+            responses={200: {"content": {"text/csv": {}}}, 422: _INVALID})
+def indicator_table(
+    level: Literal["provinsi", "kabkota"] = "provinsi",
+    parent: str | None = Query(None, description="hanya kab/kota di provinsi ini (id provinsi)"),
+    metrics: str | None = Query(None, description="daftar metrik dipisah koma; kosong = semua yang ada datanya"),
+    q: str | None = Query(None, max_length=100, description="cari nama wilayah"),
+    sort: str = Query("name", description="'name' atau nama metrik"),
+    order: Literal["asc", "desc"] = "asc",
+    limit: int = Query(100, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+    format: Literal["json", "csv"] = "json",
+) -> dict | Response:
+    """Latest value of each metric per region, one row per region: for tables,
+    dashboards and CSV export. Values are flat in each row, keyed by metric;
+    `columns` gives each metric's label and unit. Older periods: /indicators/history."""
+    cols = _metrics(metrics, level)
+    names = [c["metric"] for c in cols]
+    if sort != "name" and sort not in names:
+        raise HTTPException(422, f"sort harus 'name' atau salah satu metrik tabel: {', '.join(names)}")
+    direction = "DESC" if order == "desc" else "ASC"   # from a Literal: safe to format into the SQL
+    rows = query(f"""
+        WITH r AS (
+            SELECT id, name, level, parent_id, population FROM region
+            WHERE level = %(level)s AND (%(parent)s::text IS NULL OR parent_id = %(parent)s)
+              AND (%(q)s::text IS NULL OR name ILIKE %(q)s)),
+        v AS (
+            SELECT region_id, jsonb_object_agg(metric, value) AS vals FROM indicator_latest
+            WHERE metric = ANY(%(names)s) AND region_id IN (SELECT id FROM r) GROUP BY region_id)
+        SELECT r.*, coalesce(v.vals, '{{}}'::jsonb) AS vals, count(*) OVER () AS total
+        FROM r LEFT JOIN v ON v.region_id = r.id
+        ORDER BY CASE WHEN %(sort)s = 'name' THEN NULL ELSE (v.vals ->> %(sort)s)::float END {direction} NULLS LAST,
+                 r.name {direction}
+        LIMIT %(limit)s OFFSET %(offset)s""",
+        {"level": level, "parent": parent, "q": f"%{q}%" if q else None, "names": names, "sort": sort,
+         "limit": limit, "offset": offset})
+    flat = [{"region_id": r["id"], "name": r["name"], "level": r["level"], "parent_id": r["parent_id"],
+             "population": r["population"], **{m: r["vals"].get(m) for m in names}} for r in rows]
+    if format == "csv":
+        buf = io.StringIO()
+        w = csv.DictWriter(buf, fieldnames=["region_id", "name", "level", "parent_id", "population", *names])
+        w.writeheader()
+        w.writerows(flat)
+        return Response(buf.getvalue(), media_type="text/csv; charset=utf-8",
+                        headers={"Content-Disposition": f'attachment; filename="indikator-{level}.csv"'})
+    return {"level": level, "parent": parent, "columns": cols, "rows": flat,
+            "total": rows[0]["total"] if rows else 0, "limit": limit, "offset": offset}
+
+
+@router.get("/indicators/history", response_model=IndicatorHistory, responses={422: _INVALID})
+def indicator_history(
+    region_id: str = Query(..., description="id wilayah, atau beberapa dipisah koma (maks. 20)"),
+    metrics: str | None = Query(None, description="daftar metrik dipisah koma; kosong = semua"),
+    since: date | None = None,
+    until: date | None = None,
+) -> dict:
+    """Each region's values per period, one series per region and metric, oldest first: for line charts."""
+    ids = [r.strip() for r in region_id.split(",") if r.strip()]
+    if not 1 <= len(ids) <= 20:
+        raise HTTPException(422, "region_id: 1 sampai 20 wilayah")
+    names = [m.strip() for m in metrics.split(",") if m.strip()] if metrics else None
+    rows = query("""
+        SELECT i.region_id, r.name, i.metric, coalesce(m.label, i.metric) AS label, i.unit,
+               m.metric IS NULL AS internal, i.period, i.value, i.is_modelled, i.source_id
+        FROM indicator i JOIN region r ON r.id = i.region_id LEFT JOIN metric_def m ON m.metric = i.metric
+        WHERE i.region_id = ANY(%(ids)s) AND (%(names)s::text[] IS NULL OR i.metric = ANY(%(names)s))
+          AND (%(since)s::date IS NULL OR i.period >= %(since)s) AND (%(until)s::date IS NULL OR i.period <= %(until)s)
+        ORDER BY i.region_id, i.metric, i.period""",
+        {"ids": ids, "names": names, "since": since, "until": until})
+    series: dict[tuple, dict] = {}
+    for r in rows:
+        s = series.setdefault((r["region_id"], r["metric"]), {
+            k: r[k] for k in ("region_id", "name", "metric", "label", "unit", "internal", "source_id")} | {"points": []})
+        s["points"].append({"period": r["period"], "value": r["value"], "is_modelled": r["is_modelled"]})
+    return {"series": list(series.values())}
 
 
 @router.get("/observations", response_model=ObservationCollection,

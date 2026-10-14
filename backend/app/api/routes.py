@@ -13,7 +13,7 @@ from fastapi import APIRouter, HTTPException, Query
 
 from ..db import query, query_one
 from .schemas import (
-    DisasterCollection, ErrorResponse, HealthReport, HotspotCollection,
+    ClassificationStats, DisasterCollection, ErrorResponse, EventHistory, HealthReport, HotspotCollection,
     LevelInfo, MapLayer, MetricDef, Notifications, QuakeCollection, RegionRef, RegionSummary,
     MarineForecast, ScoreResponse, SolarForecast, ScoreWeights, SourceInfo, WarningCollection, WindGrid,
 )
@@ -539,6 +539,67 @@ def composite_score(body: ScoreWeights) -> dict:
         "score_meaning": SCORE_MEANING,
         "count": len(out),
         "results": out,
+    }
+
+
+@router.get("/stats/classification", response_model=ClassificationStats)
+def classification_stats() -> dict:
+    """Building classes (from OSM tags) and quake urgency (rules in
+    ingest/seismic.urgency), counted from what ingest already stored."""
+    building = {
+        r["kind"]: r["n"]
+        for r in query("SELECT kind, COUNT(*) AS n FROM building GROUP BY kind")
+    }
+    quake_urgency = {
+        r["urgency"]: r["n"]
+        for r in query(
+            """
+            SELECT attrs->>'urgency' AS urgency, COUNT(*) AS n
+            FROM observation
+            WHERE metric = 'quake' AND attrs ? 'urgency'
+            GROUP BY 1
+            """
+        )
+    }
+    return {
+        "building": building,
+        "quake_urgency": quake_urgency,
+        "total_buildings": sum(building.values()),
+        "total_quakes_classified": sum(quake_urgency.values()),
+    }
+
+
+@router.get("/history/events", response_model=EventHistory)
+def event_history(
+    metric: str = Query(..., pattern="^(quake|hotspot|disaster)$"),
+    days: int = Query(90, ge=1, le=3650),
+    bucket: str = Query("day", pattern="^(day|week)$"),
+) -> dict:
+    """Event counts over time, split by urgency where it applies.
+
+    Only quakes carry an urgency; hotspot and disaster rows come back with
+    a null urgency key, so the frontend renders a single bar per bucket.
+    """
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+    rows = query(
+        """
+        SELECT date_trunc(%s, observed_at) AS bucket,
+               attrs->>'urgency' AS urgency,
+               COUNT(*) AS n
+        FROM observation
+        WHERE metric = %s AND observed_at >= %s AND """ + counted(metric) + """
+        GROUP BY 1, 2
+        ORDER BY 1
+        """,
+        (bucket, metric, since),
+    )
+    return {
+        "metric": metric,
+        "bucket": bucket,
+        "buckets": [
+            {"bucket": r["bucket"].isoformat(), "urgency": r["urgency"], "count": r["n"]}
+            for r in rows
+        ],
     }
 
 

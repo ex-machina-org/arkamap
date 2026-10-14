@@ -12,6 +12,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from .api.buildings import router as buildings_router
 from .api.clients import router as clients_router
 from .api.data import router as data_router
+from .api.isochrone import router as isochrone_router
+from .api.reports import router as reports_router
 from .api.public import router as public_router
 from .api.routes import router
 from .api.users import router as users_router
@@ -104,6 +106,8 @@ app.add_middleware(
 app.include_router(router, prefix="/api", tags=["data"])
 app.include_router(data_router, prefix="/api", tags=["data"])
 app.include_router(buildings_router, prefix="/api", tags=["data"])
+app.include_router(reports_router, prefix="/api", tags=["reports"])
+app.include_router(isochrone_router, prefix="/api", tags=["data"])
 app.include_router(users_router, prefix="/api", tags=["users & iot"])
 app.include_router(public_router, prefix="/api", tags=["public"])
 app.include_router(clients_router, prefix="/api", tags=["clients (admin)"])
