@@ -40,3 +40,8 @@ PUBLIC_URL = os.getenv("PUBLIC_URL", "http://localhost:8000").rstrip("/")
 # one of API_KEYS). Off in local dev so tests and curl work without keys;
 # turn it on wherever the API is exposed.
 REQUIRE_API_KEY = os.getenv("REQUIRE_API_KEY", "0") == "1"
+
+# IoT payloads must carry "nama" and "waktu". Off during the transition: a
+# reading without them is stored (nama -> "default", waktu -> arrival time)
+# and the device gets a warning; set IOT_STRICT_PAYLOAD=1 to reject instead.
+IOT_STRICT_PAYLOAD = os.getenv("IOT_STRICT_PAYLOAD", "0") == "1"

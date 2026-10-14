@@ -51,6 +51,14 @@ services:
       retries: 30
     restart: unless-stopped
 
+  # Stores readings published over MQTT through the same path as HTTP ingest.
+  mqtt-bridge:
+    <<: *backend
+    command: ["python", "-m", "app.iot.mqtt_bridge"]
+    depends_on:
+      api: { condition: service_healthy }
+    restart: unless-stopped
+
   # One-shot: downloads public datasets into an empty database, then exits.
   seed:
     <<: *backend

@@ -24,6 +24,7 @@ from .config import CORS_ORIGINS
 from .ingest.buildings_prewarm import run_forever as run_buildings_forever, start_background as start_buildings_background
 from .ingest import bmkg
 from .ingest.runner import run_all, seed_registry
+from .iot.layout import retry_rule_layouts
 
 logging.basicConfig(
     level=logging.INFO,
@@ -62,6 +63,11 @@ async def lifespan(app: FastAPI):
         # BMKG warnings only live a few hours; quakes should show up fast
         scheduler.add_job(
             bmkg.run, IntervalTrigger(minutes=15), id="bmkg", replace_existing=True,
+            max_instances=1, next_run_time=datetime.now(),
+        )
+        # sensor fields laid out/categorised by rules while the AI was down
+        scheduler.add_job(
+            retry_rule_layouts, IntervalTrigger(minutes=30), id="iot_retry", replace_existing=True,
             max_instances=1, next_run_time=datetime.now(),
         )
         scheduler.start()

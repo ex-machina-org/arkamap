@@ -1,11 +1,12 @@
-"""Accounts, profiles and IoT devices."""
+"""Accounts, profiles, IoT devices and sensor data."""
 import logging
 import time
 from collections import defaultdict, deque
 
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
+from fastapi.concurrency import run_in_threadpool
 from psycopg import errors
 from psycopg.types.json import Jsonb
 from pydantic import BaseModel, Field
@@ -15,11 +16,15 @@ from ..config import ADMIN_EMAILS, IDN_BBOX
 from .. import fields, modes
 from ..db import conn, execute, query, query_one
 from ..iot import broker
+from ..iot import ingest as iot
 from ..iot import layout as iot_layout
 from ..iot import quickstart
 from ..iot.categories import Category, majority
 from ..iot import relevance
-from .schemas import AuthOut, DeviceCreated, DeviceOut, ErrorResponse, KeyRotated, MeOut, Quickstart, WidgetSpec
+from .schemas import (
+    AuthOut, DeviceAlert, DeviceCreated, DeviceOut, ErrorResponse,
+    IngestOut, KeyRotated, MeOut, Quickstart, WidgetSpec,
+)
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -355,6 +360,20 @@ def list_devices(user: dict = Depends(current_user)) -> list[dict]:
         " WHERE d.user_id = %s AND d.test_expires_at IS NULL ORDER BY d.created_at", (user["id"],))]
 
 
+@router.get("/me/alerts", response_model=list[DeviceAlert], responses={401: {"model": ErrorResponse}})
+def device_alerts(user: dict = Depends(current_user)) -> list[dict]:
+    """The latest alert each of the user's devices reported, "bahaya" first."""
+    return query(
+        """
+        SELECT a.device_id, d.name AS device_name, r.name AS region_name, a.slug AS nama,
+               a.status, a.message, a.category, a.changed_at, a.updated_at
+        FROM device_alert a JOIN device d ON d.id = a.device_id
+        LEFT JOIN region r ON r.id = d.region_id
+        WHERE d.user_id = %s AND d.revoked_at IS NULL
+        ORDER BY a.status = 'bahaya' DESC, a.changed_at DESC
+        """, (user["id"],))
+
+
 @router.patch("/me/devices/{device_id}", response_model=DeviceOut, responses={401: {"model": ErrorResponse}})
 def update_device(device_id: int, body: DeviceUpdate, user: dict = Depends(current_user)) -> dict:
     _own_device(user, device_id)
@@ -472,3 +491,20 @@ def _streams(device_id: int) -> list[dict]:
                     "fields": fs, "reading_count": st["reading_count"],
                     "created_at": st["created_at"], "last_seen_at": st["last_seen_at"]})
     return out
+# ── ingest (HTTP) ───────────────────────────────────────────────────────
+
+
+@router.post("/ingest", status_code=202, response_model=IngestOut,
+             responses={400: {"model": ErrorResponse}, 401: {"model": ErrorResponse}, 429: {"model": ErrorResponse}})
+async def ingest_http(request: Request, x_device_key: str | None = Header(None),
+                      x_api_key: str | None = Header(None),
+                      dry_run: bool = Query(False, description="cek key dan payload tanpa menyimpan")) -> dict:
+    """Same payload as MQTT: {"nama", "kategori", "data": {...}}.
+    Auth: the device's API key in X-API-Key (what the edge proxy expects on
+    every request) or X-Device-Key."""
+    body = await request.body()
+    try:
+        return await run_in_threadpool(iot.ingest, x_device_key or x_api_key, body, "http", dry_run)
+    except iot.Rejected as exc:
+        code = 401 if "API key" in str(exc) else 429 if "terlalu cepat" in str(exc) else 400
+        raise HTTPException(code, str(exc)) from None

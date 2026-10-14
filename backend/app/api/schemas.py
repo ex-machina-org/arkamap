@@ -738,3 +738,32 @@ class KeyRotated(BaseModel):
     api_key: str
     key_prefix: str
     quickstart: Quickstart
+
+
+# ── sensor ingest ─────────────────────────────────────────────────────
+class IngestOut(BaseModel):
+    device_id: int
+    fields: int
+    new_fields: int = Field(description="field yang baru pertama kali dikirim; memicu penataan ulang AI")
+    stream_id: int | None = Field(None, description="tabel data (per \"nama\") tempat kiriman ini masuk")
+    nama: str | None = Field(None, description='nama tabel setelah dinormalkan; "default" bila "nama" kosong')
+    version: int | None = Field(None, description="versi tabel; naik saat kiriman membawa field baru. null = kiriman ulang")
+    warnings: list[str] = Field(default_factory=list, description='data disimpan, tetapi "nama"/"waktu" kurang')
+    duplicate: bool = Field(False, description="true: kiriman ulang, tidak disimpan lagi (tetap 202)")
+    dry_run: bool = Field(False, description="true: hanya dicek, tidak disimpan")
+    keys: list[str] | None = Field(None, description="dry_run: nama field setelah diratakan")
+    alert: Literal["aman", "bahaya"] | None = Field(None, description='status "alert" dari payload, bila dikirim')
+
+
+class DeviceAlert(BaseModel):
+    """The latest alert a device reported for one "nama"; "bahaya" notifies the owner."""
+    device_id: int
+    device_name: str
+    region_name: str | None = None
+    nama: str = Field(description="tabel data (\"nama\") yang membawa alert ini")
+    status: Literal["aman", "bahaya"]
+    message: str | None = Field(None, description='"pesan" dari perangkat, bila ada')
+    category: Literal["kebakaran", "cuaca", "gempa", "bencana", "panas"] | None = Field(
+        None, description='"kategori" dari perangkat; kosong = alert alat umum')
+    changed_at: datetime = Field(description="saat status terakhir berubah")
+    updated_at: datetime = Field(description="laporan terakhir dari perangkat")
