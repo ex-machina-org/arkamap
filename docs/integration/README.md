@@ -7,6 +7,8 @@ Cara frontend (`frontend/`) dan backend (`backend/`) Arkamap terhubung. Bentuk s
 | [Matriks endpoint](API_ENDPOINT_MATRIX.md) | Setiap operasi API dan file frontend yang memanggilnya |
 | [Audit kontrak](API_CONTRACT_AUDIT.md) | Kesesuaian kode, `openapi.json`, tipe frontend, dan kontrak tertulis |
 | [Validasi](VALIDATION.md) | Pemeriksaan otomatis dan manual beserta hasil terakhir |
+| [Panduan API](../backend/API.md) dan [IoT](../backend/IOT.md) | Konvensi, contoh request, dan alur perangkat dari sisi backend |
+| [Infrastruktur](../backend/Infra.md) | Layanan, konfigurasi, dan keamanan |
 
 ## Batas browser
 

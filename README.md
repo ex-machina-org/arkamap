@@ -105,6 +105,7 @@ npm run api:check           # kontrak OpenAPI dan tipe TypeScript sesuai backend
 ## Dokumentasi
 
 - [Kontrak API](docs/API_CONTRACT.md) dan [catatan integrasi](docs/integration/README.md): [matriks endpoint](docs/integration/API_ENDPOINT_MATRIX.md), [audit kontrak](docs/integration/API_CONTRACT_AUDIT.md), [validasi](docs/integration/VALIDATION.md)
+- Backend: [panduan API](docs/backend/API.md), [akun dan perangkat IoT](docs/backend/IOT.md), [halaman frontend per endpoint](docs/backend/FRONTEND.md), [komponen agen](docs/backend/VIZ.md), [infrastruktur dan keamanan](docs/backend/Infra.md)
 - [Frontend](docs/frontend/README.md): [arsitektur](docs/frontend/ARCHITECTURE.md), [design system](docs/frontend/DESIGN-SYSTEM.md), [katalog komponen](docs/frontend/COMPONENTS.md), [checklist UI](docs/frontend/UI-CHECKLIST.md)
 - [Aturan visual](DESIGN.md) dan [panduan kontribusi](CONTRIBUTING.md)
 

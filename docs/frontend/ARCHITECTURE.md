@@ -8,7 +8,7 @@ src/app/<route>/page.tsx        route composition, route-local wiring
 src/features/<feature>/        domain components, hooks, data, types, transformations
 src/components/application/    reusable application patterns and shells
 src/components/base/           BoardUI controls
-src/components/ui/             capability gaps and legacy JOINTS compositions
+src/components/ui/             capability gaps and earlier JOINTS compositions
 src/components/foundations/    shared visual foundations
 src/hooks/                     shared reactive behavior
 src/lib/, src/utils/           shared pure utilities and compatibility helpers
@@ -22,9 +22,9 @@ The `app` directory is a Vite route convention, not a Next.js runtime. Current r
 
 Pages may consume features and shared layers. Features may consume shared layers but must not import pages or another feature's internal implementation. Shared components must not import features or pages. Base controls and foundations must not depend on application components. Shared hooks/utilities must not depend on product routes, features, or components.
 
-`npm run architecture:check` resolves local imports with TypeScript's resolver, including aliases, relative imports, re-exports, and literal dynamic imports. Its named legacy exception is `ui/kpi-card.tsx -> application/dashboard/stat-cards.tsx`: this existing composition predates the folder contract. Do not add exceptions for convenience. Fix the responsibility or document a necessary migration explicitly.
+`npm run architecture:check` resolves local imports with TypeScript's resolver, including aliases, relative imports, re-exports, and literal dynamic imports. Its one named exception is `ui/kpi-card.tsx -> application/dashboard/stat-cards.tsx`: this existing composition predates the folder contract. Do not add exceptions for convenience. Fix the responsibility or document a necessary migration explicitly.
 
-`components/ui` currently contains both primitives and composites. It may compose BoardUI base controls. New reusable composites belong in `components/application`, rather than growing the legacy mixed layer.
+`components/ui` currently contains both primitives and composites. It may compose BoardUI base controls. New reusable composites belong in `components/application`, rather than growing the mixed layer.
 
 ## Feature organization
 
