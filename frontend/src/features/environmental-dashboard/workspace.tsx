@@ -1,15 +1,13 @@
 "use client";
 
-import { DeviceForm } from "./device-form";
-import { DeviceDetail } from "./device-detail/device-detail";
-import { DeviceTestLab } from "./device-test/device-test";
+import { navigate } from "@/lib/navigate";
 import { useDevices } from "./device-api";
 import { ApiDashboard } from "./components/api-dashboard";
 import { useSession } from "@/hooks/use-session";
 import { greeting } from "./greeting";
 import { useProfileSwitcher } from "@/hooks/use-profile-switcher";
-import { useEffect, useMemo, useState } from "react";
-import { MapController, type MapPreset } from "./map-controller";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import type { MapPreset } from "./map-controller";
 import {
   RiAddLine,
   RiFlaskLine,
@@ -45,7 +43,6 @@ import { dangerItems } from "./alert-level";
 import { DangerAlertDialog } from "./components/danger-alert-dialog";
 import { DeviceRegistry } from "./device-registry";
 import { NAVIGATION_ITEMS } from "./navigation";
-import { JevAssistantPanel } from "@/components/application/jev-chat/jev-assistant-panel";
 
 import { Button } from "@/components/base/buttons/button";
 import { ButtonGroup, ButtonGroupItem } from "@/components/base/buttons/button-group";
@@ -101,6 +98,13 @@ import {
   type ModeType,
 } from "./environmental-data";
 import { KodamaMark } from "@/components/foundations/brand/kodama-icon";
+
+// Loaded when shown: these are large and only one of them is on screen at a time.
+const DeviceForm = lazy(() => import("./device-form").then(m => ({ default: m.DeviceForm })));
+const DeviceDetail = lazy(() => import("./device-detail/device-detail").then(m => ({ default: m.DeviceDetail })));
+const DeviceTestLab = lazy(() => import("./device-test/device-test").then(m => ({ default: m.DeviceTestLab })));
+const MapController = lazy(() => import("./map-controller").then(m => ({ default: m.MapController })));
+const JevAssistantPanel = lazy(() => import("@/components/application/jev-chat/jev-assistant-panel").then(m => ({ default: m.JevAssistantPanel })));
 
 
 const NOTIFICATIONS: AppShellNotification[] = [
@@ -374,7 +378,7 @@ export default function EnvironmentalDashboardWorkspace({ devicePage, deviceId, 
       <JointsAppShell
         navigation={NAVIGATION_ITEMS.map((item) => item.id === "sensors" ? { ...item, badge: String(deviceCount) } : item.id === "alerts" && dangerAlerts.length ? { ...item, tone: "danger" as const, badge: dangerAlerts.length > 99 ? "99+" : String(dangerAlerts.length) } : item)}
         activeId={activeNav}
-        assistant={!preview && assistantOpen ? <JevAssistantPanel onClose={() => setAssistantOpen(false)} /> : undefined}
+        assistant={!preview && assistantOpen ? <Suspense fallback={null}><JevAssistantPanel onClose={() => setAssistantOpen(false)} /></Suspense> : undefined}
         onAskAssistant={preview ? undefined : () => setAssistantOpen(true)}
         identity={preview ? undefined : { name: session.me?.user.name ?? "Pengunjung", role: session.me?.profile?.role ?? "Map publik" }}
         onAccountAction={preview ? undefined : label => { if (label === "Keluar" && session.me) void session.logout().catch(cause => toast.error(cause.message)); else window.dispatchEvent(new Event("arkamap-profile-open")); }}
@@ -389,9 +393,9 @@ export default function EnvironmentalDashboardWorkspace({ devicePage, deviceId, 
         }}
         onNavigate={(id) => {
           if (!preview && ["forensics", "simulator"].includes(id)) { toast.info("Fitur masih Preview", { description: "Backend belum menyediakan alur operasional fitur ini." }); return; }
-          if (!preview && id === "reports") { window.location.assign("/map"); return; }
-          if (id === "components") window.location.href = "/design-system";
-          else if (id === "map" || id === "siri-map") window.location.href = "/map";
+          if (!preview && id === "reports") { navigate("/map"); return; }
+          if (id === "components") navigate("/design-system");
+          else if (id === "map" || id === "siri-map") navigate("/map");
           else if (id === "forensics") setForensicSheetOpen(true);
           else if (id === "reports") setReportModalOpen(true);
           else if (id === "simulator") {
@@ -400,10 +404,10 @@ export default function EnvironmentalDashboardWorkspace({ devicePage, deviceId, 
             });
           }
           else if (id === "alerts" && dangerAlerts.length) {
-            if (devicePage || page === "sources") window.location.assign("/alerts?bahaya");
+            if (devicePage || page === "sources") navigate("/alerts?bahaya");
             else { setActiveNav("alerts"); setShowAllDangers(true); }
           }
-          else if (devicePage || page) window.location.assign(NAVIGATION_ITEMS.find(item => item.id === id)?.href ?? (id === "sensors" ? "/devices" : "/dashboard"));
+          else if (devicePage || page) navigate(NAVIGATION_ITEMS.find(item => item.id === id)?.href ?? (id === "sensors" ? "/devices" : "/dashboard"));
           else setActiveNav(id);
         }}
         title={devicePage === "new" ? "Tambah Alat" : devicePage === "test" ? "Uji Alat" : devicePage === "detail" ? "Detail Alat" : activeNav === "sensors" ? "Perangkat IoT & BYOD" : activeNav === "sources" ? "Sumber Data" : activeNav === "alerts" ? "Pemantauan & Peringatan" : !preview && session.me ? greeting(session.me.user.name) : "Environmental Command Center"}
@@ -417,10 +421,10 @@ export default function EnvironmentalDashboardWorkspace({ devicePage, deviceId, 
         }
         actions={<>{devicePage === "new" || devicePage === "detail" || devicePage === "test" ? undefined : activeNav === "sensors" ? (
           <div className="flex items-center gap-2">
-            <Button variant="secondary" size="small" leadingIcon={RiFlaskLine} onClick={() => window.location.assign("/devices/test")}>
+            <Button variant="secondary" size="small" leadingIcon={RiFlaskLine} onClick={() => navigate("/devices/test")}>
               Uji Alat
             </Button>
-            <Button variant="primary" size="small" leadingIcon={RiAddLine} onClick={() => window.location.assign("/devices/new")}>
+            <Button variant="primary" size="small" leadingIcon={RiAddLine} onClick={() => navigate("/devices/new")}>
               Tambah Alat
             </Button>
           </div>
@@ -452,9 +456,9 @@ export default function EnvironmentalDashboardWorkspace({ devicePage, deviceId, 
             group: "Analisis",
             onSelect: () => setForensicSheetOpen(true),
           },
-        ] : [{ id: "cmd-map", label: "Buka pantauan dan laporan wilayah", group: "Navigasi", onSelect: () => window.location.assign("/map") }]}
+        ] : [{ id: "cmd-map", label: "Buka pantauan dan laporan wilayah", group: "Navigasi", onSelect: () => navigate("/map") }]}
       >
-        {devicePage === "new" ? <DeviceForm /> : devicePage === "test" ? <DeviceTestLab /> : devicePage === "detail" && deviceId !== undefined ? <DeviceDetail id={deviceId} /> : activeNav === "sensors" ? <DeviceRegistry /> : activeNav === "sources" ? <DataSources /> : activeNav === "alerts" ? <AlertsMonitor deviceAlerts={deviceAlerts} regional={regionalAlerts} region={alertRegion} prefs={alertPrefs} /> : !preview ? <ApiDashboard /> : (
+        {devicePage === "new" ? <Suspense fallback={null}><DeviceForm /></Suspense> : devicePage === "test" ? <Suspense fallback={null}><DeviceTestLab /></Suspense> : devicePage === "detail" && deviceId !== undefined ? <Suspense fallback={null}><DeviceDetail id={deviceId} /></Suspense> : activeNav === "sensors" ? <DeviceRegistry /> : activeNav === "sources" ? <DataSources /> : activeNav === "alerts" ? <AlertsMonitor deviceAlerts={deviceAlerts} regional={regionalAlerts} region={alertRegion} prefs={alertPrefs} /> : !preview ? <ApiDashboard /> : (
         <div className="flex flex-col gap-3">
           {/* 2. Sleek Filter Bar with SegmentedControl & Kbd */}
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border-button-default bg-background-primary-default p-2 shadow-2xs">
@@ -590,7 +594,7 @@ export default function EnvironmentalDashboardWorkspace({ devicePage, deviceId, 
                   <div className="relative h-[380px] w-full overflow-hidden rounded-b-xl bg-background-full">
                     <Map center={[108.5, -2.5]} zoom={4.8} className="size-full">
                       <MapControls showZoom showCompass showFullscreen position="top-right" />
-                      <MapController incident={activeIncident} preset={mapPreset} />
+                      <Suspense fallback={null}><MapController incident={activeIncident} preset={mapPreset} /></Suspense>
 
                       {filteredIncidents.map((incident) => {
                         if (incident.hazardType === "hotspot" && !showHotspots) return null;
@@ -980,7 +984,7 @@ export default function EnvironmentalDashboardWorkspace({ devicePage, deviceId, 
         onClose={closeDangers}
         onOpenAlerts={() => {
           closeDangers();
-          if (devicePage || page) window.location.assign("/alerts");
+          if (devicePage || page) navigate("/alerts");
           else setActiveNav("alerts");
         }}
       />

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { navigate } from "@/lib/navigate";
 import { RiSensorLine, RiSparklingFill } from "@remixicon/react";
 import { Announcement } from "@/components/base/announcement/announcement";
 import { Button } from "@/components/base/buttons/button";
@@ -27,7 +28,7 @@ export function CurationAnnouncement({ view }: { view: DashboardView }) {
           <ul className="flex flex-wrap gap-2">{view.unsupported.map(item => <li key={item}><Chip variant="subtle" color="yellow">{item}</Chip></li>)}</ul>
         </div>}
         <DialogFooter>
-          {!!view.unsupported.length && <Button variant="secondary" leadingIcon={RiSensorLine} onClick={() => window.location.assign("/devices/new")}>Pasang sensor sendiri</Button>}
+          {!!view.unsupported.length && <Button variant="secondary" leadingIcon={RiSensorLine} onClick={() => navigate("/devices/new")}>Pasang sensor sendiri</Button>}
           <Button onClick={() => setOpen(false)}>Tutup</Button>
         </DialogFooter>
       </DialogContent>
