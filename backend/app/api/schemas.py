@@ -1002,3 +1002,35 @@ class Dashboard(BaseModel):
     ours: OurData | None
     view: DashboardView | None = Field(None, description="tampilan sesuai bidang user: layer peta, kejadian, peringkat, peringatan")
     devices: list[DeviceDashboard]
+
+
+# ── community and moderation ──────────────────────────────────────────
+class CommunityDevice(BaseModel):
+    id: int
+    name: str
+    category: str
+    region_id: str | None = None
+    region_name: str | None = None
+    lat: float | None = None
+    lon: float | None = None
+    layout: list[WidgetSpec] | None = None
+    last_seen_at: datetime | None = None
+    latest_at: datetime | None = None
+    latest: dict[str, Any] = Field(description="nilai terakhir per field (field tersembunyi tidak disertakan)")
+
+
+class ModerationItem(DeviceOut):
+    owner_email: str
+    owner_name: str
+    readings: int
+    latest: dict[str, Any] | None = None
+
+
+class ModerationResult(BaseModel):
+    device_id: int
+    community_status: Literal["approved", "rejected"]
+
+
+class PasswordReset(BaseModel):
+    user_id: int
+    temporary_password: str = Field(description="HANYA ditampilkan sekali; berikan ke user lewat jalur pribadi")

@@ -1,4 +1,4 @@
-"""Accounts, profiles, IoT devices, sensor data and dashboards."""
+"""Accounts, profiles, IoT devices, sensor data, dashboards and community sharing."""
 import logging
 import time
 from collections import defaultdict, deque
@@ -12,7 +12,8 @@ from psycopg import errors
 from psycopg.types.json import Jsonb
 from pydantic import BaseModel, Field
 
-from ..auth import current_user, hash_password, make_token, new_device_key, verify_password
+from ..auth import (admin_user, current_user, hash_password, make_token, new_device_key, temp_password,
+                    verify_password)
 from ..config import ADMIN_EMAILS, IDN_BBOX
 from .. import fields, modes
 from ..db import conn, execute, query, query_one
@@ -24,8 +25,9 @@ from ..iot.categories import Category, majority
 from ..iot import relevance
 from . import fieldview, routes
 from .schemas import (
-    AuthOut, Dashboard, DeviceAlert, DeviceCreated, DeviceEvent, DeviceOut, ErrorResponse,
-    IngestOut, KeyRotated, MeOut, Quickstart, Readings, ReadingsDeleted, Stream, WidgetSpec,
+    AuthOut, CommunityDevice, Dashboard, DeviceAlert, DeviceCreated, DeviceEvent, DeviceOut, ErrorResponse,
+    IngestOut, KeyRotated, MeOut, ModerationItem, ModerationResult, PasswordReset, Quickstart, Readings,
+    ReadingsDeleted, Stream, UserOut, WidgetSpec,
 )
 
 log = logging.getLogger(__name__)
@@ -111,6 +113,11 @@ class ReadingsDelete(BaseModel):
 class PasswordChange(BaseModel):
     old_password: str = Field(max_length=128)
     new_password: str = Field(min_length=8, max_length=128)
+
+
+class ModerateIn(BaseModel):
+    approve: bool
+    note: str | None = Field(None, max_length=500)
 
 
 # ── helpers ─────────────────────────────────────────────────────────────
@@ -802,3 +809,91 @@ async def ingest_http(request: Request, x_device_key: str | None = Header(None),
     except iot.Rejected as exc:
         code = 401 if "API key" in str(exc) else 429 if "terlalu cepat" in str(exc) else 400
         raise HTTPException(code, str(exc)) from None
+
+
+# ── community ───────────────────────────────────────────────────────────
+
+
+@router.get("/community/devices", response_model=list[CommunityDevice])
+def community_devices(category: str | None = None, region_id: str | None = None) -> list[dict]:
+    """Approved community devices with their latest reading. Public."""
+    rows = query(
+        f"""
+        SELECT {_DEVICE_COLS}, last.latest_at, last.latest
+        FROM device d LEFT JOIN region r ON r.id = d.region_id
+        LEFT JOIN LATERAL (SELECT MAX(last_seen) AS latest_at, jsonb_object_agg(key, sample) AS latest
+                           FROM device_field f WHERE f.device_id = d.id) last ON TRUE
+        WHERE d.visibility = 'community' AND d.community_status = 'approved' AND d.revoked_at IS NULL
+          AND (%s::text IS NULL OR d.category = %s)
+          AND (%s::text IS NULL OR d.region_id = %s OR r.parent_id = %s)
+        ORDER BY d.last_seen_at DESC NULLS LAST
+        """, (category, category, region_id, region_id, region_id))
+    out = []
+    for d in rows:
+        hidden = {w["field"] for w in (d["layout"] or []) if w.get("hidden")}
+        d["latest"] = {k: v for k, v in (d["latest"] or {}).items() if k not in hidden}
+        out.append({k: v for k, v in d.items()
+                    if k not in ("key_prefix", "community_note", "layout_stale")})
+    return out
+
+
+@router.get("/community/devices/{device_id}/readings", response_model=Readings)
+def community_readings(device_id: int, field: str | None = None,
+                       hours: int = Query(24, ge=1, le=24 * 30),
+                       limit: int = Query(500, ge=1, le=5000)) -> dict:
+    if not query_one("SELECT 1 FROM device WHERE id = %s AND visibility = 'community'"
+                     " AND community_status = 'approved'", (device_id,)):
+        raise HTTPException(404, "perangkat komunitas tidak ditemukan")
+    return _readings(device_id, field, hours, limit)
+
+
+# ── moderation (admin) ──────────────────────────────────────────────────
+# Not under /api/admin/*: Caddy blocks that path for the ingest triggers.
+
+
+@router.get("/moderation/users", response_model=list[UserOut])
+def find_users(q: str | None = Query(None, min_length=2, description="cari email atau nama"),
+               limit: int = Query(50, ge=1, le=500), _: dict = Depends(admin_user)) -> list[dict]:
+    return query("SELECT id, email, name, is_admin FROM app_user"
+                 " WHERE %(q)s::text IS NULL OR email ILIKE '%%' || %(q)s || '%%'"
+                 " OR name ILIKE '%%' || %(q)s || '%%' ORDER BY id LIMIT %(limit)s",
+                 {"q": q, "limit": limit})
+
+
+@router.post("/moderation/users/{user_id}/reset-password", response_model=PasswordReset,
+             responses={404: {"model": ErrorResponse}})
+def reset_password(user_id: int, _: dict = Depends(admin_user)) -> dict:
+    """For a user who forgot their password: sets a random temporary one
+    (returned ONCE; hand it over privately) and logs out all their sessions.
+    They should change it with POST /me/password after logging in."""
+    if not query_one("SELECT 1 FROM app_user WHERE id = %s", (user_id,)):
+        raise HTTPException(404, "user tidak ditemukan")
+    pw = temp_password()
+    _set_password(user_id, pw)
+    return {"user_id": user_id, "temporary_password": pw}
+
+
+@router.get("/moderation/community", response_model=list[ModerationItem])
+def pending_community(status: str = Query("pending", pattern="^(pending|approved|rejected)$"),
+                      _: dict = Depends(admin_user)) -> list[dict]:
+    rows = query(
+        f"""
+        SELECT {_DEVICE_COLS}, u.email AS owner_email, u.name AS owner_name,
+               (SELECT COUNT(*) FROM sensor_reading s WHERE s.device_id = d.id) AS readings,
+               (SELECT data FROM sensor_reading s WHERE s.device_id = d.id
+                ORDER BY received_at DESC LIMIT 1) AS latest
+        FROM device d JOIN app_user u ON u.id = d.user_id LEFT JOIN region r ON r.id = d.region_id
+        WHERE d.visibility = 'community' AND d.community_status = %s
+        ORDER BY d.created_at
+        """, (status,))
+    return [_public(r) for r in rows]
+
+
+@router.post("/moderation/community/{device_id}", response_model=ModerationResult)
+def moderate(device_id: int, body: ModerateIn, _: dict = Depends(admin_user)) -> dict:
+    n = execute("UPDATE device SET community_status = %s, community_note = %s"
+                " WHERE id = %s AND visibility = 'community'",
+                ("approved" if body.approve else "rejected", body.note, device_id))
+    if not n:
+        raise HTTPException(404, "tidak ada pengajuan komunitas untuk perangkat ini")
+    return {"device_id": device_id, "community_status": "approved" if body.approve else "rejected"}
