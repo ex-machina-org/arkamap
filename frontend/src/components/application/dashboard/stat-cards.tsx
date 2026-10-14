@@ -38,7 +38,7 @@ type IconComponent = ComponentType<{
   "aria-hidden"?: boolean | "true" | "false";
 }>;
 
-export type StatCardsVariant = "plain" | "footer";
+export type StatCardsVariant = "plain" | "footer" | "breakdown";
 
 /** Tint of the footer variant's gradient icon tile. */
 export type StatTone = "blue" | "orange" | "purple" | "pink" | "sky" | "emerald";
@@ -55,7 +55,11 @@ export type Stat = {
   caption?: string;
   /** Footer variant: shows an info glyph with this text on hover. */
   hint?: string;
+  /** Breakdown variant: how the value divides, drawn as a split bar with a count per part. */
+  breakdown?: StatPart[];
 };
+
+export type StatPart = { label: string; value: number; tone: "danger" | "warning" | "success" | "neutral" };
 
 const DEFAULT_STATS: Stat[] = [
   { icon: RiGroupLine, label: "Customers", value: "14,592", delta: "+5.3%", deltaColor: "lime" },
@@ -205,6 +209,43 @@ export function StatIconTile({ icon: Icon, tone = "blue", size = "md", className
   );
 }
 
+const PART_TONES: Record<StatPart["tone"], string> = {
+  danger: "bg-status-solid-danger",
+  warning: "bg-status-solid-warning",
+  success: "bg-status-solid-success",
+  neutral: "bg-status-solid-neutral",
+};
+
+/** A compact card: the value, a bar split by its parts, and each part's count underneath. */
+function BreakdownStatCard({ stat }: { stat: Stat }) {
+  const parts = stat.breakdown ?? [];
+  const total = parts.reduce((sum, part) => sum + part.value, 0);
+  return (
+    <section className="flex min-w-0 flex-col gap-3 rounded-2xl bg-background-secondary-default p-4">
+      <div className="flex items-center gap-2.5">
+        <StatIconTile icon={stat.icon} tone={stat.tone} size="sm" />
+        <p className="min-w-0 flex-1 truncate text-body-medium text-text-secondary">{stat.label}</p>
+        {stat.hint && <StatHint label={stat.label} hint={stat.hint} />}
+      </div>
+      <p className="text-display-4-medium whitespace-nowrap text-text-primary tabular-nums">{stat.value}</p>
+      <div className="flex h-2 w-full gap-0.5 overflow-hidden rounded-full bg-background-inner-default" role="img" aria-label={parts.map(part => `${part.label} ${part.value}`).join(", ")}>
+        {total > 0 && parts.filter(part => part.value > 0).map(part => (
+          <span key={part.label} className={cx("h-full min-w-1 first:rounded-l-full last:rounded-r-full", PART_TONES[part.tone])} style={{ flexGrow: part.value, flexBasis: 0 }} />
+        ))}
+      </div>
+      <ul className="flex flex-col gap-1">
+        {parts.map(part => (
+          <li key={part.label} className="flex items-center gap-2 text-body-2-regular text-text-secondary">
+            <span aria-hidden className={cx("size-2 shrink-0 rounded-full", PART_TONES[part.tone])} />
+            <span className="min-w-0 flex-1 truncate">{part.label}</span>
+            <span className="tabular-nums text-text-primary">{part.value}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function FooterStatCard({ stat }: { stat: Stat }) {
   return (
     <section className="flex min-w-0 flex-col rounded-2xl bg-background-secondary-default p-2">
@@ -260,16 +301,18 @@ export function StatCards({
         // row on phones where the plain cards still fit two up.
         columns === 1
           ? "grid-cols-1"
-          : variant === "footer"
+          : variant === "footer" || variant === "breakdown"
             ? "grid-cols-1 sm:grid-cols-2"
             : "grid-cols-2",
-        columns === 4 && (variant === "footer" ? "xl:grid-cols-4" : "lg:grid-cols-4"),
+        columns === 4 && (variant === "footer" || variant === "breakdown" ? "xl:grid-cols-4" : "lg:grid-cols-4"),
         className,
       )}
     >
       {items.slice(0, count ?? items.length).map((stat) =>
         variant === "footer" ? (
           <FooterStatCard key={stat.label} stat={stat} />
+        ) : variant === "breakdown" ? (
+          <BreakdownStatCard key={stat.label} stat={stat} />
         ) : (
           <StatCard key={stat.label} stat={stat} />
         ),
