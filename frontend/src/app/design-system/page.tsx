@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { RiArrowLeftLine, RiCommandLine, RiLoginBoxLine, RiMoonLine, RiSearchLine, RiSunLine } from "@remixicon/react";
+import { RiCommandLine, RiLoginBoxLine, RiMoonLine, RiSearchLine, RiSunLine } from "@remixicon/react";
 import { ArkamapLogo } from "@/components/foundations/brand/logo";
 import { CatalogExportActions } from "./export-actions";
 import { CommandMenu } from "@/components/ui/command";
@@ -62,7 +62,6 @@ export default function DesignSystemPage() {
             <RiLoginBoxLine className="size-4" />
             <span>Log in</span>
           </button>
-          <a href="/prototype" className="hidden items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-text-secondary transition-colors duration-150 hover:bg-background-primary-hover hover:text-text-primary active:scale-95 md:flex"><RiArrowLeftLine className="size-4" />Prototype</a>
           <button type="button" onClick={toggleTheme} className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border-button-default bg-background-primary-default text-text-secondary shadow-xs outline-none transition-all duration-150 hover:text-text-primary active:scale-95 focus-visible:ring-2 focus-visible:ring-accent-500" aria-label={dark ? "Use light theme" : "Use dark theme"}>{dark ? <RiSunLine className="size-4" /> : <RiMoonLine className="size-4" />}</button>
         </div>
       </div>
