@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { RiAlarmWarningLine, RiBroadcastLine, RiFireLine, RiPulseLine, RiRefreshLine, RiSearchLine, RiSettings3Line } from "@remixicon/react";
 import { StatCards, type Stat } from "@/components/application/dashboard/stat-cards";
-import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
 import { Checkbox } from "@/components/base/checkbox/checkbox";
 import { Input } from "@/components/base/input/input";
@@ -128,7 +127,7 @@ export function AlertsMonitor({ deviceAlerts, regional, region, prefs }: {
   const regionRows = (id: "fireRisk" | "heat", note?: string): AlertEntry[] => !show(id) ? [] : split[id]
     .filter(item => matches(search, item.name, item.label))
     .map(item => ({ group: categoryLabel(id), key: `${id}:${item.region_id}:${item.metric}`, level: REGION_LEVEL, node: (
-      <AlertRow level={REGION_LEVEL} tag={`${formatDecimal(item.normalised)}/100`}
+      <AlertRow level={REGION_LEVEL} tags={[`Skor ${formatDecimal(item.normalised)}/100`]}
         title={item.name} detail={note ? `${item.label} · ${note}` : item.label}
         meta={`${formatDecimal(item.value)} ${metricUnit(item.metric)}`.trim()} />
     ) }));
@@ -142,8 +141,8 @@ export function AlertsMonitor({ deviceAlerts, regional, region, prefs }: {
   const deviceRows = (id: AlertCategory): AlertEntry[] => !show(id) ? [] : deviceAlerts.alerts
     .filter(alert => deviceAlertCategory(alert) === id && matches(search, alert.device_name, alert.nama, alert.message, alert.region_name))
     .map(alert => ({ group: categoryLabel(id), key: `iot:${alert.device_id}:${alert.nama}`, level: alert.status === "bahaya" ? "bahaya" as const : undefined, node: (
-      <AlertRow href={`/devices/${alert.device_id}`} level={alert.status === "bahaya" ? "bahaya" : "aman"}
-        tag={id !== "device" ? `Alat IoT · ${alert.status === "bahaya" ? "Bahaya" : "Aman"}` : undefined}
+      <AlertRow href={`/devices/${alert.device_id}`} level={alert.status === "bahaya" ? "bahaya" : undefined}
+        status={alert.status === "aman" ? { color: "lime", label: "Aman" } : undefined} tags={[id !== "device" && "Alat IoT"]}
         title={`${alert.device_name} · ${alert.nama}`}
         detail={alert.message ?? alert.region_name}
         meta={formatRelative(alert.status === "bahaya" ? alert.changed_at : alert.updated_at)} />
@@ -155,7 +154,7 @@ export function AlertsMonitor({ deviceAlerts, regional, region, prefs }: {
     ...(show("fire") ? split.fire.filter(item => matches(search, item.name, item.province)) : []).map(item => ({
       group: "Kebakaran", key: `fire:${item.region_id}`, level: fireLevel(item.confirmed), node: (
         <AlertRow level={fireLevel(item.confirmed)}
-          tag={item.confirmed ? "GDACS" : "Satelit"}
+          tags={[item.confirmed ? "Dikonfirmasi GDACS" : "Deteksi satelit"]}
           title={item.province ? `${item.name}, ${item.province}` : item.name}
           detail={`${item.clusters} lokasi panas berulang · ${formatDecimal(item.frp_max)} MW · ${item.satellites.join(", ")}`}
           meta={formatRelative(item.last_seen)} />
@@ -186,25 +185,11 @@ export function AlertsMonitor({ deviceAlerts, regional, region, prefs }: {
   const dangers = dangerItems(data, deviceAlerts.alerts).filter(item => enabled.has(item.category));
   const scopeName = region && scope === "region" ? region.name ?? "wilayah pantauan" : "seluruh Indonesia";
 
-  const online = devices.devices.length - offline.length;
   const stats: Stat[] = [
-    { icon: RiAlarmWarningLine, label: "Bahaya", value: String(dangers.length), delta: "", deltaColor: dangers.length ? "rose" : "lime", tone: "orange", hint: "Peringatan berlevel bahaya: cuaca berat/ekstrem, gempa darurat atau siaga tsunami, GDACS merah, kebakaran terkonfirmasi GDACS, dan alat yang melapor bahaya. Hanya ini yang masuk notifikasi dan pop-up. Rawan kebakaran dan hawa panas selalu waspada.",
-      breakdown: [{ label: "Bahaya", value: dangers.length, tone: "danger" }, { label: "Waspada", value: total - dangers.length, tone: "warning" }] },
-    { icon: RiBroadcastLine, label: "Alat IoT", value: String(deviceBahaya), delta: "", deltaColor: deviceBahaya ? "rose" : "lime", tone: "purple", hint: "Status terakhir yang dikirim alat Anda lewat field \"alert\", termasuk yang berkategori (mis. kebakaran) dan tampil di kategorinya. Hanya status bahaya yang memicu notifikasi.",
-      breakdown: [{ label: "Bahaya", value: deviceBahaya, tone: "danger" }, { label: "Aman", value: safe, tone: "success" }] },
-    { icon: RiFireLine, label: "Kebakaran", value: String(counts.fire), delta: "", deltaColor: confirmedFires ? "rose" : "neutral", tone: "pink", hint: "Kemungkinan kebakaran, belum dicek lapangan: kabupaten/kota dengan titik panas satelit NASA FIRMS yang terdeteksi berulang dalam 48 jam, setelah lokasi panas menetap (industri, suar gas, gunung api) dan pembangkit termal disaring. Terkonfirmasi bila GDACS juga melaporkan kebakaran hutan di dekatnya; hanya itu yang masuk notifikasi. Ditambah alat Anda yang melapor bahaya dengan kategori \"kebakaran\".",
-      breakdown: [
-        { label: "Terkonfirmasi GDACS", value: confirmedFires, tone: "danger" },
-        { label: "Deteksi satelit", value: split.fire.length - confirmedFires, tone: "warning" },
-        { label: "Dari alat", value: deviceDanger("fire"), tone: "danger" },
-        { label: "Wilayah rawan", value: split.fireRisk.length, tone: "neutral" },
-      ] },
-    { icon: RiPulseLine, label: "Gangguan sistem", value: String(issues), delta: "", deltaColor: issues ? "rose" : "lime", tone: "sky", hint: "Sumber data yang gagal diperbarui dan perangkat IoT akun Anda yang tidak mengirim data 15 menit terakhir.",
-      breakdown: [
-        { label: "Sumber gagal", value: failingSources.length, tone: "danger" },
-        { label: "Alat offline", value: offline.length, tone: "warning" },
-        { label: "Alat online", value: online, tone: "success" },
-      ] },
+    { icon: RiAlarmWarningLine, label: "Bahaya", value: String(dangers.length), delta: `${total - dangers.length} waspada`, deltaColor: dangers.length ? "rose" : "lime", tone: "orange", caption: `Di ${scopeName}`, breakdown: [{ label: "Bahaya", value: dangers.length, color: "rose" }, { label: "Waspada", value: total - dangers.length, color: "yellow" }], hint: "Peringatan berlevel bahaya: cuaca berat/ekstrem, gempa darurat atau siaga tsunami, GDACS merah, kebakaran terkonfirmasi GDACS, dan alat yang melapor bahaya. Hanya ini yang masuk notifikasi dan pop-up. Rawan kebakaran dan hawa panas selalu waspada." },
+    { icon: RiBroadcastLine, label: "Alat IoT bahaya", value: String(deviceBahaya), delta: `${safe} aman`, deltaColor: deviceBahaya ? "rose" : "lime", tone: "purple", caption: `${deviceAlerts.alerts.length} laporan alert dari alat`, breakdown: [{ label: "Bahaya", value: deviceBahaya, color: "rose" }, { label: "Aman", value: safe, color: "lime" }], hint: "Status terakhir yang dikirim alat Anda lewat field \"alert\", termasuk yang berkategori (mis. kebakaran) dan tampil di kategorinya. Hanya status bahaya yang memicu notifikasi." },
+    { icon: RiFireLine, label: "Kebakaran", value: String(counts.fire), delta: `${confirmedFires} terkonfirmasi`, deltaColor: confirmedFires ? "rose" : "neutral", tone: "pink", caption: `${counts.fireRisk} wilayah rawan kebakaran`, breakdown: [{ label: "Terkonfirmasi GDACS", value: confirmedFires, color: "rose" }, { label: "Deteksi satelit", value: split.fire.length - confirmedFires, color: "yellow" }, { label: "Dari alat", value: deviceDanger("fire"), color: "purple" }], hint: "Kemungkinan kebakaran, belum dicek lapangan: kabupaten/kota dengan titik panas satelit NASA FIRMS yang terdeteksi berulang dalam 48 jam, setelah lokasi panas menetap (industri, suar gas, gunung api) dan pembangkit termal disaring. Terkonfirmasi bila GDACS juga melaporkan kebakaran hutan di dekatnya; hanya itu yang masuk notifikasi. Ditambah alat Anda yang melapor bahaya dengan kategori \"kebakaran\"." },
+    { icon: RiPulseLine, label: "Gangguan sistem", value: String(issues), delta: issues ? "Periksa" : "Normal", deltaColor: issues ? "rose" : "lime", tone: "sky", caption: `${devices.devices.length} alat terdaftar`, breakdown: [{ label: "Sumber data gagal", value: failingSources.length, color: "rose" }, { label: "Alat offline", value: offline.length, color: "yellow" }, { label: "Alat online", value: devices.devices.length - offline.length, color: "lime" }], hint: "Sumber data yang gagal diperbarui dan perangkat IoT akun Anda yang tidak mengirim data 15 menit terakhir." },
   ];
 
   const loading = !data && notifications.loading;
@@ -233,7 +218,7 @@ export function AlertsMonitor({ deviceAlerts, regional, region, prefs }: {
         </DialogContent>
       </Dialog>
 
-      <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <DashboardCard
           title="Peringatan aktif"
           description={notifications.updatedAt ? `${region && scope === "region" ? `Wilayah ${scopeName}` : "Seluruh Indonesia"} · diperbarui ${formatRelative(notifications.updatedAt)}` : "Memuat peringatan..."}
@@ -295,20 +280,9 @@ export function AlertsMonitor({ deviceAlerts, regional, region, prefs }: {
             <ul className="flex flex-col gap-1.5">
               {!data ? <li className="text-body-2-regular text-text-secondary">{notifications.loading ? "Memeriksa sumber..." : "Status sumber tidak tersedia."}</li>
                 : failingSources.length ? failingSources.map(source => (
-                  <li key={source.id} className={cx(insetClass, "flex flex-col gap-0.5 px-3 py-2")}>
-                    <span className="flex items-center gap-2">
-                      <Chip variant="bold" color="rose">Gagal</Chip>
-                      <span className="min-w-0 flex-1 truncate text-body-medium text-text-primary">{source.title}</span>
-                    </span>
-                    <span className="line-clamp-2 text-body-2-regular text-text-secondary" title={source.last_error ?? undefined}>{source.last_error}</span>
-                    <span className="text-caption-1 text-text-tertiary">Terakhir berhasil {formatRelative(source.last_ok_at) ?? "belum pernah"}</span>
-                  </li>
-                )) : (
-                  <li className={cx(insetClass, "flex items-center gap-2 px-3 py-2")}>
-                    <Chip variant="bold" color="lime">Normal</Chip>
-                    <span className="text-body-medium text-text-primary">Semua sumber berjalan normal</span>
-                  </li>
-                )}
+                  <AlertRow key={source.id} status={{ color: "rose", label: "Gagal" }} title={source.title}
+                    detail={source.last_error} tags={[`Terakhir berhasil ${formatRelative(source.last_ok_at) ?? "belum pernah"}`]} />
+                )) : <AlertRow status={{ color: "lime", label: "Normal" }} title="Semua sumber berjalan normal" />}
             </ul>
           </section>
 
@@ -322,12 +296,11 @@ export function AlertsMonitor({ deviceAlerts, regional, region, prefs }: {
                 : devices.error ? <li role="alert" className="text-body-2-regular text-text-error-primary">{devices.error}</li>
                 : !devices.devices.length ? <li className="text-body-2-regular text-text-secondary">Belum ada perangkat terdaftar.</li>
                 : <>
-                  <li className={cx(insetClass, "flex items-center gap-2 px-3 py-2")}>
-                    <Chip variant="bold" color={offline.length ? "yellow" : "lime"}>{devices.devices.length - offline.length}/{devices.devices.length}</Chip>
-                    <span className="text-body-medium text-text-primary">Perangkat online</span>
-                  </li>
+                  <AlertRow status={offline.length ? { color: "yellow", label: `${offline.length} offline` } : { color: "lime", label: "Semua online" }}
+                    title={`${devices.devices.length - offline.length} dari ${devices.devices.length} perangkat online`} />
                   {offline.map(device => (
-                    <AlertRow key={device.id} href={`/devices/${device.backendId}`} level="waspada" tag="Offline" title={device.name} meta={device.lastSeen} />
+                    <AlertRow key={device.id} href={`/devices/${device.backendId}`} status={{ color: "yellow", label: "Offline" }}
+                      title={device.name} tags={[device.lastSeen === "Belum ada data" ? "Belum pernah mengirim data" : `Terakhir terlihat ${device.lastSeen}`]} />
                   ))}
                 </>}
             </ul>

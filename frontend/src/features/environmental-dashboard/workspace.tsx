@@ -1,12 +1,20 @@
 "use client";
 
-import { navigate } from "@/lib/navigate";
+import { goTo } from "@/lib/navigate";
 import { useDevices } from "./device-api";
 import { ApiDashboard } from "./components/api-dashboard";
 import { useSession } from "@/hooks/use-session";
 import { greeting } from "./greeting";
 import { useProfileSwitcher } from "@/hooks/use-profile-switcher";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+
+// Loaded when shown: each of these pulls in maplibre (device pages, the preview map) or the whole chat (Kodama's panel),
+// which the dashboard itself does not need to appear.
+const DeviceForm = lazy(() => import("./device-form").then(module => ({ default: module.DeviceForm })));
+const DeviceDetail = lazy(() => import("./device-detail/device-detail").then(module => ({ default: module.DeviceDetail })));
+const DeviceTestLab = lazy(() => import("./device-test/device-test").then(module => ({ default: module.DeviceTestLab })));
+const PreviewIncidentMap = lazy(() => import("./preview-incident-map").then(module => ({ default: module.PreviewIncidentMap })));
+const JevAssistantPanel = lazy(() => import("@/components/application/jev-chat/jev-assistant-panel").then(module => ({ default: module.JevAssistantPanel })));
 import type { MapPreset } from "./map-controller";
 import {
   RiAddLine,
@@ -22,7 +30,6 @@ import {
   RiSendPlane2Fill,
   RiShieldCheckLine,
   RiUserLocationLine,
-  RiWaterPercentLine,
   RiWindyLine,
 } from "@remixicon/react";
 import { toast } from "sonner";
@@ -71,13 +78,6 @@ import {
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FadeDivider } from "@/components/ui/fade-divider";
-import {
-  Map,
-  MapControls,
-  MapMarker,
-  MarkerContent,
-  MarkerTooltip,
-} from "@/components/ui/map";
 import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
@@ -98,13 +98,6 @@ import {
   type ModeType,
 } from "./environmental-data";
 import { KodamaMark } from "@/components/foundations/brand/kodama-icon";
-
-// Loaded when shown: these are large and only one of them is on screen at a time.
-const DeviceForm = lazy(() => import("./device-form").then(m => ({ default: m.DeviceForm })));
-const DeviceDetail = lazy(() => import("./device-detail/device-detail").then(m => ({ default: m.DeviceDetail })));
-const DeviceTestLab = lazy(() => import("./device-test/device-test").then(m => ({ default: m.DeviceTestLab })));
-const MapController = lazy(() => import("./map-controller").then(m => ({ default: m.MapController })));
-const JevAssistantPanel = lazy(() => import("@/components/application/jev-chat/jev-assistant-panel").then(m => ({ default: m.JevAssistantPanel })));
 
 
 const NOTIFICATIONS: AppShellNotification[] = [
@@ -393,9 +386,9 @@ export default function EnvironmentalDashboardWorkspace({ devicePage, deviceId, 
         }}
         onNavigate={(id) => {
           if (!preview && ["forensics", "simulator"].includes(id)) { toast.info("Fitur masih Preview", { description: "Backend belum menyediakan alur operasional fitur ini." }); return; }
-          if (!preview && id === "reports") { navigate("/map"); return; }
-          if (id === "components") navigate("/design-system");
-          else if (id === "map" || id === "siri-map") navigate("/map");
+          if (!preview && id === "reports") { goTo("/map"); return; }
+          if (id === "components") goTo("/design-system");
+          else if (id === "map" || id === "siri-map") goTo("/map");
           else if (id === "forensics") setForensicSheetOpen(true);
           else if (id === "reports") setReportModalOpen(true);
           else if (id === "simulator") {
@@ -404,10 +397,11 @@ export default function EnvironmentalDashboardWorkspace({ devicePage, deviceId, 
             });
           }
           else if (id === "alerts" && dangerAlerts.length) {
-            if (devicePage || page === "sources") navigate("/alerts?bahaya");
+            if (!preview && page !== "alerts") goTo("/alerts?bahaya");
             else { setActiveNav("alerts"); setShowAllDangers(true); }
           }
-          else if (devicePage || page) navigate(NAVIGATION_ITEMS.find(item => item.id === id)?.href ?? (id === "sensors" ? "/devices" : "/dashboard"));
+          // every menu has its own address, so Back works and a link can be shared; the session stays loaded
+          else if (!preview) goTo(NAVIGATION_ITEMS.find(item => item.id === id)?.href ?? (id === "sensors" ? "/devices" : "/dashboard"));
           else setActiveNav(id);
         }}
         title={devicePage === "new" ? "Tambah Alat" : devicePage === "test" ? "Uji Alat" : devicePage === "detail" ? "Detail Alat" : activeNav === "sensors" ? "Perangkat IoT & BYOD" : activeNav === "sources" ? "Sumber Data" : activeNav === "alerts" ? "Pemantauan & Peringatan" : !preview && session.me ? greeting(session.me.user.name) : "Environmental Command Center"}
@@ -421,10 +415,10 @@ export default function EnvironmentalDashboardWorkspace({ devicePage, deviceId, 
         }
         actions={<>{devicePage === "new" || devicePage === "detail" || devicePage === "test" ? undefined : activeNav === "sensors" ? (
           <div className="flex items-center gap-2">
-            <Button variant="secondary" size="small" leadingIcon={RiFlaskLine} onClick={() => navigate("/devices/test")}>
+            <Button variant="secondary" size="small" leadingIcon={RiFlaskLine} onClick={() => goTo("/devices/test")}>
               Uji Alat
             </Button>
-            <Button variant="primary" size="small" leadingIcon={RiAddLine} onClick={() => navigate("/devices/new")}>
+            <Button variant="primary" size="small" leadingIcon={RiAddLine} onClick={() => goTo("/devices/new")}>
               Tambah Alat
             </Button>
           </div>
@@ -456,7 +450,7 @@ export default function EnvironmentalDashboardWorkspace({ devicePage, deviceId, 
             group: "Analisis",
             onSelect: () => setForensicSheetOpen(true),
           },
-        ] : [{ id: "cmd-map", label: "Buka pantauan dan laporan wilayah", group: "Navigasi", onSelect: () => navigate("/map") }]}
+        ] : [{ id: "cmd-map", label: "Buka pantauan dan laporan wilayah", group: "Navigasi", onSelect: () => goTo("/map") }]}
       >
         {devicePage === "new" ? <Suspense fallback={null}><DeviceForm /></Suspense> : devicePage === "test" ? <Suspense fallback={null}><DeviceTestLab /></Suspense> : devicePage === "detail" && deviceId !== undefined ? <Suspense fallback={null}><DeviceDetail id={deviceId} /></Suspense> : activeNav === "sensors" ? <DeviceRegistry /> : activeNav === "sources" ? <DataSources /> : activeNav === "alerts" ? <AlertsMonitor deviceAlerts={deviceAlerts} regional={regionalAlerts} region={alertRegion} prefs={alertPrefs} /> : !preview ? <ApiDashboard /> : (
         <div className="flex flex-col gap-3">
@@ -592,62 +586,11 @@ export default function EnvironmentalDashboardWorkspace({ devicePage, deviceId, 
 
                 <CardContent className="p-0">
                   <div className="relative h-[380px] w-full overflow-hidden rounded-b-xl bg-background-full">
-                    <Map center={[108.5, -2.5]} zoom={4.8} className="size-full">
-                      <MapControls showZoom showCompass showFullscreen position="top-right" />
-                      <Suspense fallback={null}><MapController incident={activeIncident} preset={mapPreset} /></Suspense>
-
-                      {filteredIncidents.map((incident) => {
-                        if (incident.hazardType === "hotspot" && !showHotspots) return null;
-                        if (incident.hazardType === "flood" && !showFloods) return null;
-                        if (incident.hazardType === "air_quality" && !showAirQuality) return null;
-                        if (incident.hazardType === "iot_sensor" && !showSensors) return null;
-
-                        const isSelected = incident.id === activeIncident?.id;
-                        const isCritical = incident.urgency === "critical";
-
-                        let bgClass = "bg-orange-500";
-                        if (incident.hazardType === "hotspot") bgClass = "bg-red-600";
-                        if (incident.hazardType === "flood") bgClass = "bg-blue-600";
-                        if (incident.hazardType === "air_quality") bgClass = "bg-purple-600";
-                        if (incident.hazardType === "iot_sensor") bgClass = "bg-emerald-600";
-
-                        return (
-                          <MapMarker
-                            key={incident.id}
-                            longitude={incident.coords[0]}
-                            latitude={incident.coords[1]}
-                            onClick={() => handleSelectIncident(incident)}
-                          >
-                            <MarkerContent>
-                              <div className="relative group cursor-pointer">
-                                {(isCritical || isSelected) && (
-                                  <div
-                                    className={`absolute -inset-1 rounded-full animate-ping opacity-60 ${bgClass}`}
-                                  />
-                                )}
-                                <div
-                                  className={`relative flex size-6 items-center justify-center rounded-full border border-white text-white shadow transition-transform ${bgClass} ${
-                                    isSelected ? "ring-2 ring-accent-500 scale-110" : ""
-                                  }`}
-                                >
-                                  {incident.hazardType === "hotspot" && <RiFireLine className="size-3.5" />}
-                                  {incident.hazardType === "flood" && <RiWaterPercentLine className="size-3.5" />}
-                                  {incident.hazardType === "air_quality" && <RiWindyLine className="size-3.5" />}
-                                  {incident.hazardType === "iot_sensor" && <RiBroadcastLine className="size-3.5" />}
-                                </div>
-                              </div>
-                            </MarkerContent>
-                            <MarkerTooltip>
-                              <div className="text-left font-sans text-xs">
-                                <p className="font-semibold">{incident.title}</p>
-                                <p className="text-caption-2 text-text-secondary">{incident.location}</p>
-                                <p className="font-medium text-text-error-primary">Skor: {incident.urgencyScore} / 10</p>
-                              </div>
-                            </MarkerTooltip>
-                          </MapMarker>
-                        );
-                      })}
-                    </Map>
+                    <Suspense fallback={null}>
+                      <PreviewIncidentMap filteredIncidents={filteredIncidents} activeIncident={activeIncident} mapPreset={mapPreset}
+                        showHotspots={showHotspots} showFloods={showFloods} showAirQuality={showAirQuality} showSensors={showSensors}
+                        handleSelectIncident={handleSelectIncident} />
+                    </Suspense>
                   </div>
                 </CardContent>
               </Card>
@@ -984,7 +927,7 @@ export default function EnvironmentalDashboardWorkspace({ devicePage, deviceId, 
         onClose={closeDangers}
         onOpenAlerts={() => {
           closeDangers();
-          if (devicePage || page) navigate("/alerts");
+          if (devicePage || page) goTo("/alerts");
           else setActiveNav("alerts");
         }}
       />

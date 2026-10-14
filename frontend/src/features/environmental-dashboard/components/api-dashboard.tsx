@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { lazy, Suspense, type ReactNode } from "react";
 import { RiBroadcastLine, RiCheckboxCircleLine, RiPulseLine, RiErrorWarningLine } from "@remixicon/react";
 import { StatCards, type Stat } from "@/components/application/dashboard/stat-cards";
 import { Button } from "@/components/base/buttons/button";
@@ -17,8 +17,10 @@ import { ImpactCard } from "./impact-card";
 import { IndicatorTable } from "./indicator-table";
 import { InsightTabs, type ListTab } from "./insight-tabs";
 import { RankingCard } from "./ranking-card";
-import { RegionMapPanel } from "./region-map-panel";
 import { ScoreCard } from "./score-card";
+
+// maplibre comes with the map, after the cards around it have shown
+const RegionMapPanel = lazy(() => import("./region-map-panel").then(module => ({ default: module.RegionMapPanel })));
 
 const openProfile = () => window.dispatchEvent(new Event("arkamap-profile-open"));
 
@@ -83,7 +85,9 @@ export function ApiDashboard() {
   const cards: { key: string; node: ReactNode }[] = [];
   if (panels.includes("ranking") && view.ranking.results.length) cards.push({ key: "ranking", node: <RankingCard ranking={view.ranking} metricLabel={metricLabel} focusName={view.focus?.name} /> });
   if (history[0]) cards.push({ key: `history-${history[0].kind}`, node: <HistoryCard series={history[0]} /> });
-  if (view.focus) cards.push({ key: "map", node: <RegionMapPanel focus={view.focus} events={view.events} /> });
+  if (view.focus) cards.push({ key: "map", node: <Suspense fallback={<div aria-hidden className="h-[344px] rounded-2xl bg-background-secondary-default" />}>
+    <RegionMapPanel focus={view.focus} events={view.events} />
+  </Suspense> });
   if (panels.includes("impact") && view.impact) cards.push({ key: "impact", node: <ImpactCard impact={view.impact} /> });
   if (listTabs.length) cards.push({ key: "insight", node: <InsightTabs view={view} tabs={listTabs} /> });
   history.slice(1).forEach(series => cards.push({ key: `history-${series.kind}`, node: <HistoryCard series={series} /> }));

@@ -14,7 +14,6 @@ import { HeatLayer } from "./heat-layer";
 import { HEAT_RAMP_CSS, HEAT_RANGE, hasTemperature } from "./heat-ramp";
 import { PointOverlays } from "./point-overlays";
 import { WindLayer } from "./wind-layer";
-import { rememberRegion } from "./region-view";
 
 export interface DockStatus {
   loading: boolean;
@@ -208,7 +207,6 @@ export function SpatialLayers({ warnings, choropleth, layer, layerError, showDat
     const roomForCard = map.getContainer().clientWidth >= 900 ? 360 : 0;
     map.fitBounds(box, { padding: { top: 96, bottom: 96, left: 96, right: 96 + roomForCard }, maxZoom: 10, duration: window.matchMedia(REDUCED_MOTION).matches ? 0 : 700 });
     onCenter.current?.([(box[0][0] + box[1][0]) / 2, (box[0][1] + box[1][1]) / 2]);
-    rememberRegion([box[0][0], box[0][1], box[1][0], box[1][1]]);
   }, [map, isLoaded, selected]);
   function pick(feature: Feature, anchor: [number, number]) {
     const id = feature.properties?.region_id;

@@ -1,7 +1,7 @@
 "use client";
 
+import { goTo } from "@/lib/navigate";
 import { useMemo, useState } from "react";
-import { navigate } from "@/lib/navigate";
 import {
   RiMore2Fill,
   RiFileCopyLine,
@@ -53,7 +53,7 @@ function DeviceActions({ device }: { device: IotDevice }) {
         <DropdownGroup>
           <DropdownItem onSelect={() => {
             setIsOpen(false);
-            if (device.backendId) { navigate(`/devices/${device.backendId}`); return; }
+            if (device.backendId) { goTo(`/devices/${device.backendId}`); return; }
             toast.info(device.name, { description: `${device.id} ? ${device.owner} ? ${DEVICE_STATUS_LABEL[device.status]} ? ${device.location}` });
           }} className="gap-2 px-2 py-1.5">
             <RiInformationLine className="size-4" aria-hidden />Lihat Detail

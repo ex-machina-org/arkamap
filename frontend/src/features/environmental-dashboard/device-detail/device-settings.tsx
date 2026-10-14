@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { navigate } from "@/lib/navigate";
+import { goTo } from "@/lib/navigate";
 import { RiDeleteBinLine, RiGroupLine, RiLayoutGridLine, RiSettings3Line, RiShareLine, RiStackLine } from "@remixicon/react";
 import { toast } from "sonner";
 import { Chip } from "@/components/base/badges/chip";
@@ -150,7 +150,7 @@ export function DeviceSettings({ device, streams, onChanged }: { device: DTO<"De
         description: "Alat, kunci, login MQTT, dan seluruh pembacaannya dihapus permanen. Tindakan ini tidak bisa dibatalkan.",
         confirmLabel: "Hapus Alat",
         destructive: true,
-        run: () => void mutate(async () => { await request(path, { method: "DELETE", ...jsonBody({}) }); navigate("/devices"); }),
+        run: () => void mutate(async () => { await request(path, { method: "DELETE", ...jsonBody({}) }); goTo("/devices"); }),
       })}>Hapus Alat</Button>} />
 
     {dialog}

@@ -29,7 +29,7 @@ function Disclosure({ icon: Icon, summary, children }: { icon: ComponentType<{ c
       <span>{summary}</span>
       <RiArrowRightSLine className={cx("size-4 shrink-0 text-foreground-icon-tertiary transition-transform", open && "rotate-90")} />
     </button>
-    {open && <div className="ml-[7px] text-body-compact text-text-secondary">{children}</div>}
+    {open && <div className="ml-1.75 text-body-compact text-text-secondary">{children}</div>}
   </div>;
 }
 

@@ -20,7 +20,7 @@ export function JevThinking({ messages }: { messages: UIMessage[] }) {
   const steps = (last?.role === "assistant" ? jevReply(last)?.steps : undefined) ?? [];
   return <div className="flex flex-col gap-2.5 px-1">
     <AgentThinking variant="wave" tone="accent" label="Kodama sedang berpikir" />
-    {steps.length > 0 && <ol aria-label="Langkah Kodama" className="ml-[7px] flex flex-col gap-2 border-l border-separator-border pl-4">
+    {steps.length > 0 && <ol aria-label="Langkah Kodama" className="ml-1.75 flex flex-col gap-2 border-l border-separator-border pl-4">
       {steps.map((step, index) => {
         const label = step.replace(/\.\.\.$/, "");
         const active = index === steps.length - 1;
