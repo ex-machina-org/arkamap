@@ -23,6 +23,10 @@ interface SidePanelProps {
   summary: ReactNode;
   /** Free exploration tools, kept below the summary. */
   explore: ReactNode;
+  /** The coloured layer's regions in order. */
+  ranking: ReactNode;
+  /** Every indicator of the picked region; leads the panel while a region is picked. */
+  detail?: ReactNode;
 }
 
 function Section({ title, meta, children }: { title: string; meta?: ReactNode; children: ReactNode }) {
@@ -75,6 +79,8 @@ export function SidePanel({
   onSelectIncident,
   summary,
   explore,
+  ranking,
+  detail,
 }: SidePanelProps) {
   return (
     <aside
@@ -90,6 +96,7 @@ export function SidePanel({
       )}
     >
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3 [scrollbar-width:thin]">
+        {detail}
         {summary}
 
         <Section
@@ -115,6 +122,8 @@ export function SidePanel({
             )}
           </div>
         </Section>
+
+        <Section title="Peringkat wilayah">{ranking}</Section>
 
         <Section title="Jelajahi data">{explore}</Section>
       </div>

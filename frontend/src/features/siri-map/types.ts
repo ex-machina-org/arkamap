@@ -1,5 +1,5 @@
 export type HazardType = "hotspot" | "flood" | "air_quality" | "seismic" | "iot_sensor" | "disaster";
-export type BasemapType = "satellite" | "street";
+export type BasemapType = "street" | "detail" | "satellite" | "heat";
 
 /** A recorded event returned by the public data APIs. */
 export interface SpatialIncident {
