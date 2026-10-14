@@ -66,3 +66,4 @@ jobs:
           python test_bmkg.py
           python test_fire.py
           python test_paths.py
+          python test_responder.py
