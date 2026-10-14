@@ -15,10 +15,8 @@ type DeviceAlert = DTO<"DeviceAlert">;
  */
 export type AlertLevel = "bahaya" | "waspada";
 
-export const LEVEL_CHIP = {
-  bahaya: { label: "Bahaya", color: "rose" },
-  waspada: { label: "Waspada", color: "yellow" },
-} as const satisfies Record<AlertLevel, { label: string; color: string }>;
+/** What a row's status dot shows: the two alert levels, a device that reports "aman", or no level. */
+export type AlertTone = AlertLevel | "aman" | "netral";
 
 /** CAP severity: only Severe and Extreme warn of a threat to life or property. */
 export const weatherLevel = (severity?: string | null): AlertLevel =>
