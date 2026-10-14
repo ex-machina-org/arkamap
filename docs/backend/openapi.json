@@ -4044,6 +4044,19 @@
             "title": "Rejected Count",
             "type": "integer"
           },
+          "test_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "diisi = alat uji; terhapus otomatis setelah waktu ini",
+            "title": "Test Expires At"
+          },
           "visibility": {
             "enum": [
               "private",
