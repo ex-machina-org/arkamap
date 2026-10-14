@@ -25,6 +25,7 @@ import {
   RiWaterPercentLine,
   RiWindyLine,
 } from "@remixicon/react";
+import { ArkamapLockup, ArkamapMark } from "@/components/foundations/brand/arkamap-brand";
 import { ArkamapSettingsModal, type ArkamapSettingsPage } from "@/components/application/settings/arkamap-settings";
 import { SettingsModal } from "@/components/application/settings/settings-modal";
 import { Badge } from "@/components/base/badges/badge";
@@ -551,14 +552,7 @@ export function DashboardSidebar({
               className="flex shrink-0 items-center justify-center cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring rounded-lg transition-transform hover:scale-105"
               aria-label={collapsed ? "Expand sidebar" : `${appName} logo`}
             >
-              <span className="flex items-center gap-2.5">
-                <span
-                  aria-hidden="true"
-                  className={cx("block size-8 shrink-0 bg-accent-500 dark:bg-text-white", !collapsed && "-translate-y-0.5")}
-                  style={{ maskImage: "url(/brand/arkamap-icon.svg)", maskRepeat: "no-repeat", maskPosition: "center", maskSize: "contain" }}
-                />
-                {!collapsed && <img src="/brand/arkamap-wordmark.svg" alt={appName} className="block h-6 w-auto shrink-0 dark:invert" />}
-              </span>
+              {collapsed ? <ArkamapMark /> : <ArkamapLockup />}
             </button>
 
           </div>

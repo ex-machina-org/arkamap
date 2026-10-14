@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ComponentProps, type FormEvent } from
 import { createPortal } from "react-dom";
 import { RiEyeLine, RiEyeOffLine, RiUserLine } from "@remixicon/react";
 import { toast } from "sonner";
+import { ArkamapLockup } from "@/components/foundations/brand/arkamap-brand";
 import { Button } from "@/components/base/buttons/button";
 import { Checkbox } from "@/components/base/checkbox/checkbox";
 import { CloseButton } from "@/components/base/buttons/close-button";
@@ -244,23 +245,7 @@ export function LoginModal({
           <div className="flex w-full flex-col justify-between overflow-y-auto p-6 sm:p-8 md:w-[420px] md:shrink-0">
             <div>
               {/* Brand Header */}
-              <div className="flex items-center gap-2.5">
-                <span
-                  aria-hidden="true"
-                  className="block size-8 shrink-0 bg-accent-500 dark:bg-text-white -translate-y-0.5"
-                  style={{
-                    maskImage: "url(/brand/arkamap-icon.svg)",
-                    maskRepeat: "no-repeat",
-                    maskPosition: "center",
-                    maskSize: "contain",
-                  }}
-                />
-                <img
-                  src="/brand/arkamap-wordmark.svg"
-                  alt="Arkamap"
-                  className="block h-6 w-auto shrink-0 dark:invert"
-                />
-              </div>
+              <ArkamapLockup />
 
               {/* Title & Subtitle */}
               <div className="mt-5">

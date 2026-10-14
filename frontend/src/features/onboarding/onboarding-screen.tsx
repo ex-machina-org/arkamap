@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ArkamapLockup } from "@/components/foundations/brand/arkamap-brand";
 import { Dialog } from "@base-ui/react/dialog";
 import { RiUserLine, RiMapPinLine, RiDashboardLine, RiCheckLine, RiArrowRightLine } from "@remixicon/react";
 import { Button } from "@/components/base/buttons/button";
@@ -56,7 +57,7 @@ export function OnboardingScreen({ me, loading, error, onLogout }: { me?: DTO<"M
               {me && <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-6">{me.profile ? <Button variant="secondary" size="small" disabled={busy} onClick={() => navigate("/dashboard")}>Kembali Ke Dashboard</Button> : <div />}{logoutError && <p role="alert" className="w-full text-body-regular text-text-error-primary">{logoutError}</p>}<Button variant="ghost" size="small" disabled={busy} onClick={() => { setBusy(true); void onLogout().then(() => navigate("/login")).catch(cause => setLogoutError(cause instanceof Error ? cause.message : "Gagal keluar dari akun.")).finally(() => setBusy(false)); }}>Keluar Dari Akun</Button></div>}
             </section>
             <aside className="order-1 flex flex-col border-b border-separator-border md:order-2 md:border-b-0 md:border-l">
-              <div className="flex items-center border-b border-separator-border px-5 py-5 sm:px-8"><img src="/brand/arkamap.svg" alt="Arkamap" className="block h-8 w-auto shrink-0 dark:invert" /></div>
+              <div className="flex items-center border-b border-separator-border px-5 py-5 sm:px-8"><ArkamapLockup /></div>
               <div className="px-5 pt-6 sm:px-8 md:pt-8">
                 <Dialog.Title className="text-heading-xl">{!me?.profile ? `Selamat Datang Di Arkamap${me ? `, ${me.user.name}.` : "."}` : `Tambah Profil Pantauan, ${me.user.name}.`}</Dialog.Title>
                 <Dialog.Description className="mt-2 text-body-regular text-text-secondary">{!me?.profile ? "Siapkan profil pantauan sebelum masuk ke dashboard. Kami akan menyesuaikan indikator dengan kebutuhan Anda." : `Buat profil pantauan baru (profil ke-${profileCount + 1} dari ${maxProfiles}) untuk kebutuhan atau wilayah lainnya.`}</Dialog.Description>
