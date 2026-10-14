@@ -5,6 +5,10 @@ DATABASE_URL = os.getenv(
     "postgresql://atlas:atlas@localhost:5433/atlas",
 )
 
+# NASA FIRMS regional feeds need no key; the area API does. If a key is
+# present we use the finer area endpoint, otherwise the regional CSV.
+FIRMS_MAP_KEY = os.getenv("FIRMS_MAP_KEY", "").strip()
+
 # Indonesia bounding box (lon/lat)
 IDN_BBOX = (95.0, -11.0, 141.0, 6.0)
 

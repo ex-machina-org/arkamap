@@ -37,5 +37,13 @@ services:
       retries: 30
     restart: unless-stopped
 
+  # One-shot: downloads public datasets into an empty database, then exits.
+  seed:
+    <<: *backend
+    command: ["python", "seed.py"]
+    depends_on:
+      api: { condition: service_healthy }
+    restart: "no"
+
 volumes:
   pgdata:
