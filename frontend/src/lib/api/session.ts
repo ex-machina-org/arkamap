@@ -3,7 +3,23 @@ import { setSessionToken } from "./connection";
 
 export const SESSION_CHANGED = "arkamap-session-changed";
 export type SessionState = { loading: boolean; me?: DTO<"MeOut">; error?: string };
-let state: SessionState = { loading: true };
+// The last verified account is kept for this tab so a reload paints it at once while `/me` is re-checked in the background.
+const ME_KEY = "arkamap-session-me";
+function cachedMe(): DTO<"MeOut"> | undefined {
+  try {
+    if (!sessionStorage.getItem("arkamap-session")) return undefined;
+    const raw = sessionStorage.getItem(ME_KEY);
+    return raw ? (JSON.parse(raw) as DTO<"MeOut">) : undefined;
+  } catch { return undefined; }
+}
+function cacheMe(me?: DTO<"MeOut">) {
+  try { if (me) sessionStorage.setItem(ME_KEY, JSON.stringify(me)); else sessionStorage.removeItem(ME_KEY); } catch { /* memory only */ }
+}
+function initialState(): SessionState {
+  const me = cachedMe();
+  return me ? { loading: false, me } : { loading: true };
+}
+let state: SessionState = initialState();
 const listeners = new Set<() => void>();
 let controller: AbortController | undefined;
 let retry: ReturnType<typeof setTimeout> | undefined;
@@ -11,6 +27,7 @@ let failures = 0;
 
 function publish(value: SessionState) {
   state = value;
+  if (!value.loading && !value.error) cacheMe(value.me);
   listeners.forEach(listener => listener());
 }
 function cancel() {
@@ -71,7 +88,7 @@ export function subscribeSession(listener: () => void) {
       window.removeEventListener("online", reconnect);
       window.removeEventListener("focus", reconnect);
       // Do not expose an old account after an unsubscribed login/logout.
-      state = { loading: true };
+      state = initialState();
       failures = 0;
     }
   };
