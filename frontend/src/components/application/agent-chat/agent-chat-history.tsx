@@ -5,7 +5,13 @@ import { useRouter } from "@/boardui-compat/navigation";
 import { useStarterBase } from "@/components/application/app-shell/app-shell";
 import {
   RiAddLine,
+  RiCloseLine,
   RiDownloadLine,
+  RiFolder3Line,
+  RiFolderAddLine,
+  RiPushpinFill,
+  RiPushpinLine,
+  RiSearchLine,
   RiGlobalLine,
   RiLogoutBoxRLine,
   RiMore2Fill,
@@ -13,7 +19,7 @@ import {
   RiSettings3Line,
   RiSpeedUpLine,
 } from "@remixicon/react";
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 
 import { Avatar } from "@/components/base/avatar/avatar";
 import {
@@ -44,18 +50,50 @@ export interface ChatThreadSummary {
   title: string;
   updatedAt: number;
   unread?: boolean;
+  /** Kept at the top of the rail, and never trimmed from storage. */
+  pinned?: boolean;
+  /** A project or study area the chat is filed under ("Riset Balikpapan"). A folder exists while it holds a chat. */
+  folder?: string;
 }
 
-export interface AgentChatHistoryProps {
-  threads: ChatThreadSummary[];
+/** The rail's words; AgentChat passes `copy.history` (English by default). */
+export interface HistoryCopy {
+  newChat: string;
+  recent: string;
+  empty: string;
+  search: string;
+  clearSearch: string;
+  results: (count: number) => string;
+  noMatches: string;
+  pinned: string;
+  pin: string;
+  unpin: string;
+  moveTo: string;
+  newFolder: string;
+  folderName: string;
+  removeFromFolder: string;
+  rename: string;
+  markUnread: string;
+  delete: string;
+  moreActions: (title: string) => string;
+}
+
+export interface AgentChatHistoryProps<T extends ChatThreadSummary = ChatThreadSummary> {
+  threads: T[];
   activeId: string;
   onSelect: (id: string) => void;
   onNewChat: () => void;
   onRename: (id: string, title: string) => void;
   onToggleUnread: (id: string) => void;
   onDelete: (id: string) => void;
+  onTogglePin: (id: string) => void;
+  /** Files the chat under a folder; undefined takes it out. */
+  onMove: (id: string, folder: string | undefined) => void;
   /** Downloads the stored chats as JSON. */
   onExport: () => void;
+  /** What the search looks through for one chat; its title when not given. */
+  searchText?: (thread: T) => string;
+  copy: HistoryCopy;
   /** Disables switching mid-stream, which would strand the running response. */
   disabled?: boolean;
   /** The account strip and export control along the bottom. */
@@ -63,7 +101,7 @@ export interface AgentChatHistoryProps {
   className?: string;
 }
 
-export function AgentChatHistory({
+export function AgentChatHistory<T extends ChatThreadSummary>({
   threads,
   activeId,
   onSelect,
@@ -71,11 +109,43 @@ export function AgentChatHistory({
   onRename,
   onToggleUnread,
   onDelete,
+  onTogglePin,
+  onMove,
   onExport,
+  searchText = (thread) => thread.title,
+  copy,
   disabled = false,
   showFooter = true,
   className,
-}: AgentChatHistoryProps) {
+}: AgentChatHistoryProps<T>) {
+  const [query, setQuery] = useState("");
+  const [collapsed, setCollapsed] = useState<string[]>([]);
+  const needle = query.trim().toLowerCase();
+  const found = needle ? threads.filter((thread) => searchText(thread).toLowerCase().includes(needle)) : null;
+  const folders = [...new Set(threads.flatMap((thread) => (thread.folder ? [thread.folder] : [])))].sort((a, b) =>
+    a.localeCompare(b, "id"),
+  );
+  const pinned = threads.filter((thread) => thread.pinned);
+  const loose = threads.filter((thread) => !thread.pinned && !thread.folder);
+  const row = (thread: T) => (
+    <ThreadRow
+      key={thread.id}
+      thread={thread}
+      folders={folders}
+      copy={copy}
+      active={thread.id === activeId}
+      disabled={disabled}
+      onSelect={onSelect}
+      onRename={onRename}
+      onToggleUnread={onToggleUnread}
+      onDelete={onDelete}
+      onTogglePin={onTogglePin}
+      onMove={onMove}
+    />
+  );
+  const toggleFolder = (folder: string) =>
+    setCollapsed((prev) => (prev.includes(folder) ? prev.filter((name) => name !== folder) : [...prev, folder]));
+
   return (
     <aside
       aria-label="Chat history"
@@ -95,34 +165,88 @@ export function AgentChatHistory({
         className="flex w-full cursor-pointer items-center gap-2 rounded-2lg px-2 py-2 text-body-medium text-text-primary transition-colors hover:bg-background-secondary-hover disabled:cursor-not-allowed disabled:opacity-50"
       >
         <RiAddLine className="size-5 shrink-0 text-foreground-icon-secondary" aria-hidden />
-        New chat
+        {copy.newChat}
       </button>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto [scrollbar-width:none]">
-        <p className="px-2 pb-1 text-body-2-medium text-text-tertiary">Recent</p>
+      <div className="-mt-3 flex h-8 shrink-0 items-center gap-1.5 rounded-2lg bg-background-primary-default px-2 shadow-xs">
+        <RiSearchLine className="size-4 shrink-0 text-foreground-icon-tertiary" aria-hidden />
+        <input
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") setQuery("");
+          }}
+          placeholder={copy.search}
+          aria-label={copy.search}
+          className="h-full min-w-0 flex-1 bg-transparent text-body-2-regular text-text-primary outline-none placeholder:text-text-tertiary [&::-webkit-search-cancel-button]:hidden"
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={() => setQuery("")}
+            aria-label={copy.clearSearch}
+            className="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-md text-foreground-icon-tertiary transition-colors hover:text-foreground-icon-primary"
+          >
+            <RiCloseLine className="size-4" aria-hidden />
+          </button>
+        )}
+      </div>
 
-        {threads.length === 0 ? (
-          <p className="px-2 text-body-2-regular text-text-tertiary">
-            Chats you start show up here.
-          </p>
+      <div className="-mt-3 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto [scrollbar-width:none]">
+        {found ? (
+          <Section label={copy.results(found.length)}>
+            {found.length ? found.map(row) : <p className="px-2 text-body-2-regular text-text-tertiary">{copy.noMatches}</p>}
+          </Section>
+        ) : threads.length === 0 ? (
+          <Section label={copy.recent}>
+            <p className="px-2 text-body-2-regular text-text-tertiary">{copy.empty}</p>
+          </Section>
         ) : (
-          threads.map((thread) => (
-            <ThreadRow
-              key={thread.id}
-              thread={thread}
-              active={thread.id === activeId}
-              disabled={disabled}
-              onSelect={onSelect}
-              onRename={onRename}
-              onToggleUnread={onToggleUnread}
-              onDelete={onDelete}
-            />
-          ))
+          <>
+            {pinned.length > 0 && <Section label={copy.pinned}>{pinned.map(row)}</Section>}
+            {folders.map((folder) => {
+              const inside = threads.filter((thread) => thread.folder === folder && !thread.pinned);
+              const open = !collapsed.includes(folder);
+              return (
+                <div key={folder} className="flex flex-col gap-1">
+                  <button
+                    type="button"
+                    onClick={() => toggleFolder(folder)}
+                    aria-expanded={open}
+                    className="flex w-full cursor-pointer items-center gap-1.5 rounded-2lg px-2 py-1 text-left text-body-2-medium text-text-secondary transition-colors hover:bg-background-secondary-hover"
+                  >
+                    <ChevronDownSmall
+                      className={cx("size-4 shrink-0 text-foreground-icon-tertiary transition-transform duration-150", !open && "-rotate-90")}
+                      aria-hidden
+                    />
+                    <RiFolder3Line className="size-4 shrink-0 text-foreground-icon-secondary" aria-hidden />
+                    <span className="min-w-0 flex-1 truncate">{folder}</span>
+                    <span className="shrink-0 text-caption-1-regular text-text-tertiary">{inside.length}</span>
+                  </button>
+                  {open && <div className="flex flex-col gap-1 pl-3">{inside.map(row)}</div>}
+                </div>
+              );
+            })}
+            {(loose.length > 0 || (pinned.length === 0 && folders.length === 0)) && (
+              <Section label={copy.recent}>{loose.map(row)}</Section>
+            )}
+          </>
         )}
       </div>
 
       {showFooter && <RailFooter threads={threads} onExport={onExport} />}
     </aside>
+  );
+}
+
+/** A labelled run of rows: pinned chats, search results, recent chats. */
+function Section({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <p className="px-2 pb-1 text-body-2-medium text-text-tertiary">{label}</p>
+      {children}
+    </div>
   );
 }
 
@@ -320,36 +444,46 @@ function formatBytes(bytes: number) {
 
 function ThreadRow({
   thread,
+  folders,
+  copy,
   active,
   disabled,
   onSelect,
   onRename,
   onToggleUnread,
   onDelete,
+  onTogglePin,
+  onMove,
 }: {
   thread: ChatThreadSummary;
+  folders: string[];
+  copy: HistoryCopy;
   active: boolean;
   disabled: boolean;
   onSelect: (id: string) => void;
   onRename: (id: string, title: string) => void;
   onToggleUnread: (id: string) => void;
   onDelete: (id: string) => void;
+  onTogglePin: (id: string) => void;
+  onMove: (id: string, folder: string | undefined) => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [renaming, setRenaming] = useState(false);
+  // the row turns into a field for a new title, or for the name of a new folder to file it under
+  const [editing, setEditing] = useState<"title" | "folder" | null>(null);
   const [draft, setDraft] = useState(thread.title);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!renaming) return;
+    if (!editing) return;
     inputRef.current?.focus();
     inputRef.current?.select();
-  }, [renaming]);
+  }, [editing]);
 
   const commit = () => {
-    const next = draft.trim();
-    if (next && next !== thread.title) onRename(thread.id, next);
-    setRenaming(false);
+    const next = draft.trim().replace(/\s+/g, " ");
+    if (editing === "title" && next && next !== thread.title) onRename(thread.id, next);
+    if (editing === "folder" && next) onMove(thread.id, next.slice(0, 60));
+    setEditing(null);
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -359,25 +493,27 @@ function ThreadRow({
     }
     if (event.key === "Escape") {
       event.preventDefault();
-      setDraft(thread.title);
-      setRenaming(false);
+      setEditing(null);
     }
   };
 
-  if (renaming) {
+  if (editing) {
+    const label = editing === "title" ? copy.rename : copy.folderName;
     return (
-      <div className="rounded-2lg bg-background-secondary-hover px-2 py-1.5">
-        <label className="sr-only" htmlFor={`rename-${thread.id}`}>
-          Rename chat
+      <div className="flex items-center gap-1.5 rounded-2lg bg-background-secondary-hover px-2 py-1.5">
+        {editing === "folder" && <RiFolderAddLine className="size-4 shrink-0 text-foreground-icon-secondary" aria-hidden />}
+        <label className="sr-only" htmlFor={`edit-${thread.id}`}>
+          {label}
         </label>
         <input
-          id={`rename-${thread.id}`}
+          id={`edit-${thread.id}`}
           ref={inputRef}
           value={draft}
+          placeholder={editing === "folder" ? copy.folderName : undefined}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={onKeyDown}
           onBlur={commit}
-          className="w-full bg-transparent text-body-2-regular text-text-primary outline-none"
+          className="w-full bg-transparent text-body-2-regular text-text-primary outline-none placeholder:text-text-tertiary"
         />
       </div>
     );
@@ -403,6 +539,7 @@ function ThreadRow({
         aria-current={active ? "true" : undefined}
         className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 py-1.5 pl-2 text-left disabled:cursor-not-allowed disabled:opacity-50"
       >
+        {thread.pinned && <RiPushpinFill aria-label={copy.pinned} className="size-3.5 shrink-0 text-foreground-icon-tertiary" />}
         {thread.unread && (
           <span
             aria-label="Unread"
@@ -451,13 +588,21 @@ function ThreadRow({
           )}
         >
           <RowMenu
-            title={thread.title}
+            thread={thread}
+            folders={folders}
+            copy={copy}
             isOpen={menuOpen}
             onOpenChange={setMenuOpen}
             onRename={() => {
               setDraft(thread.title);
-              setRenaming(true);
+              setEditing("title");
             }}
+            onNewFolder={() => {
+              setDraft("");
+              setEditing("folder");
+            }}
+            onMove={(folder) => onMove(thread.id, folder)}
+            onTogglePin={() => onTogglePin(thread.id)}
             onToggleUnread={() => onToggleUnread(thread.id)}
             onDelete={() => onDelete(thread.id)}
           />
@@ -470,17 +615,27 @@ function ThreadRow({
 /** DropdownTrigger is itself the button, so it is styled directly — putting an
  *  IconButton inside it would nest one button in another. */
 function RowMenu({
-  title,
+  thread,
+  folders,
+  copy,
   isOpen,
   onOpenChange,
   onRename,
+  onNewFolder,
+  onMove,
+  onTogglePin,
   onToggleUnread,
   onDelete,
 }: {
-  title: string;
+  thread: ChatThreadSummary;
+  folders: string[];
+  copy: HistoryCopy;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onRename: () => void;
+  onNewFolder: () => void;
+  onMove: (folder: string | undefined) => void;
+  onTogglePin: () => void;
   onToggleUnread: () => void;
   onDelete: () => void;
 }) {
@@ -488,11 +643,14 @@ function RowMenu({
     onOpenChange(false);
     action();
   };
+  const label = copy.moreActions(thread.title);
+  const item = "truncate text-body-medium whitespace-nowrap text-text-primary";
+  const icon = "size-4 shrink-0 text-foreground-icon-secondary";
 
   return (
     <Dropdown isOpen={isOpen} onOpenChange={onOpenChange}>
       <DropdownTrigger
-        aria-label={`More actions for ${title}`}
+        aria-label={label}
         className={cx(
           "inline-flex size-6 shrink-0 items-center justify-center rounded-md",
           "text-foreground-icon-secondary transition-colors duration-150 ease",
@@ -503,22 +661,47 @@ function RowMenu({
         <RiMore2Fill className="size-4 shrink-0" aria-hidden />
       </DropdownTrigger>
 
-      <DropdownPopover
-        aria-label={`More actions for ${title}`}
-        placement="bottom end"
-        className="w-[190px] p-2"
-      >
+      <DropdownPopover aria-label={label} placement="bottom end" className="w-[220px] p-2.5 overflow-hidden">
         <DropdownGroup>
+          <DropdownItem onSelect={choose(onTogglePin)} className="px-2 py-1.5">
+            {thread.pinned ? <RiPushpinFill className={icon} aria-hidden /> : <RiPushpinLine className={icon} aria-hidden />}
+            <span className={item}>{thread.pinned ? copy.unpin : copy.pin}</span>
+          </DropdownItem>
           <DropdownItem onSelect={choose(onRename)} className="px-2 py-1.5">
-            <span className="truncate text-body-medium whitespace-nowrap text-text-primary">Rename</span>
+            <span className={cx(item, "pl-6")}>{copy.rename}</span>
           </DropdownItem>
           <DropdownItem onSelect={choose(onToggleUnread)} className="px-2 py-1.5">
-            <span className="truncate text-body-medium whitespace-nowrap text-text-primary">
-              Mark as unread
-            </span>
+            <span className={cx(item, "pl-6")}>{copy.markUnread}</span>
           </DropdownItem>
+        </DropdownGroup>
+
+        <DropdownDivider />
+
+        <DropdownGroup label={copy.moveTo}>
+          {folders
+            .filter((folder) => folder !== thread.folder)
+            .map((folder) => (
+              <DropdownItem key={folder} onSelect={choose(() => onMove(folder))} className="px-2 py-1.5">
+                <RiFolder3Line className={icon} aria-hidden />
+                <span className={item}>{folder}</span>
+              </DropdownItem>
+            ))}
+          <DropdownItem onSelect={choose(onNewFolder)} className="px-2 py-1.5">
+            <RiFolderAddLine className={icon} aria-hidden />
+            <span className={item}>{copy.newFolder}</span>
+          </DropdownItem>
+          {thread.folder && (
+            <DropdownItem onSelect={choose(() => onMove(undefined))} className="px-2 py-1.5">
+              <span className={cx(item, "pl-6")}>{copy.removeFromFolder}</span>
+            </DropdownItem>
+          )}
+        </DropdownGroup>
+
+        <DropdownDivider />
+
+        <DropdownGroup>
           <DropdownItem onSelect={choose(onDelete)} className="px-2 py-1.5">
-            <span className="truncate text-body-medium whitespace-nowrap text-text-error-primary">Delete</span>
+            <span className="truncate text-body-medium whitespace-nowrap text-text-error-primary">{copy.delete}</span>
           </DropdownItem>
         </DropdownGroup>
       </DropdownPopover>

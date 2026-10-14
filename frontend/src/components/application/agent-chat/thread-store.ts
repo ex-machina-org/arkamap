@@ -12,9 +12,14 @@ export interface StoredThread extends ChatThreadSummary {
 /** Enough history to be useful without letting localStorage grow unbounded. */
 const MAX_THREADS = 30;
 
-/** Newest message first, and trimmed from the oldest end. */
+/** Newest message first, and trimmed from the oldest end. Pinned chats and chats filed
+ *  in a folder were kept on purpose, so only loose ones count toward the limit.
+ *  ponytail: kept chats are unbounded; cap them too if storage quota becomes a problem. */
 export function orderThreads(threads: StoredThread[]) {
-  return [...threads].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, MAX_THREADS);
+  let loose = 0;
+  return [...threads]
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .filter((thread) => thread.pinned || thread.folder || ++loose <= MAX_THREADS);
 }
 
 /** Storage is a convenience, never a source of truth — every access can throw
@@ -45,14 +50,14 @@ export function writeThreads(storageKey: string, threads: StoredThread[]) {
   }
 }
 
-/** Adds or replaces one thread, keeping the title a reader may have renamed. */
+/** Adds or replaces one thread, keeping what a reader set on it: its title, pin and folder. */
 export function saveThread(storageKey: string, thread: StoredThread) {
   const threads = readThreads(storageKey);
   const previous = threads.find((item) => item.id === thread.id);
   writeThreads(
     storageKey,
     orderThreads([
-      { ...thread, title: previous?.title ?? thread.title },
+      { ...previous, ...thread, title: previous?.title ?? thread.title },
       ...threads.filter((item) => item.id !== thread.id),
     ]),
   );
