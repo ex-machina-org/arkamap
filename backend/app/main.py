@@ -94,6 +94,22 @@ async def lifespan(app: FastAPI):
     close_pool()
 
 
+class StripTrailingSlash:
+    """Serves "/api/regions/" as "/api/regions" instead of redirecting to it. Starlette's
+    redirect carries the absolute URL, i.e. this API's own domain, which a proxy in front
+    (the frontend's /api) would hand to the browser and so reveal where the API lives."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        path = scope.get("path", "")
+        if scope["type"] in ("http", "websocket") and len(path) > 1 and path.endswith("/"):
+            path = path.rstrip("/") or "/"
+            scope = {**scope, "path": path, "raw_path": path.encode()}
+        await self.app(scope, receive, send)
+
+
 app = FastAPI(
     title="Nusantara Sustainability Atlas",
     description=(
@@ -107,6 +123,7 @@ app = FastAPI(
     dependencies=[Depends(require_app_key)],
 )
 
+app.add_middleware(StripTrailingSlash)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,   # env CORS_ORIGINS; default "*"

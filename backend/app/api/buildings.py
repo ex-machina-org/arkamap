@@ -44,7 +44,7 @@ OVERPASS_URLS = [
 
 # Overpass answers 406 to requests it can't attribute, and the OSM usage
 # policy asks clients to identify themselves.
-HEADERS = {"User-Agent": "NusantaraAtlas/0.2 (+https://ugm.winatra.app)"}
+HEADERS = {"User-Agent": "Arkamap/0.6 (environmental monitoring; JOINTS UGM 2026)"}
 
 # Building footprints are only meaningful once zoomed to roughly a
 # neighbourhood — at province scale this would be millions of polygons.

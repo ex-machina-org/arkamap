@@ -25,7 +25,7 @@ log = logging.getLogger(__name__)
 
 TEWS = "https://data.bmkg.go.id/DataMKG/TEWS/"
 NOWCAST = "https://www.bmkg.go.id/alerts/nowcast/id"
-UA = {"User-Agent": "nusantara-atlas/1.0 (+https://api.winatra.app)"}
+UA = {"User-Agent": "Arkamap/0.6 (environmental monitoring; JOINTS UGM 2026)"}
 CAP_NS = {"cap": "urn:oasis:names:tc:emergency:cap:1.2"}
 
 
