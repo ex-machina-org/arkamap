@@ -1,9 +1,11 @@
 "use client";
 
 import {
+  useRef,
   useState,
   type ComponentType,
   type ReactNode,
+  type Ref,
 } from "react";
 import {
   RiArrowDownSLine,
@@ -26,6 +28,8 @@ import {
 import { ArkamapSettingsModal, type ArkamapSettingsPage } from "@/components/application/settings/arkamap-settings";
 import { SettingsModal } from "@/components/application/settings/settings-modal";
 import { Badge } from "@/components/base/badges/badge";
+import { FluidHoverHighlight } from "@/components/base/fluid-hover/fluid-hover-highlight";
+import { useFluidHover } from "@/hooks/use-fluid-hover";
 import type { ProfileOption } from "@/hooks/use-profile-switcher";
 import { cx } from "@/utils/cx";
 import type { EnvironmentalMode } from "./dashboard-mode-switcher";
@@ -72,6 +76,7 @@ function NavItem({
   collapsed = false,
   href = "#",
   onClick,
+  rowRef,
 }: {
   icon: IconComponent;
   label: string;
@@ -81,9 +86,12 @@ function NavItem({
   collapsed?: boolean;
   href?: string;
   onClick?: () => void;
+  /** Registers the row with a fluid hover list, whose highlight replaces the CSS hover fill. */
+  rowRef?: Ref<HTMLAnchorElement>;
 }) {
   return (
     <a
+      ref={rowRef}
       href={href}
       onClick={
         onClick
@@ -97,14 +105,14 @@ function NavItem({
       aria-label={label}
       title={collapsed ? label : undefined}
       className={cx(
-        "flex items-center justify-between gap-2 overflow-hidden rounded-2lg p-2",
+        "relative flex items-center justify-between gap-2 overflow-hidden rounded-2lg p-2",
         "transition-[width,background-color] duration-200 ease-in-out",
         collapsed ? "w-9" : "w-full",
         isSelected
           ? "bg-linear-to-b from-accent-500 to-accent-600 text-white font-medium shadow-nav-selected"
           : danger
             ? "bg-notification-error-background font-medium text-text-error-primary hover:opacity-90"
-            : "text-text-secondary hover:text-text-primary hover:bg-background-secondary-hover",
+            : cx("text-text-secondary hover:text-text-primary", !rowRef && "hover:bg-background-secondary-hover"),
       )}
     >
       <span className="flex min-w-0 items-center gap-2">
@@ -252,134 +260,218 @@ function NavRows({
   return (
     <div className="flex w-full flex-col gap-3">
       {Array.from(sections.entries()).map(([sectionName, sectionItems], index) => (
-        <div key={sectionName || "main"} className="flex w-full flex-col gap-1">
-          {sectionName && (
-            <>
-              {/* The heading is hidden when the rail collapses, so a hairline keeps the groups apart. */}
-              {collapsed && index > 0 && <div role="separator" className="mx-auto h-px w-5 bg-border-button-default" />}
+        <NavSection
+          key={sectionName || "main"}
+          name={sectionName}
+          index={index}
+          items={sectionItems}
+          selected={selected}
+          collapsed={collapsed}
+          expandedKeys={expandedKeys}
+          onToggle={toggleExpand}
+          onNavigate={onNavigate}
+        />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * One section's rows, sub-items included, share a single fluid hover
+ * highlight. Sections stay separate lists because their headings divide
+ * different groups of destinations.
+ */
+function NavSection({
+  name,
+  index,
+  items,
+  selected,
+  collapsed,
+  expandedKeys,
+  onToggle,
+  onNavigate,
+}: {
+  name: string;
+  index: number;
+  items: DashboardNavItem[];
+  selected: string;
+  collapsed: boolean;
+  expandedKeys: Set<string>;
+  onToggle: (key: string) => void;
+  onNavigate?: (key: string) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  // A click on the section heading should not navigate; only the 4px gaps
+  // between rows route to the lit row.
+  const hover = useFluidHover(containerRef, { gapClick: { maxDistance: 4 } });
+  // One stable callback ref per row index, so rows do not re-register on
+  // every render.
+  const [rowRefs] = useState(() => new Map<number, (element: HTMLElement | null) => void>());
+  const rowRef = (rowIndex: number) => {
+    let ref = rowRefs.get(rowIndex);
+    if (!ref) {
+      ref = (element) => hover.registerItem(rowIndex, element);
+      rowRefs.set(rowIndex, ref);
+    }
+    return ref;
+  };
+
+  // Rows in visual order: each item, then its sub-items while expanded.
+  const rowKeys: string[] = [];
+  const subItemRows = new Set<number>();
+  items.forEach((item) => {
+    rowKeys.push(item.key);
+    if (item.children?.length && expandedKeys.has(item.key) && !collapsed) {
+      item.children.forEach((child) => {
+        subItemRows.add(rowKeys.length);
+        rowKeys.push(child.key);
+      });
+    }
+  });
+  const selectedRow = rowKeys.indexOf(selected === "home" ? "overview" : selected);
+
+  const rows = items.map((item) => {
+    const hasChildren = item.children && item.children.length > 0;
+    const isChildSelected = item.children?.some((c) => c.key === selected);
+    const isSelected = selected === item.key || (selected === "home" && item.key === "overview");
+    const isExpanded = expandedKeys.has(item.key);
+    const itemRow = rowKeys.indexOf(item.key);
+
+    if (hasChildren) {
+      return (
+        <div key={item.key} className="flex flex-col gap-0.5">
+          <button
+            ref={rowRef(itemRow)}
+            type="button"
+            onClick={() => onToggle(item.key)}
+            aria-expanded={isExpanded}
+            aria-label={item.label}
+            title={collapsed ? item.label : undefined}
+            className={cx(
+              "relative flex items-center justify-between overflow-hidden rounded-2lg p-2 text-left cursor-pointer transition-colors duration-150",
+              collapsed ? "w-9" : "w-full",
+              isChildSelected
+                ? "text-text-primary font-medium bg-background-secondary-hover/70"
+                : "text-text-secondary hover:text-text-primary",
+            )}
+          >
+            <span className="flex min-w-0 items-center gap-2">
+              <item.icon className="size-5 shrink-0 text-foreground-icon-secondary" aria-hidden />
               <Collapsible collapsed={collapsed}>
-                <div className="px-2 pt-1 pb-0.5 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
-                  {sectionName}
-                </div>
+                <span className="text-body-medium whitespace-nowrap">
+                  {item.label}
+                </span>
               </Collapsible>
-            </>
-          )}
+            </span>
 
-          {sectionItems.map((item) => {
-            const hasChildren = item.children && item.children.length > 0;
-            const isChildSelected = item.children?.some((c) => c.key === selected);
-            const isSelected = selected === item.key || (selected === "home" && item.key === "overview");
-            const isExpanded = expandedKeys.has(item.key);
+            <Collapsible collapsed={collapsed}>
+              {isExpanded ? (
+                <RiArrowDownSLine className="size-4 shrink-0 text-foreground-icon-tertiary" />
+              ) : (
+                <RiArrowRightSLine className="size-4 shrink-0 text-foreground-icon-tertiary" />
+              )}
+            </Collapsible>
+          </button>
 
-            if (hasChildren) {
-              return (
-                <div key={item.key} className="flex flex-col gap-0.5">
-                  <button
-                    type="button"
-                    onClick={() => toggleExpand(item.key)}
-                    aria-expanded={isExpanded}
-                    aria-label={item.label}
-                    title={collapsed ? item.label : undefined}
+          {isExpanded && !collapsed && (
+            <div className="flex flex-col gap-0.5 pl-4 ml-3 border-l border-border-button-default/60">
+              {item.children!.map((child) => {
+                const isChildActive = selected === child.key;
+                const ChildIcon = child.icon;
+                const childRow = rowKeys.indexOf(child.key);
+                return (
+                  <a
+                    key={child.key}
+                    ref={rowRef(childRow)}
+                    href={child.href || "#"}
+                    onClick={
+                      child.onClick
+                        ? (e) => {
+                            e.preventDefault();
+                            child.onClick!();
+                          }
+                        : onNavigate
+                          ? (e) => {
+                              e.preventDefault();
+                              onNavigate(child.key);
+                            }
+                          : undefined
+                    }
+                    aria-current={isChildActive ? "page" : undefined}
                     className={cx(
-                      "flex items-center justify-between overflow-hidden rounded-2lg p-2 text-left cursor-pointer transition-colors duration-150",
-                      collapsed ? "w-9" : "w-full",
-                      isChildSelected
-                        ? "text-text-primary font-medium bg-background-secondary-hover/70"
-                        : "text-text-secondary hover:text-text-primary hover:bg-background-secondary-hover",
+                      "relative flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition-colors",
+                      isChildActive
+                        ? "bg-accent-500/15 font-medium text-accent-700 dark:text-accent-300"
+                        : "text-text-secondary hover:text-text-primary",
                     )}
                   >
                     <span className="flex min-w-0 items-center gap-2">
-                      <item.icon className="size-5 shrink-0 text-foreground-icon-secondary" aria-hidden />
-                      <Collapsible collapsed={collapsed}>
-                        <span className="text-body-medium whitespace-nowrap">
-                          {item.label}
-                        </span>
-                      </Collapsible>
+                      {ChildIcon && <ChildIcon className="size-4 shrink-0" aria-hidden />}
+                      <span className="truncate">{child.label}</span>
                     </span>
-
-                    <Collapsible collapsed={collapsed}>
-                      {isExpanded ? (
-                        <RiArrowDownSLine className="size-4 shrink-0 text-foreground-icon-tertiary" />
-                      ) : (
-                        <RiArrowRightSLine className="size-4 shrink-0 text-foreground-icon-tertiary" />
-                      )}
-                    </Collapsible>
-                  </button>
-
-                  {isExpanded && !collapsed && (
-                    <div className="flex flex-col gap-0.5 pl-4 ml-3 border-l border-border-button-default/60">
-                      {item.children!.map((child) => {
-                        const isChildActive = selected === child.key;
-                        const ChildIcon = child.icon;
-                        return (
-                          <a
-                            key={child.key}
-                            href={child.href || "#"}
-                            onClick={
-                              child.onClick
-                                ? (e) => {
-                                    e.preventDefault();
-                                    child.onClick!();
-                                  }
-                                : onNavigate
-                                  ? (e) => {
-                                      e.preventDefault();
-                                      onNavigate(child.key);
-                                    }
-                                  : undefined
-                            }
-                            aria-current={isChildActive ? "page" : undefined}
-                            className={cx(
-                              "flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition-colors",
-                              isChildActive
-                                ? "bg-accent-500/15 font-medium text-accent-700 dark:text-accent-300"
-                                : "text-text-secondary hover:text-text-primary hover:bg-background-secondary-hover",
-                            )}
-                          >
-                            <span className="flex min-w-0 items-center gap-2">
-                              {ChildIcon && <ChildIcon className="size-4 shrink-0" aria-hidden />}
-                              <span className="truncate">{child.label}</span>
-                            </span>
-                            {child.badge && (
-                              <Badge color={isChildActive ? "primary" : "neutral"} className="text-[10px] px-1 py-0">
-                                {child.badge}
-                              </Badge>
-                            )}
-                          </a>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            }
-
-            return (
-              <NavItem
-                key={item.key}
-                icon={item.icon}
-                label={item.label}
-                href={item.href}
-                onClick={
-                  item.onClick
-                    ? item.onClick
-                    : onNavigate
-                      ? () => onNavigate(item.key)
-                      : undefined
-                }
-                isSelected={isSelected}
-                danger={item.tone === "danger"}
-                collapsed={collapsed}
-                badge={
-                  item.badge !== undefined ? (
-                    <Badge color={item.tone === "danger" ? "danger" : isSelected ? "primary" : "neutral"}>{item.badge}</Badge>
-                  ) : undefined
-                }
-              />
-            );
-          })}
+                    {child.badge && (
+                      <Badge color={isChildActive ? "primary" : "neutral"} className="text-[10px] px-1 py-0">
+                        {child.badge}
+                      </Badge>
+                    )}
+                  </a>
+                );
+              })}
+            </div>
+          )}
         </div>
-      ))}
+      );
+    }
+
+    return (
+      <NavItem
+        key={item.key}
+        rowRef={rowRef(itemRow)}
+        icon={item.icon}
+        label={item.label}
+        href={item.href}
+        onClick={
+          item.onClick
+            ? item.onClick
+            : onNavigate
+              ? () => onNavigate(item.key)
+              : undefined
+        }
+        isSelected={isSelected}
+        danger={item.tone === "danger"}
+        collapsed={collapsed}
+        badge={
+          item.badge !== undefined ? (
+            <Badge color={item.tone === "danger" ? "danger" : isSelected ? "primary" : "neutral"}>{item.badge}</Badge>
+          ) : undefined
+        }
+      />
+    );
+  });
+
+  return (
+    <div ref={containerRef} className="relative flex w-full flex-col gap-1" {...hover.handlers}>
+      <FluidHoverHighlight
+        hover={hover}
+        // A fresh pointer entry fades in from the active route.
+        from={selectedRow >= 0 ? hover.itemRects[selectedRow] : null}
+        className={cx(
+          "bg-background-secondary-hover",
+          hover.activeIndex !== null && subItemRows.has(hover.activeIndex) ? "rounded-lg" : "rounded-2lg",
+        )}
+      />
+      {name && (
+        <>
+          {/* The heading is hidden when the rail collapses, so a hairline keeps the groups apart. */}
+          {collapsed && index > 0 && <div role="separator" className="mx-auto h-px w-5 bg-border-button-default" />}
+          <Collapsible collapsed={collapsed}>
+            <div className="px-2 pt-1 pb-0.5 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
+              {name}
+            </div>
+          </Collapsible>
+        </>
+      )}
+      {rows}
     </div>
   );
 }

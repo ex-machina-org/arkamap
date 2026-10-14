@@ -102,8 +102,6 @@ export function SiriMapWorkspace() {
   }, [settled, isRegional, focus]);
   const nationalMask = useIndonesiaMask(!isRegional);
   const { situation, loading: situationLoading, error: situationError, metricLabel, metrics } = useSituation(view, Boolean(me));
-  // Fetched once for the header count; the alerts page needs a session, so guests get none.
-  const notifications = useApi(me ? "/notifications" : null, "Notifications");
   // A signed-in view waits for its field's layers, so the 4,000 hotspots are not fetched twice.
   const spatial = useSpatialData(focus?.id, situation?.windows, situation?.feeds, !dashboard.loading && (!me || situation !== null));
   const [events, setEvents] = useState<FeatureCollection>();
@@ -326,7 +324,6 @@ export function SiriMapWorkspace() {
             onShowDataChange={setShowData}
             wind={wind}
             onWindChange={setWind}
-            notificationCount={me ? notifications.data?.count ?? 0 : null}
           >
             <AccountMenu />
           </MapHeader>
