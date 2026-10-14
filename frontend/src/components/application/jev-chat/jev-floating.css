@@ -1,0 +1,45 @@
+/* Kodama's floating card on the map: a thin rim in the Siri spectrum that the
+ * screen-edge glow (globals.css .siri-edge-glow) already uses, so the card and
+ * the glow read as one assistant. Hex because the spectrum is shared with that
+ * glow, not a theme role. Quiet while idle, full strength while Kodama works. */
+.kodama-rim {
+  position: relative;
+  isolation: isolate;
+}
+
+.kodama-rim::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  padding: 1.5px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from 200deg at 50% 50%,
+    #38bdf8,
+    #818cf8,
+    #c084fc,
+    #f472b6,
+    #fb7185,
+    #06b6d4,
+    #38bdf8
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.45;
+  pointer-events: none;
+  transition: opacity 300ms ease-out;
+}
+
+.kodama-rim[data-busy]::before {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kodama-rim::before {
+    transition: none;
+  }
+}
