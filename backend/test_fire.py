@@ -73,4 +73,12 @@ n = notifications("p1")
 assert len(n["fire_alerts"]) == 1 and n["fire_alerts"][0]["region_id"] == "k1"
 from app.api.schemas import Notifications
 Notifications(**n)
+# a second call within CACHE_SECONDS reuses the answer, and a caller's edits never reach the cache
+calls = []
+real = fire._possible_fires
+fire._possible_fires = lambda *a: calls.append(a) or real(*a)
+again = fire.possible_fires()
+again[0]["clusters"] = -1
+assert not calls and fire.possible_fires()[0]["clusters"] == 2
+fire._possible_fires = real
 print("OK: semua kasus sesuai")
