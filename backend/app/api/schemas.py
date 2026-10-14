@@ -767,3 +767,65 @@ class DeviceAlert(BaseModel):
         None, description='"kategori" dari perangkat; kosong = alert alat umum')
     changed_at: datetime = Field(description="saat status terakhir berubah")
     updated_at: datetime = Field(description="laporan terakhir dari perangkat")
+
+
+# ── data tables and readings ──────────────────────────────────────────
+class Reading(BaseModel):
+    id: int | None = None
+    stream_id: int | None = None
+    version_id: int | None = None
+    received_at: datetime
+    measured_at: datetime | None = Field(None, description="waktu dari sensor sendiri, bila dikirim")
+    protocol: str | None = None
+    data: dict[str, Any] | None = None
+    value: Any = None
+
+
+class Readings(BaseModel):
+    device_id: int
+    field: str | None = None
+    count: int
+    readings: list[Reading]
+    next_before: int | None = Field(None, description="isi ke ?before= untuk halaman berikutnya; null = habis")
+
+
+class ReadingsDeleted(BaseModel):
+    deleted: int
+
+
+class StreamField(BaseModel):
+    key: str
+    label: str
+    type: str
+    category: SensorCategory
+    category_by: Literal["rule", "ai", "user"]
+    first_seen: datetime
+    last_seen: datetime
+
+
+class StreamVersion(BaseModel):
+    """A table's field set since a reading first brought new fields (a sensor upgrade)."""
+    id: int
+    version: int
+    keys: list[str] = Field(description="field versi ini")
+    added: list[str] = Field(description="field yang belum ada di versi sebelumnya")
+    reading_count: int
+    first_seen: datetime
+    last_seen: datetime
+
+
+class Stream(BaseModel):
+    """One data table per \"nama\" the device sends; columns = every field it has had."""
+    id: int
+    slug: str = Field(description='"nama" yang dinormalkan; kiriman dengan nama ini masuk ke tabel ini')
+    aliases: list[str] = Field(default_factory=list, description="nama tabel lain yang sudah digabung ke sini")
+    versions: list[StreamVersion] = Field(description="urut dari versi 1")
+    name: str
+    name_by: Literal["auto", "payload", "user"]
+    category: SensorCategory
+    category_by: Literal["fields", "user"] = Field(description="fields = mayoritas kategori field-nya")
+    confirmed: bool = Field(description="false = ada field yang kategorinya masih sementara (aturan, bukan AI/user)")
+    fields: list[StreamField] = Field(description="kolom tabel")
+    reading_count: int
+    created_at: datetime
+    last_seen_at: datetime
