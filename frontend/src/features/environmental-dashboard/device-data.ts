@@ -39,7 +39,7 @@ export const DEVICE_STATUS_LABEL: Record<DeviceStatus, string> = {
   calibration: "Kalibrasi",
 };
 
-// Fixture data for the prototype; no device backend is connected.
+// Fixture data for the dashboard preview; no device backend is connected.
 export const INITIAL_DEVICES: IotDevice[] = [
   { id: "DEV-001", name: "AWLR Karangligar", kind: "awlr", ownership: "institution", owner: "BBWS Citarum", location: "Telukjambe Barat, Karawang", province: "Jawa Barat", status: "online", battery: null, lastSeen: "1 menit lalu" },
   { id: "DEV-002", name: "TMA Gambut Dayun", kind: "peat_level", ownership: "institution", owner: "BRGM", location: "Dayun, Siak", province: "Riau", status: "online", battery: 82, lastSeen: "3 menit lalu" },
