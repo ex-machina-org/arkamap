@@ -14,6 +14,7 @@ import { SpatialLayers, type ChoroplethSpec, type DockStatus, type RegionPick } 
 import { HAZARDS, HAZARD_ORDER } from "./hazards";
 import type { MapLayer } from "./atlas";
 import type { BasemapType, HazardType, SpatialIncident } from "./types";
+import { boundsFor, INDONESIA_BOUNDS, type MapBounds } from "./region-view";
 
 const SATELLITE_STYLE: StyleSpecification = {
   version: 8,
@@ -73,12 +74,16 @@ const CLUSTER_THRESHOLD = 24;
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 /** Pins sit on satellite imagery in both themes, so the outline stays white. */
 const PIN_OUTLINE = "#ffffff";
-/** Indonesia spans roughly 95°E to 141°E and 11°S to 6°N; the margin keeps border provinces fully visible without letting users pan into other regions. */
-const INDONESIA_BOUNDS: [[number, number], [number, number]] = [
-  [85, -19],
-  [151, 15],
-];
 const MIN_ZOOM = 3;
+
+/** Moves the pan and zoom-out limit when the watched region changes; the map is created with Indonesia's. */
+function MapLimits({ bounds }: { bounds: MapBounds }) {
+  const { map, isLoaded } = useMap();
+  useEffect(() => {
+    if (map && isLoaded) map.setMaxBounds(bounds);
+  }, [map, isLoaded, bounds]);
+  return null;
+}
 
 /** A camera request. A new object is a new request, so focusing the same incident twice still moves the map. */
 export interface CameraTarget {
@@ -232,6 +237,10 @@ export function MapViewport({
   status,
 }: MapViewportProps) {
   const clustered = incidents.length > CLUSTER_THRESHOLD;
+  const focusKey = focus?.join(",");
+  // `focusKey` is the stable identity of the box, so a new array with the same numbers does not move the limit.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const limits = useMemo(() => boundsFor(focus), [focusKey]);
 
   // One cluster layer per hazard so a cluster's colour says what it contains.
   const groups = useMemo(() => {
@@ -266,6 +275,7 @@ export function MapViewport({
         styles={basemap === "satellite" || basemap === "detail" ? BASEMAP_STYLES[basemap] : undefined}
         className="size-full"
       >
+        <MapLimits bounds={limits} />
         <MapCameraController target={camera} pitch={is3D ? 48 : 0} intro={introCamera} />
 
         <SpatialLayers warnings={warnings} choropleth={choropleth} layer={layer} layerError={layerError} showData={showData} basemap={basemap} wind={wind} selectedRegionId={selectedRegionId} onSelectRegion={onSelectRegion} onRegionCenter={onRegionCenter} buildings={is3D} events={events} focus={focus} boundary={boundary} nationalMask={nationalMask} status={status} />
