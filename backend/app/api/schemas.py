@@ -738,3 +738,299 @@ class KeyRotated(BaseModel):
     api_key: str
     key_prefix: str
     quickstart: Quickstart
+
+
+# ── sensor ingest ─────────────────────────────────────────────────────
+class IngestOut(BaseModel):
+    device_id: int
+    fields: int
+    new_fields: int = Field(description="field yang baru pertama kali dikirim; memicu penataan ulang AI")
+    stream_id: int | None = Field(None, description="tabel data (per \"nama\") tempat kiriman ini masuk")
+    nama: str | None = Field(None, description='nama tabel setelah dinormalkan; "default" bila "nama" kosong')
+    version: int | None = Field(None, description="versi tabel; naik saat kiriman membawa field baru. null = kiriman ulang")
+    warnings: list[str] = Field(default_factory=list, description='data disimpan, tetapi "nama"/"waktu" kurang')
+    duplicate: bool = Field(False, description="true: kiriman ulang, tidak disimpan lagi (tetap 202)")
+    dry_run: bool = Field(False, description="true: hanya dicek, tidak disimpan")
+    keys: list[str] | None = Field(None, description="dry_run: nama field setelah diratakan")
+    alert: Literal["aman", "bahaya"] | None = Field(None, description='status "alert" dari payload, bila dikirim')
+
+
+class DeviceAlert(BaseModel):
+    """The latest alert a device reported for one "nama"; "bahaya" notifies the owner."""
+    device_id: int
+    device_name: str
+    region_name: str | None = None
+    nama: str = Field(description="tabel data (\"nama\") yang membawa alert ini")
+    status: Literal["aman", "bahaya"]
+    message: str | None = Field(None, description='"pesan" dari perangkat, bila ada')
+    category: Literal["kebakaran", "cuaca", "gempa", "bencana", "panas"] | None = Field(
+        None, description='"kategori" dari perangkat; kosong = alert alat umum')
+    changed_at: datetime = Field(description="saat status terakhir berubah")
+    updated_at: datetime = Field(description="laporan terakhir dari perangkat")
+
+
+# ── data tables and readings ──────────────────────────────────────────
+class Reading(BaseModel):
+    id: int | None = None
+    stream_id: int | None = None
+    version_id: int | None = None
+    received_at: datetime
+    measured_at: datetime | None = Field(None, description="waktu dari sensor sendiri, bila dikirim")
+    protocol: str | None = None
+    data: dict[str, Any] | None = None
+    value: Any = None
+
+
+class Readings(BaseModel):
+    device_id: int
+    field: str | None = None
+    count: int
+    readings: list[Reading]
+    next_before: int | None = Field(None, description="isi ke ?before= untuk halaman berikutnya; null = habis")
+
+
+class ReadingsDeleted(BaseModel):
+    deleted: int
+
+
+class StreamField(BaseModel):
+    key: str
+    label: str
+    type: str
+    category: SensorCategory
+    category_by: Literal["rule", "ai", "user"]
+    first_seen: datetime
+    last_seen: datetime
+
+
+class StreamVersion(BaseModel):
+    """A table's field set since a reading first brought new fields (a sensor upgrade)."""
+    id: int
+    version: int
+    keys: list[str] = Field(description="field versi ini")
+    added: list[str] = Field(description="field yang belum ada di versi sebelumnya")
+    reading_count: int
+    first_seen: datetime
+    last_seen: datetime
+
+
+class Stream(BaseModel):
+    """One data table per \"nama\" the device sends; columns = every field it has had."""
+    id: int
+    slug: str = Field(description='"nama" yang dinormalkan; kiriman dengan nama ini masuk ke tabel ini')
+    aliases: list[str] = Field(default_factory=list, description="nama tabel lain yang sudah digabung ke sini")
+    versions: list[StreamVersion] = Field(description="urut dari versi 1")
+    name: str
+    name_by: Literal["auto", "payload", "user"]
+    category: SensorCategory
+    category_by: Literal["fields", "user"] = Field(description="fields = mayoritas kategori field-nya")
+    confirmed: bool = Field(description="false = ada field yang kategorinya masih sementara (aturan, bukan AI/user)")
+    fields: list[StreamField] = Field(description="kolom tabel")
+    reading_count: int
+    created_at: datetime
+    last_seen_at: datetime
+
+
+# ── test devices ──────────────────────────────────────────────────────
+class DeviceEvent(BaseModel):
+    """One line in a test device's log."""
+    id: int
+    at: datetime
+    kind: Literal["diterima", "ulang", "tabel_baru", "versi_baru", "peringatan", "bahaya", "ditolak", "nama_diganti", "digabung", "dihapus"]
+    message: str
+
+
+# ── dashboard ─────────────────────────────────────────────────────────
+class Compare(BaseModel):
+    metric: str
+    label: str
+    value: float
+    unit: str
+    period: date
+    is_modelled: bool
+    source_id: str
+    region_id: str
+    region_name: str | None = None
+
+
+class SeriesPoint(BaseModel):
+    t: datetime
+    v: float
+
+
+class Widget(WidgetSpec):
+    latest: Any = Field(None, description="nilai terakhir field ini (tipe bebas)")
+    latest_at: datetime | None = None
+    pair_latest: Any = Field(None, description="widget map: nilai terakhir field pasangan (longitude)")
+    series: list[SeriesPoint] | None = Field(None, description="untuk line/bar/gauge, maks ±200 titik")
+    compare: Compare | None = None
+
+
+class DeviceDashboard(BaseModel):
+    widgets: list[Widget]
+    device: DeviceOut
+
+
+class OurIndicator(IndicatorValue):
+    reason: str
+    added_for_sensor: bool = Field(False, description="ditambahkan karena sensor user mengukur hal yang sebanding")
+
+
+class OurRegion(BaseModel):
+    id: str
+    name: str
+    level: str
+    indicators: list[OurIndicator]
+    missing: list[str] = Field(description="metrik terpilih yang belum ada datanya di wilayah ini")
+
+
+class OurData(BaseModel):
+    role: str
+    metrics_by: str | None = None
+    region: OurRegion | None = None
+    metrics: list[MetricPick] | None = Field(None, description="bila profil belum punya wilayah")
+
+
+class Focus(BaseModel):
+    id: str
+    name: str
+    level: str
+    parent_id: str | None = None
+    bbox: list[float] = Field(description="[barat, selatan, timur, utara] untuk membuka peta")
+
+
+class EventPanel(BaseModel):
+    kind: Literal["quake", "hotspot", "disaster"]
+    days: int
+    count: int
+    max_value: float | None = Field(None, description="quake: magnitudo terbesar; hotspot: FRP tertinggi (MW)")
+    top: list[dict[str, Any]]
+
+
+class RankRow(BaseModel):
+    region_id: str
+    name: str
+    score: float
+    value: float
+    is_you: bool
+
+
+class RankPanel(BaseModel):
+    metric: str
+    sort: Literal["attention", "value_desc"]
+    scope: str = Field(description="provinsi user, atau Indonesia bila tanpa wilayah")
+    polarity: str
+    your_rank: int | None = None
+    of: int
+    results: list[RankRow]
+    score_meaning: str
+
+
+class AlertPanel(BaseModel):
+    weather_warnings: list[WarningProps] = Field([], description="peringatan dini cuaca BMKG di wilayah user")
+    region_alerts: list[RegionAlert]
+    disaster_alerts: list[DisasterAlert]
+    quake_alerts: list[QuakeAlert]
+
+
+class ImpactRegion(BaseModel):
+    id: str
+    name: str
+    population: int | None = None
+    distance_km: float | None = Field(None, description="gempa: jarak dari episenter")
+
+
+class ImpactQuake(BaseModel):
+    mag: float
+    observed_at: datetime
+    lat: float
+    lon: float
+    depth_km: float | None = None
+    place: str | None = None
+    urgency: str | None = None
+    tsunami: bool
+    felt: str | None = Field(None, description="laporan dirasakan BMKG (MMI per tempat), bila ada")
+    potensi: str | None = None
+    source_id: str
+    radius_km: int = Field(description="perkiraan radius terasa dari magnitudo")
+    regions: list[ImpactRegion] = Field(description="kabupaten/kota dalam radius, terdekat dulu (maks. 30)")
+    population: int = Field(description="jumlah penduduk kabupaten/kota tersebut")
+
+
+class ImpactWarning(WarningProps):
+    regions: list[ImpactRegion] = Field(description="kabupaten/kota yang tercakup peringatan")
+    population: int
+
+
+class ImpactPanel(BaseModel):
+    """Mode protected: apa yang terjadi, di mana, siapa terdampak."""
+    quakes: list[ImpactQuake]
+    warnings: list[ImpactWarning]
+    radius_note: str
+
+
+class HistoryMonth(BaseModel):
+    month: date
+    count: int
+
+
+class HistoryPanel(BaseModel):
+    """Mode plan: jumlah kejadian per bulan setahun terakhir."""
+    kind: Literal["quake", "hotspot", "disaster"]
+    days: int
+    months: list[HistoryMonth]
+
+
+class DashboardView(BaseModel):
+    profile_id: int
+    mode: ModeInfo
+    impact: ImpactPanel | None = Field(None, description="hanya mode protected")
+    history: list[HistoryPanel] | None = Field(None, description="hanya mode plan")
+    field: FieldBrief
+    fit: Literal["cocok", "sebagian", "tidak_cocok"] | None = None
+    unsupported: list[str]
+    message: str | None = None
+    focus: Focus | None = None
+    layers: list[Layer]
+    events: list[EventPanel]
+    ranking: RankPanel
+    alerts: AlertPanel
+
+
+class Dashboard(BaseModel):
+    profile_needed: bool = Field(description="true = arahkan user mengisi profil dulu")
+    ours: OurData | None
+    view: DashboardView | None = Field(None, description="tampilan sesuai bidang user: layer peta, kejadian, peringkat, peringatan")
+    devices: list[DeviceDashboard]
+
+
+# ── community and moderation ──────────────────────────────────────────
+class CommunityDevice(BaseModel):
+    id: int
+    name: str
+    category: str | None = Field(None, description="petunjuk opsional dari pemilik; kategori sebenarnya per field")
+    region_id: str | None = None
+    region_name: str | None = None
+    lat: float | None = None
+    lon: float | None = None
+    layout: list[WidgetSpec] | None = None
+    last_seen_at: datetime | None = None
+    latest_at: datetime | None = None
+    latest: dict[str, Any] = Field(description="nilai terakhir per field (field tersembunyi tidak disertakan)")
+
+
+class ModerationItem(DeviceOut):
+    owner_email: str
+    owner_name: str
+    readings: int
+    latest: dict[str, Any] | None = None
+
+
+class ModerationResult(BaseModel):
+    device_id: int
+    community_status: Literal["approved", "rejected"]
+
+
+class PasswordReset(BaseModel):
+    user_id: int
+    temporary_password: str = Field(description="HANYA ditampilkan sekali; berikan ke user lewat jalur pribadi")

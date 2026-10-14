@@ -16,7 +16,7 @@ from .api.isochrone import router as isochrone_router
 from .api.reports import router as reports_router
 from .api.public import router as public_router
 from .api.routes import router
-from .api.users import router as users_router
+from .api.users import purge_test_devices, router as users_router
 from .auth import admin_user
 from .db import apply_schema, close_pool, init_pool
 from .clients import require_app_key
@@ -24,6 +24,7 @@ from .config import CORS_ORIGINS
 from .ingest.buildings_prewarm import run_forever as run_buildings_forever, start_background as start_buildings_background
 from .ingest import bmkg
 from .ingest.runner import run_all, seed_registry
+from .iot.layout import retry_rule_layouts
 
 logging.basicConfig(
     level=logging.INFO,
@@ -62,6 +63,16 @@ async def lifespan(app: FastAPI):
         # BMKG warnings only live a few hours; quakes should show up fast
         scheduler.add_job(
             bmkg.run, IntervalTrigger(minutes=15), id="bmkg", replace_existing=True,
+            max_instances=1, next_run_time=datetime.now(),
+        )
+        # sensor fields laid out/categorised by rules while the AI was down
+        scheduler.add_job(
+            retry_rule_layouts, IntervalTrigger(minutes=30), id="iot_retry", replace_existing=True,
+            max_instances=1, next_run_time=datetime.now(),
+        )
+        # test devices delete themselves, with everything they received
+        scheduler.add_job(
+            purge_test_devices, IntervalTrigger(minutes=10), id="test_devices", replace_existing=True,
             max_instances=1, next_run_time=datetime.now(),
         )
         scheduler.start()

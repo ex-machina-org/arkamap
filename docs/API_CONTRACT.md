@@ -186,6 +186,11 @@ Payload sama untuk kedua jalur:
 - Batas: 16 KB, 100 field, 1 kiriman per detik per perangkat.
 - `?dry_run=true` hanya memeriksa kunci dan payload tanpa menyimpan. Responsnya menyebut tabel tujuan (mengikuti alias gabungan), field, dan jumlah field baru.
 - Pesan MQTT yang salah tidak dibalas. Penolakan terakhir tersimpan di `last_error` perangkat.
+- `alert` (opsional) adalah status bahaya yang dilaporkan perangkat sendiri: `"aman"`, `"bahaya"`, atau `{"status": "bahaya", "pesan": "Asap terdeteksi", "kategori": "kebakaran"}`. `kategori` salah satu dari `kebakaran`, `cuaca`, `gempa`, `bencana`, `panas`, atau dikosongkan (alert alat umum). Hanya status terakhir per perangkat dan `nama` yang disimpan; `IngestOut.alert` mengulang status yang diterima.
+
+| Method dan path | Akses | Respons |
+|---|---|---|
+| `GET /api/me/alerts` | **Pengguna** | `DeviceAlert[]`: alert terakhir tiap perangkat dan `nama`, `bahaya` lebih dulu, lalu yang terbaru berubah |
 
 Kode yang dilihat pengguna di Serial Monitor, sekaligus panduan pop up "Jika Ada Masalah" di frontend:
 
@@ -225,7 +230,7 @@ Akses **Pengguna**.
 - Satu alat uji per akun. Alat uji adalah perangkat biasa dengan `test_expires_at` 2 jam setelah dibuat.
 - Alat uji tidak muncul di daftar perangkat, dashboard, komunitas, maupun agen, dan tidak bisa dibagikan.
 - Penjadwal backend tiap 10 menit menghapus alat uji yang kedaluwarsa, beserta pembacaan dan kredensial MQTT-nya. Frontend menghapusnya lebih awal dengan `DELETE /api/me/devices/{id}`.
-- `DeviceEvent.kind`: `diterima`, `ulang`, `tabel_baru`, `versi_baru`, `peringatan`, `ditolak`, `nama_diganti`, `digabung`, `dihapus`. Hanya alat uji yang mencatat kejadian.
+- `DeviceEvent.kind`: `diterima`, `ulang`, `tabel_baru`, `versi_baru`, `peringatan`, `bahaya`, `ditolak`, `nama_diganti`, `digabung`, `dihapus`. Hanya alat uji yang mencatat kejadian.
 
 ## Dashboard pengguna
 

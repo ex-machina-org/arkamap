@@ -572,8 +572,16 @@
       "CommunityDevice": {
         "properties": {
           "category": {
-            "title": "Category",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "petunjuk opsional dari pemilik; kategori sebenarnya per field",
+            "title": "Category"
           },
           "id": {
             "title": "Id",
@@ -675,7 +683,6 @@
         "required": [
           "id",
           "name",
-          "category",
           "latest"
         ],
         "title": "CommunityDevice",
@@ -924,6 +931,96 @@
         "title": "DatasetLink",
         "type": "object"
       },
+      "DeviceAlert": {
+        "description": "The latest alert a device reported for one \"nama\"; \"bahaya\" notifies the owner.",
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "enum": [
+                  "kebakaran",
+                  "cuaca",
+                  "gempa",
+                  "bencana",
+                  "panas"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "\"kategori\" dari perangkat; kosong = alert alat umum",
+            "title": "Category"
+          },
+          "changed_at": {
+            "description": "saat status terakhir berubah",
+            "format": "date-time",
+            "title": "Changed At",
+            "type": "string"
+          },
+          "device_id": {
+            "title": "Device Id",
+            "type": "integer"
+          },
+          "device_name": {
+            "title": "Device Name",
+            "type": "string"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "\"pesan\" dari perangkat, bila ada",
+            "title": "Message"
+          },
+          "nama": {
+            "description": "tabel data (\"nama\") yang membawa alert ini",
+            "title": "Nama",
+            "type": "string"
+          },
+          "region_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region Name"
+          },
+          "status": {
+            "enum": [
+              "aman",
+              "bahaya"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "description": "laporan terakhir dari perangkat",
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "device_id",
+          "device_name",
+          "nama",
+          "status",
+          "changed_at",
+          "updated_at"
+        ],
+        "title": "DeviceAlert",
+        "type": "object"
+      },
       "DeviceCreated": {
         "properties": {
           "api_key": {
@@ -964,6 +1061,48 @@
           "device"
         ],
         "title": "DeviceDashboard",
+        "type": "object"
+      },
+      "DeviceEvent": {
+        "description": "One line in a test device's log.",
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "diterima",
+              "ulang",
+              "tabel_baru",
+              "versi_baru",
+              "peringatan",
+              "bahaya",
+              "ditolak",
+              "nama_diganti",
+              "digabung",
+              "dihapus"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "at",
+          "kind",
+          "message"
+        ],
+        "title": "DeviceEvent",
         "type": "object"
       },
       "DeviceIn": {
@@ -2799,6 +2938,22 @@
       },
       "IngestOut": {
         "properties": {
+          "alert": {
+            "anyOf": [
+              {
+                "enum": [
+                  "aman",
+                  "bahaya"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "status \"alert\" dari payload, bila dikirim",
+            "title": "Alert"
+          },
           "device_id": {
             "title": "Device Id",
             "type": "integer"
@@ -3895,6 +4050,19 @@
             "description": "kiriman yang ditolak (format salah, terlalu cepat, dst.)",
             "title": "Rejected Count",
             "type": "integer"
+          },
+          "test_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "diisi = alat uji; terhapus otomatis setelah waktu ini",
+            "title": "Test Expires At"
           },
           "visibility": {
             "enum": [
@@ -9163,6 +9331,50 @@
         ]
       }
     },
+    "/api/me/alerts": {
+      "get": {
+        "description": "The latest alert each of the user's devices reported, \"bahaya\" first.",
+        "operationId": "device_alerts_api_me_alerts_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DeviceAlert"
+                  },
+                  "title": "Response Device Alerts Api Me Alerts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Device Alerts",
+        "tags": [
+          "users & iot"
+        ]
+      }
+    },
     "/api/me/dashboard": {
       "get": {
         "description": "Everything the user's home screen needs. Without sensors: our data,\npicked from how the user described themselves. With sensors: their\nwidgets too, and the whole dashboard adapts to them: every metric the AI\nchose as a comparison for a sensor field is added to the region cards and\nthe map layers (flagged `added_for_sensor`).",
@@ -9435,6 +9647,71 @@
           }
         ],
         "summary": "Update Device",
+        "tags": [
+          "users & iot"
+        ]
+      }
+    },
+    "/api/me/devices/{device_id}/events": {
+      "get": {
+        "description": "Newest first. Only test devices record events.",
+        "operationId": "list_events_api_me_devices__device_id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "device_id",
+            "required": true,
+            "schema": {
+              "title": "Device Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DeviceEvent"
+                  },
+                  "title": "Response List Events Api Me Devices  Device Id  Events Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Events",
         "tags": [
           "users & iot"
         ]
@@ -10611,6 +10888,91 @@
           }
         ],
         "summary": "Activate Profile",
+        "tags": [
+          "users & iot"
+        ]
+      }
+    },
+    "/api/me/test-device": {
+      "get": {
+        "operationId": "get_test_device_api_me_test_device_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/DeviceOut"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Test Device Api Me Test Device Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Test Device",
+        "tags": [
+          "users & iot"
+        ]
+      },
+      "post": {
+        "description": "A fresh sandbox: the previous test device and everything it received go, a new key comes.",
+        "operationId": "start_test_device_api_me_test_device_post",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Start Test Device",
         "tags": [
           "users & iot"
         ]

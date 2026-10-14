@@ -1,25 +1,34 @@
-"""Accounts, profiles and IoT devices."""
+"""Accounts, profiles, IoT devices, sensor data, dashboards and community sharing."""
 import logging
 import time
 from collections import defaultdict, deque
+from datetime import datetime
 
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
+from fastapi.concurrency import run_in_threadpool
 from psycopg import errors
 from psycopg.types.json import Jsonb
 from pydantic import BaseModel, Field
 
-from ..auth import current_user, hash_password, make_token, new_device_key, verify_password
+from ..auth import (admin_user, current_user, hash_password, make_token, new_device_key, temp_password,
+                    verify_password)
 from ..config import ADMIN_EMAILS, IDN_BBOX
 from .. import fields, modes
 from ..db import conn, execute, query, query_one
 from ..iot import broker
+from ..iot import ingest as iot
 from ..iot import layout as iot_layout
 from ..iot import quickstart
 from ..iot.categories import Category, majority
 from ..iot import relevance
-from .schemas import AuthOut, DeviceCreated, DeviceOut, ErrorResponse, KeyRotated, MeOut, Quickstart, WidgetSpec
+from . import fieldview, routes
+from .schemas import (
+    AuthOut, CommunityDevice, Dashboard, DeviceAlert, DeviceCreated, DeviceEvent, DeviceOut, ErrorResponse,
+    IngestOut, KeyRotated, MeOut, ModerationItem, ModerationResult, PasswordReset, Quickstart, Readings,
+    ReadingsDeleted, Stream, UserOut, WidgetSpec,
+)
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -84,9 +93,31 @@ class WidgetEdit(BaseModel):
     category: Category | None = Field(None, description="kategori tetap; pilihan user tidak ditimpa AI")
 
 
+class StreamEdit(BaseModel):
+    name: str | None = Field(None, min_length=1, max_length=100)
+    category: Category | None = Field(None, description="kosong = ikut mayoritas field-nya")
+
+
+class StreamMerge(BaseModel):
+    into: int = Field(description="id kelompok tujuan; kelompok ini dilebur ke sana")
+
+
+class ReadingsDelete(BaseModel):
+    """At least one filter; all given filters must match."""
+    ids: list[int] | None = Field(None, max_length=5000)
+    stream_id: int | None = None
+    since: datetime | None = None
+    until: datetime | None = None
+
+
 class PasswordChange(BaseModel):
     old_password: str = Field(max_length=128)
     new_password: str = Field(min_length=8, max_length=128)
+
+
+class ModerateIn(BaseModel):
+    approve: bool
+    note: str | None = Field(None, max_length=500)
 
 
 # ── helpers ─────────────────────────────────────────────────────────────
@@ -147,6 +178,54 @@ def _own_device(user: dict, device_id: int) -> dict:
 
 def _public(d: dict) -> dict:
     return {k: v for k, v in d.items() if k not in ("user_id", "layout_stale")}
+
+
+def _widgets(device: dict, hours: int, points: int = 200) -> list[dict]:
+    """Layout (re-planned if new fields arrived) + latest value, a series and
+    the region's own figure for comparison. All values from the database."""
+    layout = device["layout"] or []
+    if device["layout_stale"] or not layout:
+        # never wait for the model here: show rule widgets for the new fields
+        # now; the AI layout lands in the background (normally already
+        # started at ingest; this covers a restart that lost that thread)
+        iot_layout.plan_in_background(device["id"])
+        layout = iot_layout.provisional(device)
+    layout = _with_categories(device["id"], layout)
+    # the newest 5000, oldest first for the chart: ascending + LIMIT kept the oldest and dropped the latest
+    rows = query("SELECT * FROM (SELECT r.received_at, r.data, s.slug FROM sensor_reading r"
+                 " JOIN device_stream s ON s.id = r.stream_id"
+                 " WHERE r.device_id = %s AND r.received_at > now() - make_interval(hours => %s)"
+                 " ORDER BY r.received_at DESC LIMIT 5000) newest ORDER BY received_at", (device["id"], hours))
+    # last value of EACH field (a field missing from the newest message
+    # keeps its previous value); device_field.sample is updated on every send
+    last = {f["key"]: f for f in query("SELECT key, sample, last_seen FROM device_field"
+                                       " WHERE device_id = %s", (device["id"],))}
+    compare = {}
+    metrics = [w["compare_metric"] for w in layout if w.get("compare_metric")]
+    if metrics and device.get("region_id"):
+        compare = {r["metric"]: r for r in query(
+            "SELECT i.metric, i.value, i.period, i.is_modelled, i.source_id, m.unit, m.label"
+            " FROM indicator_latest i JOIN metric_def m USING (metric)"
+            " WHERE i.region_id = %s AND i.metric = ANY(%s)", (device["region_id"], metrics))}
+    step = max(1, len(rows) // points)
+    out = []
+    for w in layout:
+        if w.get("hidden"):
+            continue
+        f = w["field"]
+        item = {**w, "latest": last.get(f, {}).get("sample"),
+                "latest_at": last.get(f, {}).get("last_seen")}
+        if w.get("pair_field"):   # map: latitude here, longitude from its pair
+            item["pair_latest"] = last.get(w["pair_field"], {}).get("sample")
+        if w["widget"] in ("line", "bar", "gauge"):
+            slug, _, key = f.rpartition("/")   # "<nama>/<field>"
+            item["series"] = [{"t": r["received_at"], "v": r["data"][key]} for r in rows[::step]
+                              if r["slug"] == slug and isinstance(r["data"].get(key), (int, float))]
+        if w.get("compare_metric") in compare:
+            item["compare"] = {**compare[w["compare_metric"]], "region_id": device["region_id"],
+                               "region_name": device.get("region_name")}
+        out.append(item)
+    return out
 
 
 # ── auth ────────────────────────────────────────────────────────────────
@@ -355,6 +434,20 @@ def list_devices(user: dict = Depends(current_user)) -> list[dict]:
         " WHERE d.user_id = %s AND d.test_expires_at IS NULL ORDER BY d.created_at", (user["id"],))]
 
 
+@router.get("/me/alerts", response_model=list[DeviceAlert], responses={401: {"model": ErrorResponse}})
+def device_alerts(user: dict = Depends(current_user)) -> list[dict]:
+    """The latest alert each of the user's devices reported, "bahaya" first."""
+    return query(
+        """
+        SELECT a.device_id, d.name AS device_name, r.name AS region_name, a.slug AS nama,
+               a.status, a.message, a.category, a.changed_at, a.updated_at
+        FROM device_alert a JOIN device d ON d.id = a.device_id
+        LEFT JOIN region r ON r.id = d.region_id
+        WHERE d.user_id = %s AND d.revoked_at IS NULL
+        ORDER BY a.status = 'bahaya' DESC, a.changed_at DESC
+        """, (user["id"],))
+
+
 @router.patch("/me/devices/{device_id}", response_model=DeviceOut, responses={401: {"model": ErrorResponse}})
 def update_device(device_id: int, body: DeviceUpdate, user: dict = Depends(current_user)) -> dict:
     _own_device(user, device_id)
@@ -382,6 +475,47 @@ def delete_device(device_id: int, user: dict = Depends(current_user)) -> None:
 def _remove_device(device_id: int) -> None:
     broker.remove_device(device_id)   # broker first: never leave a login for a deleted device
     execute("DELETE FROM device WHERE id = %s", (device_id,))
+
+
+# ── test device: a sandbox with a real key that deletes itself ──────────
+
+TEST_TTL_HOURS = 2
+
+
+@router.get("/me/test-device", response_model=DeviceOut | None, responses={401: {"model": ErrorResponse}})
+def get_test_device(user: dict = Depends(current_user)) -> dict | None:
+    d = query_one(f"SELECT {_DEVICE_COLS} FROM device d LEFT JOIN region r ON r.id = d.region_id"
+                  " WHERE d.user_id = %s AND d.test_expires_at > now() ORDER BY d.id DESC LIMIT 1", (user["id"],))
+    return _public(d) if d else None
+
+
+@router.post("/me/test-device", status_code=201, response_model=DeviceCreated, responses={401: {"model": ErrorResponse}})
+def start_test_device(user: dict = Depends(current_user)) -> dict:
+    """A fresh sandbox: the previous test device and everything it received go, a new key comes."""
+    for old in query("SELECT id FROM device WHERE user_id = %s AND test_expires_at IS NOT NULL", (user["id"],)):
+        delete_device(old["id"], user)
+    created = create_device(DeviceIn(name="Alat Uji"), user)
+    device_id = created["device"]["id"]
+    execute("UPDATE device SET test_expires_at = now() + make_interval(hours => %s) WHERE id = %s",
+            (TEST_TTL_HOURS, device_id))
+    return {**created, "device": _public(_own_device(user, device_id))}
+
+
+def purge_test_devices() -> None:
+    """Scheduled: expired test devices go with all their data."""
+    for d in query("SELECT id FROM device WHERE test_expires_at < now()"):
+        try:
+            _remove_device(d["id"])
+        except broker.BrokerError as exc:   # tried again next run
+            log.warning("hapus alat uji %s gagal: %s", d["id"], exc)
+
+
+@router.get("/me/devices/{device_id}/events", response_model=list[DeviceEvent], responses={401: {"model": ErrorResponse}})
+def list_events(device_id: int, user: dict = Depends(current_user)) -> list[dict]:
+    """Newest first. Only test devices record events."""
+    _own_device(user, device_id)
+    return query("SELECT id, at, kind, message FROM device_event WHERE device_id = %s ORDER BY id DESC LIMIT 100",
+                 (device_id,))
 
 
 @router.post("/me/devices/{device_id}/key", response_model=KeyRotated, responses={401: {"model": ErrorResponse}})
@@ -446,6 +580,69 @@ def share_device(device_id: int, body: ShareIn, user: dict = Depends(current_use
     return _public(_own_device(user, device_id))
 
 
+@router.get("/me/devices/{device_id}/readings", response_model=Readings, responses={401: {"model": ErrorResponse}})
+def device_readings(device_id: int, field: str | None = None,
+                    hours: int = Query(24, ge=1, le=24 * 90),
+                    limit: int = Query(500, ge=1, le=5000),
+                    stream: int | None = Query(None, description="id tabel data; kosong = semua"),
+                    version: int | None = Query(None, description="id versi tabel (Stream.versions[].id); kosong = semua versi"),
+                    before: int | None = Query(None, description="halaman berikutnya: next_before dari respons"),
+                    user: dict = Depends(current_user)) -> dict:
+    _own_device(user, device_id)
+    return _readings(device_id, field, hours, limit, stream, before, version)
+
+
+def _readings(device_id: int, field: str | None, hours: int, limit: int,
+              stream: int | None = None, before: int | None = None, version: int | None = None) -> dict:
+    """Newest first. Paging by id, not offset: stable while new rows arrive.
+    `field` is a widget's "<nama>/<field>" (a bare field matches any table)."""
+    slug, _, key = (field or "").rpartition("/")
+    rows = query(
+        "SELECT r.id, r.stream_id, r.version_id, r.received_at, r.measured_at, r.protocol, r.data"
+        " FROM sensor_reading r JOIN device_stream s ON s.id = r.stream_id WHERE r.device_id = %s"
+        " AND r.received_at > now() - make_interval(hours => %s)"
+        " AND (%s = '' OR r.data ? %s) AND (%s = '' OR s.slug = %s)"
+        " AND (%s::bigint IS NULL OR r.stream_id = %s) AND (%s::bigint IS NULL OR r.version_id = %s)"
+        " AND (%s::bigint IS NULL OR r.id < %s)"
+        " ORDER BY r.id DESC LIMIT %s",
+        (device_id, hours, key, key, slug, slug, stream, stream, version, version, before, before, limit))
+    nxt = rows[-1]["id"] if len(rows) == limit else None
+    if field:
+        rows = [{"id": r["id"], "stream_id": r["stream_id"], "version_id": r["version_id"],
+                 "received_at": r["received_at"], "measured_at": r["measured_at"], "value": r["data"][key]}
+                for r in rows]
+    return {"device_id": device_id, "field": field, "count": len(rows), "readings": rows, "next_before": nxt}
+
+
+@router.post("/me/devices/{device_id}/readings/delete", response_model=ReadingsDeleted,
+             responses={400: {"model": ErrorResponse}, 401: {"model": ErrorResponse}})
+def delete_readings(device_id: int, body: ReadingsDelete, user: dict = Depends(current_user)) -> dict:
+    """Remove wrong rows (calibration, tests). Cannot be undone."""
+    _own_device(user, device_id)
+    if not (body.ids or body.stream_id or body.since or body.until):
+        raise HTTPException(400, "beri minimal satu filter: ids, stream_id, since, atau until")
+    n = execute(
+        "DELETE FROM sensor_reading WHERE device_id = %s"
+        " AND (%s::bigint[] IS NULL OR id = ANY(%s)) AND (%s::bigint IS NULL OR stream_id = %s)"
+        " AND (%s::timestamptz IS NULL OR received_at >= %s) AND (%s::timestamptz IS NULL OR received_at < %s)",
+        (device_id, body.ids, body.ids, body.stream_id, body.stream_id,
+         body.since, body.since, body.until, body.until))
+    _recount(device_id)
+    iot.record_event(device_id, "dihapus", f"{n} pembacaan dihapus")
+    return {"deleted": n}
+
+
+def _recount(device_id: int) -> None:
+    execute("UPDATE device_stream s SET reading_count = (SELECT COUNT(*) FROM sensor_reading r"
+            " WHERE r.stream_id = s.id) WHERE s.device_id = %s", (device_id,))
+    execute("UPDATE stream_version v SET reading_count = (SELECT COUNT(*) FROM sensor_reading r"
+            " WHERE r.version_id = v.id) FROM device_stream s WHERE s.id = v.stream_id AND s.device_id = %s",
+            (device_id,))
+
+
+# ── streams: one data table per "nama", versioned as fields are added ───
+
+
 def _streams(device_id: int) -> list[dict]:
     fields = {r["key"]: r for r in query(
         "SELECT key, type, category, category_by, first_seen, last_seen FROM device_field WHERE device_id = %s",
@@ -472,3 +669,231 @@ def _streams(device_id: int) -> list[dict]:
                     "fields": fs, "reading_count": st["reading_count"],
                     "created_at": st["created_at"], "last_seen_at": st["last_seen_at"]})
     return out
+
+
+@router.get("/me/devices/{device_id}/streams", response_model=list[Stream], responses={401: {"model": ErrorResponse}})
+def list_streams(device_id: int, user: dict = Depends(current_user)) -> list[dict]:
+    """The data table page: one table per "nama", columns = every field it has had."""
+    _own_device(user, device_id)
+    return _streams(device_id)
+
+
+def _own_stream(device_id: int, stream_id: int) -> None:
+    if not query_one("SELECT 1 FROM device_stream WHERE id = %s AND device_id = %s", (stream_id, device_id)):
+        raise HTTPException(404, "kelompok data tidak ditemukan")
+
+
+@router.patch("/me/devices/{device_id}/streams/{stream_id}", response_model=list[Stream],
+              responses={401: {"model": ErrorResponse}})
+def edit_stream(device_id: int, stream_id: int, body: StreamEdit, user: dict = Depends(current_user)) -> list[dict]:
+    _own_device(user, device_id)
+    _own_stream(device_id, stream_id)
+    sets = body.model_dump(exclude_unset=True)
+    if "name" in sets:
+        old = query_one("SELECT name, slug FROM device_stream WHERE id = %s", (stream_id,))
+        execute("UPDATE device_stream SET name = %s, name_by = %s WHERE id = %s",
+                (sets["name"], "user" if sets["name"] else None, stream_id))
+        iot.record_event(device_id, "nama_diganti", f'Tabel "{old["name"] or old["slug"]}" diganti nama menjadi "{sets["name"]}"')
+    if "category" in sets:
+        execute("UPDATE device_stream SET category = %s WHERE id = %s", (sets["category"], stream_id))
+    return _streams(device_id)
+
+
+@router.post("/me/devices/{device_id}/streams/{stream_id}/merge", response_model=list[Stream],
+             responses={400: {"model": ErrorResponse}, 401: {"model": ErrorResponse}})
+def merge_stream(device_id: int, stream_id: int, body: StreamMerge, user: dict = Depends(current_user)) -> list[dict]:
+    """When the automatic split was wrong: fold this stream into another."""
+    _own_device(user, device_id)
+    _own_stream(device_id, stream_id)
+    _own_stream(device_id, body.into)
+    if body.into == stream_id:
+        raise HTTPException(400, "tidak bisa digabung dengan dirinya sendiri")
+    with conn() as c, c.cursor() as cur:
+        src = cur.execute("SELECT slug, keys FROM device_stream WHERE id = %s", (stream_id,)).fetchone()
+        dst = cur.execute("SELECT slug, keys FROM device_stream WHERE id = %s", (body.into,)).fetchone()
+        # only a typo of the same sensor may merge: a different field set is different data
+        if set(src["keys"]) != set(dst["keys"]):
+            raise HTTPException(400, f'field "{src["slug"]}" dan "{dst["slug"]}" berbeda; hanya tabel dengan field sama persis yang bisa digabung')
+        # the merged table's versions follow the target's, in order
+        cur.execute("UPDATE stream_version SET stream_id = %s, version = version + (SELECT COALESCE(MAX(version), 0)"
+                    " FROM stream_version WHERE stream_id = %s) WHERE stream_id = %s", (body.into, body.into, stream_id))
+        cur.execute("UPDATE sensor_reading SET stream_id = %s WHERE stream_id = %s", (body.into, stream_id))
+        # its senders keep their "nama": it now leads here
+        cur.execute("UPDATE device_stream t SET keys = ARRAY(SELECT k FROM (SELECT DISTINCT unnest(t.keys || s.keys) k) u"
+                    " ORDER BY k COLLATE \"C\"), last_seen_at = GREATEST(t.last_seen_at, s.last_seen_at),"
+                    " aliases = ARRAY(SELECT DISTINCT unnest(t.aliases || s.aliases || ARRAY[s.slug]))"
+                    " FROM device_stream s WHERE t.id = %s AND s.id = %s", (body.into, stream_id))
+        cur.execute("DELETE FROM device_stream WHERE id = %s", (stream_id,))
+        # fields and widgets move to the target's "<slug>/"; one already there wins
+        old, new = src["slug"] + "/", dst["slug"] + "/"
+        cur.execute("DELETE FROM device_field f WHERE f.device_id = %s AND left(f.key, %s) = %s AND EXISTS ("
+                    " SELECT 1 FROM device_field g WHERE g.device_id = f.device_id AND g.key = %s || substr(f.key, %s))",
+                    (device_id, len(old), old, new, len(old) + 1))
+        cur.execute("UPDATE device_field SET key = %s || substr(key, %s) WHERE device_id = %s AND left(key, %s) = %s",
+                    (new, len(old) + 1, device_id, len(old), old))
+        layout = cur.execute("SELECT layout FROM device WHERE id = %s", (device_id,)).fetchone()["layout"] or []
+        moved = lambda w: w["field"].startswith(old)  # noqa: E731
+        ren = lambda v: new + v[len(old):] if v and v.startswith(old) else v  # noqa: E731
+        kept = {w["field"] for w in layout if not moved(w)}
+        layout = [{**w, "field": ren(w["field"]), "pair_field": ren(w.get("pair_field"))} if moved(w) else w
+                  for w in layout if not moved(w) or ren(w["field"]) not in kept]
+        cur.execute("UPDATE device SET layout = %s, layout_stale = TRUE WHERE id = %s", (Jsonb(layout), device_id))
+    _recount(device_id)
+    iot.record_event(device_id, "digabung", f'Tabel "{src["slug"]}" digabung ke "{dst["slug"]}"')
+    return _streams(device_id)
+
+
+# ── dashboard ───────────────────────────────────────────────────────────
+
+
+@router.get("/me/dashboard", response_model=Dashboard, responses={401: {"model": ErrorResponse}})
+def dashboard(hours: int = Query(24, ge=1, le=24 * 30), user: dict = Depends(current_user)) -> dict:
+    """Everything the user's home screen needs. Without sensors: our data,
+    picked from how the user described themselves. With sensors: their
+    widgets too, and the whole dashboard adapts to them: every metric the AI
+    chose as a comparison for a sensor field is added to the region cards and
+    the map layers (flagged `added_for_sensor`)."""
+    devices = query(f"SELECT {_DEVICE_COLS} FROM device d LEFT JOIN region r ON r.id = d.region_id"
+                    " WHERE d.user_id = %s AND d.test_expires_at IS NULL ORDER BY d.created_at", (user["id"],))
+    # widgets first: they may (re)plan the layout stored on the device
+    dev_out = [{"widgets": _widgets(d, hours), "device": _public(d)} for d in devices]
+    for_sensor: dict[str, str] = {}
+    for dv in dev_out:
+        for w in dv["widgets"]:
+            if w.get("compare_metric"):
+                for_sensor.setdefault(w["compare_metric"],
+                                      f"pembanding untuk sensor {dv['device']['name']}: {w['label']}")
+
+    prof = _active_profile(user["id"])
+    ours, view = None, None
+    if prof:
+        f = fields.get(prof["field"])
+        view = {"profile_id": prof["id"],
+                "field": {"id": f["id"], "label": f["label"], "description": f["description"]},
+                "fit": prof["fit"], "unsupported": prof["unsupported"], "message": prof["ai_message"],
+                **fieldview.build(f, prof["region_id"], prof["mode"])}
+        chosen = [m["metric"] for m in prof["metrics"]]
+        reasons = {m["metric"]: m["reason"] for m in prof["metrics"]}
+        extra = [m for m in for_sensor if m not in chosen]
+        reasons.update({m: for_sensor[m] for m in extra})
+        on_map = {l.get("metric") for l in view["layers"]}
+        view["layers"] = view["layers"] + [{"type": "choropleth", "metric": m, "added_for_sensor": True}
+                                           for m in extra if m not in on_map]
+        ours = {"role": prof["role"], "metrics_by": prof["metrics_by"], "region": None}
+        if prof["region_id"]:
+            r = routes.region_detail(prof["region_id"])
+            inds = {i.metric: i.model_dump() for i in r.indicators}
+            ours["region"] = {"id": r.id, "name": r.name, "level": r.level,
+                              "indicators": [{**inds[m], "reason": reasons[m], "added_for_sensor": m in extra}
+                                             for m in chosen + extra if m in inds],
+                              "missing": [m for m in chosen + extra if m not in inds]}
+        else:
+            ours["metrics"] = prof["metrics"] + [{"metric": m, "reason": for_sensor[m]} for m in extra]
+    return {"profile_needed": prof is None, "ours": ours, "view": view, "devices": dev_out}
+
+
+# ── ingest (HTTP) ───────────────────────────────────────────────────────
+
+
+@router.post("/ingest", status_code=202, response_model=IngestOut,
+             responses={400: {"model": ErrorResponse}, 401: {"model": ErrorResponse}, 429: {"model": ErrorResponse}})
+async def ingest_http(request: Request, x_device_key: str | None = Header(None),
+                      x_api_key: str | None = Header(None),
+                      dry_run: bool = Query(False, description="cek key dan payload tanpa menyimpan")) -> dict:
+    """Same payload as MQTT: {"nama", "kategori", "data": {...}}.
+    Auth: the device's API key in X-API-Key (what the edge proxy expects on
+    every request) or X-Device-Key."""
+    body = await request.body()
+    try:
+        return await run_in_threadpool(iot.ingest, x_device_key or x_api_key, body, "http", dry_run)
+    except iot.Rejected as exc:
+        code = 401 if "API key" in str(exc) else 429 if "terlalu cepat" in str(exc) else 400
+        raise HTTPException(code, str(exc)) from None
+
+
+# ── community ───────────────────────────────────────────────────────────
+
+
+@router.get("/community/devices", response_model=list[CommunityDevice])
+def community_devices(category: str | None = None, region_id: str | None = None) -> list[dict]:
+    """Approved community devices with their latest reading. Public."""
+    rows = query(
+        f"""
+        SELECT {_DEVICE_COLS}, last.latest_at, last.latest
+        FROM device d LEFT JOIN region r ON r.id = d.region_id
+        LEFT JOIN LATERAL (SELECT MAX(last_seen) AS latest_at, jsonb_object_agg(key, sample) AS latest
+                           FROM device_field f WHERE f.device_id = d.id) last ON TRUE
+        WHERE d.visibility = 'community' AND d.community_status = 'approved' AND d.revoked_at IS NULL
+          AND (%s::text IS NULL OR d.category = %s)
+          AND (%s::text IS NULL OR d.region_id = %s OR r.parent_id = %s)
+        ORDER BY d.last_seen_at DESC NULLS LAST
+        """, (category, category, region_id, region_id, region_id))
+    out = []
+    for d in rows:
+        hidden = {w["field"] for w in (d["layout"] or []) if w.get("hidden")}
+        d["latest"] = {k: v for k, v in (d["latest"] or {}).items() if k not in hidden}
+        out.append({k: v for k, v in d.items()
+                    if k not in ("key_prefix", "community_note", "layout_stale")})
+    return out
+
+
+@router.get("/community/devices/{device_id}/readings", response_model=Readings)
+def community_readings(device_id: int, field: str | None = None,
+                       hours: int = Query(24, ge=1, le=24 * 30),
+                       limit: int = Query(500, ge=1, le=5000)) -> dict:
+    if not query_one("SELECT 1 FROM device WHERE id = %s AND visibility = 'community'"
+                     " AND community_status = 'approved'", (device_id,)):
+        raise HTTPException(404, "perangkat komunitas tidak ditemukan")
+    return _readings(device_id, field, hours, limit)
+
+
+# ── moderation (admin) ──────────────────────────────────────────────────
+# Not under /api/admin/*: Caddy blocks that path for the ingest triggers.
+
+
+@router.get("/moderation/users", response_model=list[UserOut])
+def find_users(q: str | None = Query(None, min_length=2, description="cari email atau nama"),
+               limit: int = Query(50, ge=1, le=500), _: dict = Depends(admin_user)) -> list[dict]:
+    return query("SELECT id, email, name, is_admin FROM app_user"
+                 " WHERE %(q)s::text IS NULL OR email ILIKE '%%' || %(q)s || '%%'"
+                 " OR name ILIKE '%%' || %(q)s || '%%' ORDER BY id LIMIT %(limit)s",
+                 {"q": q, "limit": limit})
+
+
+@router.post("/moderation/users/{user_id}/reset-password", response_model=PasswordReset,
+             responses={404: {"model": ErrorResponse}})
+def reset_password(user_id: int, _: dict = Depends(admin_user)) -> dict:
+    """For a user who forgot their password: sets a random temporary one
+    (returned ONCE; hand it over privately) and logs out all their sessions.
+    They should change it with POST /me/password after logging in."""
+    if not query_one("SELECT 1 FROM app_user WHERE id = %s", (user_id,)):
+        raise HTTPException(404, "user tidak ditemukan")
+    pw = temp_password()
+    _set_password(user_id, pw)
+    return {"user_id": user_id, "temporary_password": pw}
+
+
+@router.get("/moderation/community", response_model=list[ModerationItem])
+def pending_community(status: str = Query("pending", pattern="^(pending|approved|rejected)$"),
+                      _: dict = Depends(admin_user)) -> list[dict]:
+    rows = query(
+        f"""
+        SELECT {_DEVICE_COLS}, u.email AS owner_email, u.name AS owner_name,
+               (SELECT COUNT(*) FROM sensor_reading s WHERE s.device_id = d.id) AS readings,
+               (SELECT data FROM sensor_reading s WHERE s.device_id = d.id
+                ORDER BY received_at DESC LIMIT 1) AS latest
+        FROM device d JOIN app_user u ON u.id = d.user_id LEFT JOIN region r ON r.id = d.region_id
+        WHERE d.visibility = 'community' AND d.community_status = %s
+        ORDER BY d.created_at
+        """, (status,))
+    return [_public(r) for r in rows]
+
+
+@router.post("/moderation/community/{device_id}", response_model=ModerationResult)
+def moderate(device_id: int, body: ModerateIn, _: dict = Depends(admin_user)) -> dict:
+    n = execute("UPDATE device SET community_status = %s, community_note = %s"
+                " WHERE id = %s AND visibility = 'community'",
+                ("approved" if body.approve else "rejected", body.note, device_id))
+    if not n:
+        raise HTTPException(404, "tidak ada pengajuan komunitas untuk perangkat ini")
+    return {"device_id": device_id, "community_status": "approved" if body.approve else "rejected"}
