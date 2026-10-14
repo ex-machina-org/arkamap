@@ -13,9 +13,10 @@ import { AgentChatActions } from "@/components/application/agent-chat/agent-chat
 import {
   AgentChatHistory,
   type ChatThreadSummary,
+  type HistoryCopy,
 } from "@/components/application/agent-chat/agent-chat-history";
 import { AgentMessage } from "@/components/application/agent-chat/agent-chat-message";
-import { AgentComposer } from "@/components/application/agent-chat/agent-composer";
+import { AgentComposer, type ComposerMention } from "@/components/application/agent-chat/agent-composer";
 import {
   orderThreads,
   readThreads,
@@ -62,6 +63,8 @@ export interface AgentChatCopy {
   error: (error: Error) => string;
   showHistory: string;
   hideHistory: string;
+  /** The history rail's words. */
+  history: HistoryCopy;
 }
 
 const STARTER_COPY: AgentChatCopy = {
@@ -79,6 +82,26 @@ const STARTER_COPY: AgentChatCopy = {
   error: () => "Something went wrong. Check the server logs, then try again.",
   showHistory: "Show chat history",
   hideHistory: "Hide chat history",
+  history: {
+    newChat: "New chat",
+    recent: "Recent",
+    empty: "Chats you start show up here.",
+    search: "Search chats",
+    clearSearch: "Clear search",
+    results: (count) => `${count} ${count === 1 ? "result" : "results"}`,
+    noMatches: "No chat matches.",
+    pinned: "Pinned",
+    pin: "Pin",
+    unpin: "Unpin",
+    moveTo: "Move to folder",
+    newFolder: "New folder…",
+    folderName: "Folder name",
+    removeFromFolder: "Remove from folder",
+    rename: "Rename",
+    markUnread: "Mark as unread",
+    delete: "Delete",
+    moreActions: (title) => `More actions for ${title}`,
+  },
 };
 
 /** The history rail's width, and the workspace gap it gives back when it closes. */
@@ -111,6 +134,7 @@ export function AgentChat({
   storageKey = STORAGE_KEY,
   initialThreadId,
   voiceLanguage,
+  mentions,
 }: {
   className?: string;
   /** Docs preview mode: fill the preview frame's height instead of the
@@ -123,7 +147,7 @@ export function AgentChat({
   /** Replaces the starter navigation in both the desktop rail and the phone drawer. */
   renderSidebar?: (options: { mobile: boolean; onClose: () => void }) => ReactNode;
   /** Renders an assistant turn whose content is richer than plain text. */
-  renderAssistant?: (message: UIMessage, streaming: boolean) => ReactNode;
+  renderAssistant?: (message: UIMessage, streaming: boolean, ask?: (text: string) => void) => ReactNode;
   /** The readable text of a message, for the transcript, titles, and the thinking gate. */
   getText?: (message: UIMessage) => string;
   /** Overrides the thinking label while a reply has no text yet, e.g. with the current tool step. */
@@ -140,6 +164,8 @@ export function AgentChat({
   initialThreadId?: string;
   /** Enables dictation in the composer, in this language. */
   voiceLanguage?: string;
+  /** What "@" in the composer lists, e.g. the user's devices and data sources. */
+  mentions?: ComposerMention[];
 }) {
   const copy = { ...STARTER_COPY, ...copyOverrides };
   const custom = customTransport !== undefined;
@@ -301,10 +327,16 @@ export function AgentChat({
   // appears as soon as the first message lands without a state round-trip.
   // The timestamp is stamped when a message is sent rather than read during
   // render, so rendering stays pure and the badge does not drift each frame.
+  // What the reader set on the open thread (pin, folder) lives on its stored row.
+  const activeMeta = threads.find((thread) => thread.id === activeId);
+  const activePinned = activeMeta?.pinned;
+  const activeFolder = activeMeta?.folder;
   const liveThread: StoredThread | null = useMemo(
     () =>
       activeId && messages.length > 0
         ? {
+            pinned: activePinned,
+            folder: activeFolder,
             id: activeId,
             title: activeTitle ?? deriveTitle(messages, copy.newChat),
             updatedAt: activeUpdatedAt,
@@ -312,7 +344,7 @@ export function AgentChat({
             messageAt,
           }
         : null,
-    [activeId, messages, activeUpdatedAt, messageAt, activeTitle, copy.newChat],
+    [activeId, messages, activeUpdatedAt, messageAt, activeTitle, copy.newChat, activePinned, activeFolder],
   );
 
   // Ordered by last message, never by what is open: selecting a thread must
@@ -408,6 +440,22 @@ export function AgentChat({
       prev.map((thread) => (thread.id === id ? { ...thread, unread: !thread.unread } : thread)),
     );
   }, []);
+
+  /** Changes one thread, the open one included: it is copied into the stored list first if it is only live. */
+  const updateThread = useCallback(
+    (id: string, patch: Partial<StoredThread>) => {
+      setThreads((prev) => {
+        const base = prev.find((thread) => thread.id === id) ?? (liveThread?.id === id ? liveThread : undefined);
+        return base ? [{ ...base, ...patch }, ...prev.filter((thread) => thread.id !== id)] : prev;
+      });
+    },
+    [liveThread],
+  );
+  const togglePin = useCallback(
+    (id: string) => updateThread(id, { pinned: !allThreads.find((thread) => thread.id === id)?.pinned }),
+    [updateThread, allThreads],
+  );
+  const moveThread = useCallback((id: string, folder: string | undefined) => updateThread(id, { folder }), [updateThread]);
 
   const deleteThread = useCallback(
     (id: string) => {
@@ -594,7 +642,7 @@ export function AgentChat({
                       messages.map((message, index) => {
                         const streaming = busy && index === messages.length - 1;
                         return renderAssistant && message.role === "assistant" ? (
-                          <div key={message.id}>{renderAssistant(message, streaming)}</div>
+                          <div key={message.id}>{renderAssistant(message, streaming, index === messages.length - 1 ? submit : undefined)}</div>
                         ) : (
                           <AgentMessage
                             key={message.id}
@@ -635,6 +683,7 @@ export function AgentChat({
                       placeholder={copy.placeholder}
                       showAttachment={!custom}
                       voiceLanguage={voiceLanguage}
+                      mentions={mentions}
                       model={probe.model}
                       provider={custom ? copy.provider : demoActive ? "Demo mode" : (probe.label ?? probe.provider)}
                       messageCount={messages.length}
@@ -664,7 +713,11 @@ export function AgentChat({
                 onRename={renameThread}
                 onToggleUnread={toggleUnread}
                 onDelete={deleteThread}
+                onTogglePin={togglePin}
+                onMove={moveThread}
                 onExport={exportThreads}
+                searchText={(thread) => [thread.title, ...thread.messages.map(getText)].join(" ")}
+                copy={copy.history}
                 disabled={busy}
                 showFooter={!custom}
               />

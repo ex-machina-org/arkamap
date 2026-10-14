@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useChat } from "@ai-sdk/react";
 import { RiCloseLine, RiEditBoxLine, RiExpandDiagonalLine } from "@remixicon/react";
 import { AgentComposer } from "@/components/application/agent-chat/agent-composer";
+import { useMentions } from "./use-mentions";
 import { saveThread } from "@/components/application/agent-chat/thread-store";
 import { Tooltip, TooltipTrigger } from "@/components/base/tooltip/tooltip";
 import { cx } from "@/utils/cx";
@@ -50,6 +51,7 @@ export function JevAssistantPanel({ onClose, className, request, onEvents, varia
   const [transport] = useState(() => new JevTransport());
   const [threadId, setThreadId] = useState(newThreadId);
   const [input, setInput] = useState("");
+  const mentions = useMentions();
   /** When each message first settled, so the full page shows real times. */
   const messageAt = useRef<Record<string, number>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -96,13 +98,14 @@ export function JevAssistantPanel({ onClose, className, request, onEvents, varia
 
   const floating = variant === "floating";
   const composer = <AgentComposer value={input} onValueChange={setInput} onSubmit={() => submit(input)} onStop={stop} busy={busy}
-    placeholder={placeholder} provider="Jev" showAttachment={false} voiceLanguage="id-ID" messageCount={messages.length}
+    placeholder={placeholder} provider="Jev" showAttachment={false} voiceLanguage="id-ID" mentions={mentions} messageCount={messages.length}
     showStatus={!floating} autoFocus={floating} leading={floating ? <KodamaMark className="size-7" /> : undefined} />;
   const conversation = <>
     {messages.map((message, index) => message.role === "user"
       ? <p key={message.id} className="ml-auto w-fit max-w-[85%] rounded-2xl bg-background-primary-default px-3 py-[11px] text-body-regular break-words whitespace-pre-wrap text-text-primary shadow-card">{jevMessageText(message)}</p>
       : <JevReply key={message.id} message={message} streaming={busy && index === messages.length - 1}
-        onRetry={index === messages.length - 1 ? () => void regenerate({ body: { threadId } }) : undefined} onEvents={onEvents} />)}
+        onRetry={index === messages.length - 1 ? () => void regenerate({ body: { threadId } }) : undefined} onEvents={onEvents}
+        onAsk={index === messages.length - 1 ? submit : undefined} />)}
     {showThinking && <JevThinking messages={messages} />}
     {error && <p role="alert" className="px-1 text-body-regular text-text-tertiary">{error.message || "Kodama tidak tersedia. Coba lagi beberapa saat lagi."}</p>}
   </>;

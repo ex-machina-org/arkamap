@@ -24,6 +24,17 @@ export function formatDateTime(value: string | number | Date) {
   return Number.isNaN(date.getTime()) ? "Waktu tidak valid" : date.toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" });
 }
 
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
+/** A day as a date ("8 Okt 2026"), a reading with its clock time. */
+export function formatWhen(t: string | number) {
+  const date = new Date(t);
+  if (Number.isNaN(date.getTime())) return "—";
+  return typeof t === "string" && DATE_ONLY.test(t)
+    ? date.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
+    : date.toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" });
+}
+
 /** Short axis label that adapts to the visible span: time of day within two days, date beyond. */
 export function timeTick(span: number) {
   return (value: string | number) => {
@@ -43,4 +54,10 @@ export function relativeTime(value: string | number | Date) {
   if (minutes < 60) return `${minutes} menit lalu`;
   if (minutes < 1440) return `${Math.round(minutes / 60)} jam lalu`;
   return `${Math.round(minutes / 1440)} hari lalu`;
+}
+
+/** An official air-quality level (0 baik … 5 berbahaya) as a status tone, ISPU-style: always shown with its label. */
+export function statusTone(level: number | null | undefined): "success" | "info" | "warning" | "danger" | "neutral" {
+  if (level == null) return "neutral";
+  return level <= 0 ? "success" : level === 1 ? "info" : level <= 3 ? "warning" : "danger";
 }

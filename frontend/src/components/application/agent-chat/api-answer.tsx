@@ -38,7 +38,7 @@ export function ApiAnswer({ answer, viz, sources, busy, step, error, fallback, c
     {!busy && fallback && <Alert tone="info" title="Dijawab tanpa AI">{fallbackMessage(fallback)}</Alert>}
     {answer && <MarkdownText text={answer} />}
     {!busy && clarify && ask && <ClarifyChoices key={answer} clarify={clarify} onAsk={question => void ask(question)} />}
-    {viz.map((item, index) => <VizRenderer key={index} viz={item} onEvents={onEvents} />)}
+    {!busy && viz.map((item, index) => <VizRenderer key={index} viz={item} onEvents={onEvents} />)}
     {sources.length > 0 && <details className="text-body-compact text-text-secondary"><summary className="cursor-pointer">Sumber jawaban ({sources.length})</summary><DataFacts value={sources} /></details>}
   </section>;
 }
