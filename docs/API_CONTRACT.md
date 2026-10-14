@@ -144,6 +144,9 @@ Semua endpoint di bagian ini memakai akses **Aplikasi**.
 | `POST /api/score` | `ScoreWeights` | `ScoreResponse` · 400 untuk metrik tidak dikenal |
 | `GET /api/reports/{region_id}` | `days` | `RegionReport` · 404 |
 | `GET /api/isochrone` | `lat*, lon*, minutes, mode` | `Isochrone` · 400, 502 |
+| `POST /api/responder/route` | `ResponderRouteIn` | `ResponderRoute` · 400 di luar Indonesia, 404 tanpa faskes dalam 30 km, 502 layanan rute atau OSM tidak merespons |
+
+**Rute responder.** `origin` dan `incident` berupa `[lon, lat]`. Jalur masuk (asal ke kejadian) dan koridor evakuasi (kejadian ke faskes) dihitung lewat Valhalla dengan `exclude_polygons`: radius 800 m titik panas 24 jam terakhir (tanpa yang berkeyakinan rendah) dan peringatan cuaca BMKG yang masih berlaku, dalam 15 km dari kejadian. Zona yang memuat ujung jalur tidak dihindari, karena kejadian biasanya berada di dalam zona apinya sendiri. Bila Valhalla gagal, rute diambil dari OSRM tanpa penghindaran. `safety_level` dihitung dari garis rute yang benar-benar dihasilkan: `critical` bila melewati buffer titik api, `caution` bila melewati peringatan cuaca atau berasal dari OSRM, `safe` bila tidak keduanya. Faskes tujuan adalah rumah sakit atau klinik terdekat yang berada di luar zona bahaya dan tidak searah hembusan asap (dari `wind_grid`); data faskes diambil dari tabel bangunan, lalu dari OSM bila belum ada.
 
 ## Perangkat IoT
 

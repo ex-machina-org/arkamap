@@ -31,6 +31,7 @@ export interface components {
     "DisasterCollection": { "count": number; "features": Array<components["schemas"]["DisasterFeature"]>; "type"?: "FeatureCollection"; };
     "DisasterFeature": { "geometry": components["schemas"]["PointGeometry"]; "properties": components["schemas"]["DisasterProps"]; "type"?: "Feature"; };
     "DisasterProps": { "alertlevel"?: "Green" | "Orange" | "Red" | null; "current"?: boolean | null; "magnitude_unit"?: string | null; "name"?: string | null; "observed_at": string; "source_id": "gdacs" | "nasa_eonet"; "type": "volcano" | "earthquake" | "flood" | "wildfire" | "cyclone" | "drought" | "landslide" | "other"; "until"?: string | null; "url"?: string | null; "value"?: number | null; };
+    "EgressLegOut": { "coordinates": Array<Array<number>>; "distance_km": number; "duration_minutes": number; "safety_level": "safe" | "caution" | "critical"; "summary": string; "target_poi": components["schemas"]["PoiRef"]; "warnings": Array<string>; };
     "ErrorResponse": { "detail": string; };
     "EventHistory": { "bucket": "day" | "week"; "buckets": Array<components["schemas"]["HistoryBucket"]>; "metric": "quake" | "hotspot" | "disaster"; };
     "EventPanel": { "count": number; "days": number; "kind": "quake" | "hotspot" | "disaster"; "max_value"?: number | null; "top": Array<Record<string, unknown>>; };
@@ -41,6 +42,7 @@ export interface components {
     "Focus": { "bbox": Array<number>; "id": string; "level": string; "name": string; "parent_id"?: string | null; };
     "Geometry": { "coordinates": unknown; "type": string; };
     "HTTPValidationError": { "detail"?: Array<components["schemas"]["ValidationError"]>; };
+    "HazardCollection": { "features": Array<Record<string, unknown>>; "type"?: "FeatureCollection"; };
     "HealthReport": { "database": string; "indicators": number; "observations": number; "regions": number; "sources"?: Array<components["schemas"]["SourceInfo"]>; "status": string; };
     "HistoryBucket": { "bucket": string; "count": number; "urgency"?: string | null; };
     "HistoryMonth": { "count": number; "month": string; };
@@ -88,6 +90,7 @@ export interface components {
     "OverviewCounts": { "community_devices": number; "disasters_30d": number; "hotspots_24h": number; "hotspots_7d": number; "quakes_7d_m45": number; };
     "PasswordChange": { "new_password": string; "old_password": string; };
     "PasswordReset": { "temporary_password": string; "user_id": number; };
+    "PoiRef": { "coords": Array<number>; "name": string; "type": "hospital"; };
     "PointGeometry": { "coordinates": Array<number>; "type"?: "Point"; };
     "ProfileIn": { "goals"?: string | null; "mode"?: "protected" | "responden" | "plan" | null; "region_id"?: string | null; "role": string; };
     "ProfileOut": { "active": boolean; "ai_message"?: string | null; "created_at": string; "field"?: string | null; "field_label"?: string | null; "fit"?: "cocok" | "sebagian" | "tidak_cocok" | null; "goals"?: string | null; "id": number; "metrics": Array<components["schemas"]["MetricPick"]>; "metrics_by"?: "ai" | "rule" | null; "mode": "protected" | "responden" | "plan"; "mode_by": "user" | "ai" | "rule"; "mode_label": string; "mode_title": string; "region_id"?: string | null; "region_name"?: string | null; "role": string; "unsupported"?: Array<string>; "updated_at": string; };
@@ -108,7 +111,10 @@ export interface components {
     "RegionRef": { "id": string; "level": "provinsi" | "kabkota"; "name": string; "parent_id"?: string | null; "population"?: number | null; };
     "RegionReport": { "alerts": Array<components["schemas"]["RegionAlert"]>; "days": number; "disasters": Array<components["schemas"]["DisasterProps"]>; "events": Record<string, components["schemas"]["EventSummary"]>; "generated_at": string; "region": components["schemas"]["RegionSummary"]; "sources": Array<components["schemas"]["SourceFreshness"]>; };
     "RegionSummary": { "area_km2"?: number | null; "composite"?: number | null; "id": string; "indicators"?: Array<components["schemas"]["IndicatorValue"]>; "level": string; "name": string; "population"?: number | null; };
+    "ResponderRoute": { "egress": components["schemas"]["EgressLegOut"]; "hazard_polygons": components["schemas"]["HazardCollection"]; "ingress": components["schemas"]["RouteLegOut"]; "pois": Array<components["schemas"]["TacticalPoi"]>; "wind"?: components["schemas"]["WindOut"] | null; };
+    "ResponderRouteIn": { "incident": Array<number>; "incident_id"?: string | null; "incident_title"?: string | null; "origin": Array<number>; };
     "RiskTop": { "name": string; "region_id": string; "score": number; };
+    "RouteLegOut": { "coordinates": Array<Array<number>>; "distance_km": number; "duration_minutes": number; "safety_level": "safe" | "caution" | "critical"; "summary": string; "warnings": Array<string>; };
     "ScorePart": { "normalised": number; "value": number; "weight": number; };
     "ScoreResponse": { "count": number; "polarity": Record<string, string>; "results": Array<components["schemas"]["ScoreResult"]>; "score_meaning": string; "weights": Record<string, number>; };
     "ScoreResult": { "coverage": number; "min_confidence": number; "modelled_share": number; "name": string; "parts": Record<string, components["schemas"]["ScorePart"]>; "region_id": string; "score": number; };
@@ -129,6 +135,7 @@ export interface components {
     "StreamField": { "category": "cuaca" | "kualitas_udara" | "air" | "tanah" | "energi" | "laut" | "kebencanaan" | "kesehatan" | "lokasi" | "perangkat" | "lainnya"; "category_by": "rule" | "ai" | "user"; "first_seen": string; "key": string; "label": string; "last_seen": string; "type": string; };
     "StreamMerge": { "into": number; };
     "StreamVersion": { "added": Array<string>; "first_seen": string; "id": number; "keys": Array<string>; "last_seen": string; "reading_count": number; "version": number; };
+    "TacticalPoi": { "coords": Array<number>; "distance_meters": number; "id": string; "name": string; "note"?: string | null; "type": "hospital"; };
     "TokenUsage": { "budget": number; "input": number; "output": number; };
     "ToolCallInfo": { "error"?: string | null; "tool": string; };
     "UserOut": { "email": string; "id": number; "is_admin": boolean; "name": string; };
@@ -140,5 +147,6 @@ export interface components {
     "WidgetEdit": { "category"?: "cuaca" | "kualitas_udara" | "air" | "tanah" | "energi" | "laut" | "kebencanaan" | "kesehatan" | "lokasi" | "perangkat" | "lainnya" | null; "field": string; "group"?: string | null; "hidden"?: boolean | null; "label"?: string | null; "unit"?: string | null; "widget"?: "line" | "gauge" | "stat" | "bar" | "status" | "map" | "table" | null; };
     "WidgetSpec": { "by"?: "rule" | "ai" | "user" | null; "category"?: "cuaca" | "kualitas_udara" | "air" | "tanah" | "energi" | "laut" | "kebencanaan" | "kesehatan" | "lokasi" | "perangkat" | "lainnya"; "category_by"?: "rule" | "ai" | "user" | null; "compare_metric"?: string | null; "field": string; "group": string; "hidden"?: boolean; "label": string; "pair_field"?: string | null; "semantic": string; "unit"?: string | null; "widget": "line" | "gauge" | "stat" | "bar" | "status" | "map" | "table"; };
     "WindGrid": { "direction": Array<number>; "east": number; "north": number; "nx": number; "ny": number; "observed_at": string; "south": number; "speed": Array<number>; "surface": Array<number | null>; "temperature": Array<number | null>; "west": number; };
+    "WindOut": { "advice": string; "direction_deg": number; "is_hazardous": boolean; "speed_kmh": number; };
   };
 }

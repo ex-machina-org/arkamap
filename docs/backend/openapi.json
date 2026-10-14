@@ -1694,6 +1694,64 @@
         "title": "DisasterProps",
         "type": "object"
       },
+      "EgressLegOut": {
+        "properties": {
+          "coordinates": {
+            "description": "garis rute [[lon, lat], ...]",
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "title": "Coordinates",
+            "type": "array"
+          },
+          "distance_km": {
+            "title": "Distance Km",
+            "type": "number"
+          },
+          "duration_minutes": {
+            "title": "Duration Minutes",
+            "type": "integer"
+          },
+          "safety_level": {
+            "description": "safe = tidak melewati zona bahaya; caution = melewati peringatan cuaca atau rute tanpa penghindaran; critical = melewati buffer titik api",
+            "enum": [
+              "safe",
+              "caution",
+              "critical"
+            ],
+            "title": "Safety Level",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "target_poi": {
+            "$ref": "#/components/schemas/PoiRef"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "coordinates",
+          "distance_km",
+          "duration_minutes",
+          "safety_level",
+          "summary",
+          "warnings",
+          "target_poi"
+        ],
+        "title": "EgressLegOut",
+        "type": "object"
+      },
       "ErrorResponse": {
         "properties": {
           "detail": {
@@ -2066,6 +2124,29 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HazardCollection": {
+        "properties": {
+          "features": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Features",
+            "type": "array"
+          },
+          "type": {
+            "const": "FeatureCollection",
+            "default": "FeatureCollection",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "features"
+        ],
+        "title": "HazardCollection",
         "type": "object"
       },
       "HealthReport": {
@@ -4505,6 +4586,33 @@
         "title": "PasswordReset",
         "type": "object"
       },
+      "PoiRef": {
+        "properties": {
+          "coords": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Coords",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "type": {
+            "const": "hospital",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "coords"
+        ],
+        "title": "PoiRef",
+        "type": "object"
+      },
       "PointGeometry": {
         "properties": {
           "coordinates": {
@@ -5654,6 +5762,97 @@
         "title": "RegionSummary",
         "type": "object"
       },
+      "ResponderRoute": {
+        "properties": {
+          "egress": {
+            "$ref": "#/components/schemas/EgressLegOut"
+          },
+          "hazard_polygons": {
+            "$ref": "#/components/schemas/HazardCollection"
+          },
+          "ingress": {
+            "$ref": "#/components/schemas/RouteLegOut"
+          },
+          "pois": {
+            "items": {
+              "$ref": "#/components/schemas/TacticalPoi"
+            },
+            "title": "Pois",
+            "type": "array"
+          },
+          "wind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WindOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "angin terdekat dari kisi angin; null bila belum ada data"
+          }
+        },
+        "required": [
+          "ingress",
+          "egress",
+          "pois",
+          "hazard_polygons"
+        ],
+        "title": "ResponderRoute",
+        "type": "object"
+      },
+      "ResponderRouteIn": {
+        "properties": {
+          "incident": {
+            "description": "[lon, lat] lokasi kejadian",
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "Incident",
+            "type": "array"
+          },
+          "incident_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Incident Id"
+          },
+          "incident_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Incident Title"
+          },
+          "origin": {
+            "description": "[lon, lat] asal armada (GPS atau posko)",
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "Origin",
+            "type": "array"
+          }
+        },
+        "required": [
+          "origin",
+          "incident"
+        ],
+        "title": "ResponderRouteIn",
+        "type": "object"
+      },
       "RiskTop": {
         "properties": {
           "name": {
@@ -5675,6 +5874,60 @@
           "score"
         ],
         "title": "RiskTop",
+        "type": "object"
+      },
+      "RouteLegOut": {
+        "properties": {
+          "coordinates": {
+            "description": "garis rute [[lon, lat], ...]",
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "title": "Coordinates",
+            "type": "array"
+          },
+          "distance_km": {
+            "title": "Distance Km",
+            "type": "number"
+          },
+          "duration_minutes": {
+            "title": "Duration Minutes",
+            "type": "integer"
+          },
+          "safety_level": {
+            "description": "safe = tidak melewati zona bahaya; caution = melewati peringatan cuaca atau rute tanpa penghindaran; critical = melewati buffer titik api",
+            "enum": [
+              "safe",
+              "caution",
+              "critical"
+            ],
+            "title": "Safety Level",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "coordinates",
+          "distance_km",
+          "duration_minutes",
+          "safety_level",
+          "summary",
+          "warnings"
+        ],
+        "title": "RouteLegOut",
         "type": "object"
       },
       "ScorePart": {
@@ -6495,6 +6748,56 @@
         "title": "StreamVersion",
         "type": "object"
       },
+      "TacticalPoi": {
+        "properties": {
+          "coords": {
+            "description": "[lon, lat]",
+            "items": {
+              "type": "number"
+            },
+            "title": "Coords",
+            "type": "array"
+          },
+          "distance_meters": {
+            "description": "jarak garis lurus dari titik kejadian",
+            "title": "Distance Meters",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "type": {
+            "const": "hospital",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "type",
+          "coords",
+          "distance_meters"
+        ],
+        "title": "TacticalPoi",
+        "type": "object"
+      },
       "TokenUsage": {
         "properties": {
           "budget": {
@@ -7292,6 +7595,36 @@
           "surface"
         ],
         "title": "WindGrid",
+        "type": "object"
+      },
+      "WindOut": {
+        "properties": {
+          "advice": {
+            "title": "Advice",
+            "type": "string"
+          },
+          "direction_deg": {
+            "description": "arah datangnya angin (derajat, meteorologis)",
+            "title": "Direction Deg",
+            "type": "number"
+          },
+          "is_hazardous": {
+            "description": "angin cukup kencang untuk mempercepat api dan asap",
+            "title": "Is Hazardous",
+            "type": "boolean"
+          },
+          "speed_kmh": {
+            "title": "Speed Kmh",
+            "type": "number"
+          }
+        },
+        "required": [
+          "speed_kmh",
+          "direction_deg",
+          "is_hazardous",
+          "advice"
+        ],
+        "title": "WindOut",
         "type": "object"
       }
     },
@@ -11913,6 +12246,83 @@
         "summary": "Region Report",
         "tags": [
           "reports"
+        ]
+      }
+    },
+    "/api/responder/route": {
+      "post": {
+        "description": "Ingress from the responder's position to the incident, and an evacuation corridor\nfrom the incident to the nearest hospital outside the hazards and upwind of the\nsmoke, with the hazards and the wind used to choose them.",
+        "operationId": "responder_route_api_responder_route_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResponderRouteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponderRoute"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Responder Route",
+        "tags": [
+          "responder"
         ]
       }
     },
