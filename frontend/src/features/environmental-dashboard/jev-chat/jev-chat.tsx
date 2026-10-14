@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { navigate as goTo } from "@/lib/navigate";
+import { goTo } from "@/lib/navigate";
 import { toast } from "sonner";
 import { AgentChat } from "@/components/application/agent-chat/agent-chat";
-import { KODAMA_DATA_NOTE, KODAMA_PROVIDERS } from "@/components/application/jev-chat/kodama-providers";
 import { DashboardSidebar, type DashboardNavItem } from "@/components/application/dashboard/dashboard-sidebar";
 import { useProfileSwitcher } from "@/hooks/use-profile-switcher";
 import { useSession } from "@/hooks/use-session";
@@ -12,6 +11,7 @@ import { JevReply } from "@/components/application/jev-chat/jev-reply";
 import { JEV_THREADS_KEY } from "@/components/application/jev-chat/jev-storage";
 import { JevThinking } from "@/components/application/jev-chat/jev-thinking";
 import { useMentions } from "@/components/application/jev-chat/use-mentions";
+import { KODAMA_MODELS } from "@/components/application/jev-chat/kodama-models";
 import { jevMessageText, JevTransport } from "@/components/application/jev-chat/jev-transport";
 import { JevEmptyState } from "./jev-empty-state";
 
@@ -27,6 +27,7 @@ const COPY = {
   newChat: "Chat baru",
   placeholder: "Tanyakan apa saja ke Kodama",
   provider: "Jev",
+  providers: KODAMA_MODELS,
   error: (error: Error) => error.message || "Kodama tidak tersedia. Coba lagi beberapa saat lagi.",
   showHistory: "Tampilkan riwayat chat",
   hideHistory: "Sembunyikan riwayat chat",
@@ -82,8 +83,6 @@ export function JevChat() {
     voiceLanguage="id-ID"
     mentions={mentions}
     copy={COPY}
-    providers={KODAMA_PROVIDERS}
-    providersNote={KODAMA_DATA_NOTE}
     getText={jevMessageText}
     renderThinking={messages => <JevThinking messages={messages} />}
     renderEmpty={onPick => <JevEmptyState name={session.me?.user.name} onPick={onPick} />}

@@ -17,18 +17,18 @@ export function alertEntries(alerts: Alerts): AlertEntry[] {
     ...uniqueWarnings(alerts).map(item => {
       const severity = severityLabel(item.severity);
       const level = weatherLevel(item.severity);
-      return { group: "Cuaca", key: `w:${item.id}`, level, node: <AlertRow level={level} tag={severity?.label} title={item.headline ?? item.event ?? "Peringatan cuaca"} meta={item.area} /> };
+      return { group: "Cuaca", key: `w:${item.id}`, level, node: <AlertRow level={level} tags={["BMKG", severity && `Tingkat ${severity.label.toLocaleLowerCase("id-ID")}`]} title={item.headline ?? item.event ?? "Peringatan cuaca"} meta={item.area} /> };
     }),
     ...alerts.quake_alerts.map(item => {
       const urgency = item.urgency && item.urgency in QUAKE_URGENCY ? QUAKE_URGENCY[item.urgency as keyof typeof QUAKE_URGENCY] : undefined;
       const level = quakeLevel(item.urgency);
-      return { group: "Gempa", key: `q:${item.observed_at}:${item.lat}:${item.lon}`, level, node: <AlertRow level={level} tag={`M ${formatDecimal(item.mag)}${urgency ? ` · ${urgency.label}` : ""}`} title={item.place ?? "Gempa tercatat"} meta={formatRelative(item.observed_at)} /> };
+      return { group: "Gempa", key: `q:${item.observed_at}:${item.lat}:${item.lon}`, level, node: <AlertRow level={level} tags={[`M ${formatDecimal(item.mag)}`, urgency?.label]} title={item.place ?? "Gempa tercatat"} meta={formatRelative(item.observed_at)} /> };
     }),
     ...alerts.disaster_alerts.map(item => {
-      const gdacs = item.alertlevel && item.alertlevel in ALERT_LEVELS ? ALERT_LEVELS[item.alertlevel as keyof typeof ALERT_LEVELS] : undefined;
-      const level = disasterLevel(item.alertlevel);
-      return { group: "Bencana", key: `d:${item.observed_at}:${item.lat}:${item.lon}`, level, node: <AlertRow level={level} tag={gdacs?.label} title={item.name ?? (item.type ? DISASTER_TYPES[item.type] ?? item.type : "Bencana tercatat")} meta={formatRelative(item.observed_at)} /> };
+      const level = item.alertlevel && item.alertlevel in ALERT_LEVELS ? ALERT_LEVELS[item.alertlevel as keyof typeof ALERT_LEVELS] : undefined;
+      const severity = disasterLevel(item.alertlevel);
+      return { group: "Bencana", key: `d:${item.observed_at}:${item.lat}:${item.lon}`, level: severity, node: <AlertRow level={severity} tags={["GDACS", level && `Level ${level.label.toLocaleLowerCase("id-ID")}`]} title={item.name ?? (item.type ? DISASTER_TYPES[item.type] ?? item.type : "Bencana tercatat")} meta={formatRelative(item.observed_at)} /> };
     }),
-    ...alertRegions(alerts).map(item => ({ group: "Indikator wilayah", key: `r:${item.region_id}:${item.metric}`, level: REGION_LEVEL, node: <AlertRow level={REGION_LEVEL} tag={`${formatDecimal(item.normalised)}/100`} title={`${item.name} · ${item.label}`} meta={formatDecimal(item.value)} /> })),
+    ...alertRegions(alerts).map(item => ({ group: "Indikator wilayah", key: `r:${item.region_id}:${item.metric}`, level: REGION_LEVEL, node: <AlertRow level={REGION_LEVEL} tags={[`Skor ${formatDecimal(item.normalised)}/100`]} title={`${item.name} · ${item.label}`} meta={formatDecimal(item.value)} /> })),
   ];
 }
