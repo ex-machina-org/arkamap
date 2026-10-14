@@ -2,6 +2,7 @@ import { useState } from "react";
 import { navigate as goTo } from "@/lib/navigate";
 import { toast } from "sonner";
 import { AgentChat } from "@/components/application/agent-chat/agent-chat";
+import { KODAMA_DATA_NOTE, KODAMA_PROVIDERS } from "@/components/application/jev-chat/kodama-providers";
 import { DashboardSidebar, type DashboardNavItem } from "@/components/application/dashboard/dashboard-sidebar";
 import { useProfileSwitcher } from "@/hooks/use-profile-switcher";
 import { useSession } from "@/hooks/use-session";
@@ -81,6 +82,8 @@ export function JevChat() {
     voiceLanguage="id-ID"
     mentions={mentions}
     copy={COPY}
+    providers={KODAMA_PROVIDERS}
+    providersNote={KODAMA_DATA_NOTE}
     getText={jevMessageText}
     renderThinking={messages => <JevThinking messages={messages} />}
     renderEmpty={onPick => <JevEmptyState name={session.me?.user.name} onPick={onPick} />}
