@@ -29,6 +29,7 @@ import type { FeatureCollection } from "geojson";
 import { useApi } from "@/hooks/use-api";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useSession } from "@/hooks/use-session";
+import { apiHeaders } from "@/lib/api/connection";
 import { geoJSON } from "@/lib/api/geojson";
 import { HOTSPOT_LIMIT, useSpatialData } from "./map-api";
 import { useIndonesiaMask, useRegionBoundary } from "@/hooks/use-region-boundary";
@@ -50,10 +51,32 @@ import {
   calculateResponderRoute,
   type TacticalPlan,
 } from "./responder-route";
-import { cameraForBbox, readLastRegion } from "./region-view";
 
 const FOCUS_ZOOM = 11.4;
+const LAST_FOCUS_KEY = "arkamap:map-focus";
+
+/** The region bbox the map last opened on, so a returning visitor's map starts there. */
+function readLastFocus(): number[] | undefined {
+  try {
+    const value: unknown = JSON.parse(localStorage.getItem(LAST_FOCUS_KEY) ?? "null");
+    return Array.isArray(value) && value.length === 4 && value.every(Number.isFinite) ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function writeLastFocus(bbox: number[] | undefined) {
+  try {
+    if (bbox) localStorage.setItem(LAST_FOCUS_KEY, JSON.stringify(bbox));
+    else localStorage.removeItem(LAST_FOCUS_KEY);
+  } catch {
+    // storage blocked: the next visit just waits for the profile again
+  }
+}
+
 const NATIONAL_VIEW: CameraTarget = { coords: [118, -2.5], zoom: 4.6, zoomMode: "exact" };
+// the same view as a different object, so MapCameraController flies there again
+const NATIONAL_AGAIN: CameraTarget = { ...NATIONAL_VIEW };
 
 function isTyping(target: EventTarget | null) {
   return target instanceof HTMLElement && (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName));
@@ -61,12 +84,22 @@ function isTyping(target: EventTarget | null) {
 
 export function SiriMapWorkspace() {
   const { isFirstVisit, completeWelcome } = useFirstVisit();
-  const { me } = useSession();
+  const { me, loading: sessionLoading } = useSession();
   const dashboard = useApi(me ? "/me/dashboard" : null, "Dashboard");
   const view = dashboard.data?.view ?? undefined;
   const focus = view?.focus;
   const boundary = useRegionBoundary(focus);
   const isRegional = focus?.level === "provinsi" || focus?.level === "kabkota";
+  // The map opens on the profile's region, never on Indonesia first: the region seen last time in this browser
+  // straight away, else (first visit) the profile's once it answers.
+  const [signedIn] = useState(() => apiHeaders().has("Authorization"));
+  const [lastFocus] = useState(() => (signedIn ? readLastFocus() : undefined));
+  const settled = !sessionLoading && !dashboard.loading;
+  const startBounds = isRegional ? focus.bbox : settled ? undefined : lastFocus;
+  const mapReady = !signedIn || Boolean(lastFocus) || settled;
+  useEffect(() => {
+    if (settled) writeLastFocus(isRegional ? focus.bbox : undefined);
+  }, [settled, isRegional, focus]);
   const nationalMask = useIndonesiaMask(!isRegional);
   const { situation, loading: situationLoading, error: situationError, metricLabel, metrics } = useSituation(view, Boolean(me));
   // Fetched once for the header count; the alerts page needs a session, so guests get none.
@@ -87,12 +120,10 @@ export function SiriMapWorkspace() {
   const incidents = spatial.incidents;
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
 
-  // A returning visitor opens on the region they looked at last; a watched region replaces it once the profile loads.
-  const [camera, setCamera] = useState<CameraTarget>(() => {
-    const last = readLastRegion();
-    return last ? cameraForBbox(last) : NATIONAL_VIEW;
-  });
+  const [camera, setCamera] = useState<CameraTarget>(NATIONAL_VIEW);
   const [introCamera] = useState(isFirstVisit);
+  // Opened on last time's region but the profile no longer has one: a new target object flies back to Indonesia.
+  const cameraTarget = settled && lastFocus && !isRegional && camera === NATIONAL_VIEW ? NATIONAL_AGAIN : camera;
   const [is3D, setIs3D] = useState(false);
   const [basemap, setBasemap] = useState<BasemapType>("satellite");
 
@@ -315,11 +346,12 @@ export function SiriMapWorkspace() {
             </button>
           )}
 
+          {mapReady ? (
           <MapViewport
             incidents={filteredIncidents}
             selectedIncident={selectedIncident}
             onSelectIncident={handleSelectIncident}
-            camera={camera}
+            camera={cameraTarget}
             introCamera={introCamera}
             is3D={is3D}
             basemap={basemap}
@@ -333,6 +365,7 @@ export function SiriMapWorkspace() {
             onSelectRegion={handlePickRegion}
             events={events}
             focus={focus?.bbox}
+            startBounds={startBounds}
             boundary={boundary}
             nationalMask={nationalMask}
             status={{
@@ -395,6 +428,10 @@ export function SiriMapWorkspace() {
               )}
             </AnimatePresence>
           </MapViewport>
+          ) : (
+            // a signed-in first visit waits for its region (about 0.2 s) rather than showing Indonesia first
+            <div aria-hidden className="size-full bg-background-full" />
+          )}
 
           <AnimatePresence>
             {tacticalPlan && (

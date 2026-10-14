@@ -14,7 +14,6 @@ import { SpatialLayers, type ChoroplethSpec, type DockStatus, type RegionPick } 
 import { HAZARDS, HAZARD_ORDER } from "./hazards";
 import type { MapLayer } from "./atlas";
 import type { BasemapType, HazardType, SpatialIncident } from "./types";
-import { boundsFor, INDONESIA_BOUNDS, type MapBounds } from "./region-view";
 
 const SATELLITE_STYLE: StyleSpecification = {
   version: 8,
@@ -74,14 +73,28 @@ const CLUSTER_THRESHOLD = 24;
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 /** Pins sit on satellite imagery in both themes, so the outline stays white. */
 const PIN_OUTLINE = "#ffffff";
+/** Indonesia spans roughly 95°E to 141°E and 11°S to 6°N; the margin keeps border provinces fully visible without letting users pan into other regions. */
+const INDONESIA_BOUNDS: [[number, number], [number, number]] = [
+  [85, -19],
+  [151, 15],
+];
 const MIN_ZOOM = 3;
 
-/** Moves the pan and zoom-out limit when the watched region changes; the map is created with Indonesia's. */
-function MapLimits({ bounds }: { bounds: MapBounds }) {
+/** A monitored region's bbox widened by a quarter of its span (at least 0.5°), so its edges never sit on the map's edge. */
+function regionLimit(bbox: number[]): [[number, number], [number, number]] {
+  const [w, s, e, n] = bbox;
+  const dx = Math.max((e - w) * 0.25, 0.5), dy = Math.max((n - s) * 0.25, 0.5);
+  return [[w - dx, s - dy], [e + dx, n + dy]];
+}
+
+/** Keeps panning and zooming out inside the monitored region, or inside Indonesia when there is none. */
+function MapBoundsController({ region }: { region?: number[] }) {
   const { map, isLoaded } = useMap();
+  const key = region?.join(",");
   useEffect(() => {
-    if (map && isLoaded) map.setMaxBounds(bounds);
-  }, [map, isLoaded, bounds]);
+    if (!map || !isLoaded) return;
+    map.setMaxBounds(key ? regionLimit(key.split(",").map(Number)) : INDONESIA_BOUNDS);
+  }, [map, isLoaded, key]);
   return null;
 }
 
@@ -97,16 +110,23 @@ function MapCameraController({
   target,
   pitch,
   intro,
+  framed,
 }: {
   target: CameraTarget;
   pitch: number;
   intro: boolean;
+  /** The map opened already framed on a region: the first target (Indonesia) is not flown to. */
+  framed: boolean;
 }) {
   const { map, isLoaded } = useMap();
   const firstFlight = useRef(true);
 
   useEffect(() => {
     if (!map || !isLoaded) return;
+    if (framed && firstFlight.current) {
+      firstFlight.current = false;
+      return;
+    }
     const reduced = window.matchMedia(REDUCED_MOTION).matches;
     const zoom = target.zoomMode === "atLeast" ? Math.max(map.getZoom(), target.zoom) : target.zoom;
     map.flyTo({
@@ -116,7 +136,7 @@ function MapCameraController({
       essential: true,
     });
     firstFlight.current = false;
-  }, [map, isLoaded, target, intro]);
+  }, [map, isLoaded, target, intro, framed]);
 
   // Pitch only tilts the current view. Re-flying here would snap back to the last focused incident.
   useEffect(() => {
@@ -206,6 +226,9 @@ interface MapViewportProps {
   children?: ReactNode;
   events?: FeatureCollection;
   focus?: number[];
+  /** [west, south, east, north] of the monitored region: the map opens on it and cannot be panned or zoomed out of it.
+   *  Absent: Indonesia. */
+  startBounds?: number[];
   boundary?: FeatureCollection;
   /** Everything outside Indonesia; dims the world around the country when no regional boundary applies. */
   nationalMask?: Feature<MultiPolygon>;
@@ -232,15 +255,15 @@ export function MapViewport({
   children,
   events,
   focus,
+  startBounds,
   boundary,
   nationalMask,
   status,
 }: MapViewportProps) {
+  // Opening straight on the region skips both the national view and its intro flight.
+  const framed = startBounds?.length === 4;
+  const intro = introCamera && !framed;
   const clustered = incidents.length > CLUSTER_THRESHOLD;
-  const focusKey = focus?.join(",");
-  // `focusKey` is the stable identity of the box, so a new array with the same numbers does not move the limit.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const limits = useMemo(() => boundsFor(focus), [focusKey]);
 
   // One cluster layer per hazard so a cluster's colour says what it contains.
   const groups = useMemo(() => {
@@ -268,15 +291,17 @@ export function MapViewport({
     <div className="relative size-full overflow-hidden bg-background-full">
       <Map
         center={camera.coords}
-        zoom={introCamera ? camera.zoom - 0.8 : camera.zoom}
-        maxBounds={INDONESIA_BOUNDS}
+        zoom={intro ? camera.zoom - 0.8 : camera.zoom}
+        bounds={framed ? [[startBounds[0], startBounds[1]], [startBounds[2], startBounds[3]]] : undefined}
+        fitBoundsOptions={{ padding: 64, maxZoom: 11 }}
+        maxBounds={framed ? regionLimit(startBounds) : INDONESIA_BOUNDS}
         minZoom={MIN_ZOOM}
         // "heat" keeps the street map underneath: the temperature surface is translucent and needs it.
         styles={basemap === "satellite" || basemap === "detail" ? BASEMAP_STYLES[basemap] : undefined}
         className="size-full"
       >
-        <MapLimits bounds={limits} />
-        <MapCameraController target={camera} pitch={is3D ? 48 : 0} intro={introCamera} />
+        <MapBoundsController region={framed ? startBounds : undefined} />
+        <MapCameraController target={camera} pitch={is3D ? 48 : 0} intro={intro} framed={framed} />
 
         <SpatialLayers warnings={warnings} choropleth={choropleth} layer={layer} layerError={layerError} showData={showData} basemap={basemap} wind={wind} selectedRegionId={selectedRegionId} onSelectRegion={onSelectRegion} onRegionCenter={onRegionCenter} buildings={is3D} events={events} focus={focus} boundary={boundary} nationalMask={nationalMask} status={status} />
         <MapControls position="bottom-right" showCompass showFullscreen showZoom />
