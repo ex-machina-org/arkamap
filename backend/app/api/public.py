@@ -40,7 +40,7 @@ def overview() -> dict:
 
     top = routes.composite_score(ScoreWeights(weights={"fire_risk": 1}))
     prov = {r["id"] for r in query("SELECT id FROM region WHERE level = 'provinsi'")}
-    notes = routes.notifications()
+    notes = routes.snapshot(fires=False)   # fire_alerts are not in the overview
     data = {
         "generated_at": now,
         "counts": {

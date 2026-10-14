@@ -78,7 +78,7 @@ def ranking(field: dict, region: dict | None, top: int = 5) -> dict:
 
 
 def alerts(field: dict, region: dict | None) -> dict:
-    n = routes.notifications()
+    n = routes.snapshot(fires=False)   # fire_alerts are not on the dashboard
     in_scope = (lambda rid: True) if not region else (
         lambda rid: rid == region["id"] or rid in {r["id"] for r in query(
             "SELECT id FROM region WHERE parent_id = %s", (region["id"],))})
