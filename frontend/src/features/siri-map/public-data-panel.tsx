@@ -25,18 +25,17 @@ function ErrorText({ children }: { children: ReactNode }) {
   return <p role="alert" className="rounded-lg bg-status-rose-background px-3 py-2 text-caption-1-medium text-status-rose-text">{children}</p>;
 }
 
-export function PublicDataPanel({ onMetric }: { onMetric: (metric: string) => void }) {
+/** `rail` picks what colours the regions; the rest are national summaries and reports. */
+export function PublicDataPanel({ rail }: { rail: ReactNode }) {
   const overview = useApi("/public/overview", "PublicOverview");
   const [regionId, setRegionId] = useState("");
   const [query, setQuery] = useState("");
   const [regions, setRegions] = useState<DTO<"RegionRef">[]>([]);
-  const [metrics, setMetrics] = useState<DTO<"MetricDef">[]>([]);
   const [community, setCommunity] = useState<DTO<"CommunityDevice">[]>([]);
   const [error, setError] = useState<string>();
   const report = useApi(regionId ? `/reports/${encodeURIComponent(regionId)}?days=30` : null, "RegionReport");
   useEffect(() => {
     const controller = new AbortController();
-    apiList("/metrics", "MetricDef", { signal: controller.signal }).then(setMetrics).catch(cause => { if (!controller.signal.aborted) setError(cause.message); });
     apiList("/community/devices", "CommunityDevice", { signal: controller.signal }).then(setCommunity).catch(cause => { if (!controller.signal.aborted) setError(cause.message); });
     return () => controller.abort();
   }, []);
@@ -80,12 +79,8 @@ export function PublicDataPanel({ onMetric }: { onMetric: (metric: string) => vo
         </Section>
       )}
 
-      <Section title="Warna wilayah" hint="Bawaan mengikuti profil. Pilih metrik lain untuk mewarnai provinsi.">
-        <Select aria-label="Metrik warna wilayah" className="w-full" defaultSelectedKey="auto" onSelectionChange={key => onMetric(String(key))}>
-          <SelectItem id="auto">Sesuai profil</SelectItem>
-          <SelectItem id="none">Tanpa warna wilayah</SelectItem>
-          {metrics.map(metric => <SelectItem key={metric.metric} id={metric.metric}>{metric.label}</SelectItem>)}
-        </Select>
+      <Section title="Warna wilayah" hint="Bawaan mengikuti profil. Pilih data lain untuk mewarnai wilayah.">
+        {rail}
       </Section>
 
       <Section title="Laporan wilayah">

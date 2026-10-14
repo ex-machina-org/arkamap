@@ -35,9 +35,21 @@ import { useIndonesiaMask, useRegionBoundary } from "@/hooks/use-region-boundary
 import { AccountMenu } from "@/components/application/auth/account-menu";
 import { JevAssistantPanel } from "@/components/application/jev-chat/jev-assistant-panel";
 import { PublicDataPanel } from "./public-data-panel";
+import { LayerRail } from "./layer-rail";
+import { RankPanel } from "./rank-panel";
+import { RegionDetail } from "./region-detail";
+import { useMapLayer } from "./use-map-layer";
+import { parentName, type Level } from "./atlas";
 import { formatCoords } from "./format";
 import { HAZARDS, HAZARD_ORDER } from "./hazards";
 import type { BasemapType, HazardType, SpatialIncident } from "./types";
+import {
+  ResponderDialog,
+  ResponderRouteLayers,
+  ResponderRoutePanel,
+  calculateResponderRoute,
+  type TacticalPlan,
+} from "./responder-route";
 
 const FOCUS_ZOOM = 11.4;
 const NATIONAL_VIEW: CameraTarget = { coords: [118, -2.5], zoom: 4.6, zoomMode: "exact" };
@@ -55,13 +67,18 @@ export function SiriMapWorkspace() {
   const boundary = useRegionBoundary(focus);
   const isRegional = focus?.level === "provinsi" || focus?.level === "kabkota";
   const nationalMask = useIndonesiaMask(!isRegional);
-  const { situation, loading: situationLoading, error: situationError, metricLabel } = useSituation(view, Boolean(me));
+  const { situation, loading: situationLoading, error: situationError, metricLabel, metrics } = useSituation(view, Boolean(me));
+  // Fetched once for the header count; the alerts page needs a session, so guests get none.
+  const notifications = useApi(me ? "/notifications" : null, "Notifications");
   // A signed-in view waits for its field's layers, so the 4,000 hotspots are not fetched twice.
   const spatial = useSpatialData(focus?.id, situation?.windows, situation?.feeds, !dashboard.loading && (!me || situation !== null));
   const [events, setEvents] = useState<FeatureCollection>();
   const isDocked = useMediaQuery("(min-width: 1280px)");
-  // "auto" follows the profile; anything else is a metric picked under "Jelajahi data".
+  // "auto" follows the profile; anything else is a metric picked under "Jelajahi data", at `level`.
   const [metricChoice, setMetricChoice] = useState("auto");
+  const [level, setLevel] = useState<Level>("provinsi");
+  const [showData, setShowData] = useState(true);
+  const [wind, setWind] = useState(false);
   // `anchor` is the clicked point on the map; a pick from the list has none and opens beside the region's middle instead.
   const [selectedRegion, setSelectedRegion] = useState<{ entry: RankEntry; position: number; of: number; anchor: [number, number] | null } | null>(null);
   const [regionCenter, setRegionCenter] = useState<{ regionId: string; center: [number, number] } | null>(null);
@@ -84,6 +101,10 @@ export function SiriMapWorkspace() {
   const [askRequest, setAskRequest] = useState<{ id: number; text: string }>();
   const reduceMotion = useReducedMotion();
   const [previewIncident, setPreviewIncident] = useState<SpatialIncident | null>(null);
+  const [tacticalPlan, setTacticalPlan] = useState<TacticalPlan | null>(null);
+  const [tacticalLeg, setTacticalLeg] = useState<"ingress" | "egress" | "both">("both");
+  const [isTacticalDialogOpen, setIsTacticalDialogOpen] = useState(false);
+  const [tacticalIncident, setTacticalIncident] = useState<SpatialIncident | null>(null);
 
   useEffect(() => {
     document.title = "Peta Operasional · Arkamap";
@@ -133,8 +154,17 @@ export function SiriMapWorkspace() {
   const choropleth = useMemo<ChoroplethSpec | null>(() => {
     if (metricChoice === "none") return null;
     if (metricChoice === "auto") return situation ? { ...situation.choropleth, label: situation.rank?.metricLabel ?? metricLabel(situation.choropleth.metric) } : null;
-    return { metric: metricChoice, label: metricLabel(metricChoice), level: "provinsi", parentId: null };
-  }, [metricChoice, situation, metricLabel]);
+    return { metric: metricChoice, label: metricLabel(metricChoice), level, parentId: null };
+  }, [metricChoice, situation, metricLabel, level]);
+  const mapLayer = useMapLayer(choropleth);
+  const regionList = useMemo(() => (mapLayer.layer?.features ?? []).map((feature) => ({
+    id: feature.properties.region_id,
+    name: feature.properties.name,
+    parent: parentName(feature.properties.parent_id),
+  })), [mapLayer.layer]);
+  const peerValues = useMemo(() => (mapLayer.layer?.features ?? [])
+    .map((feature) => feature.properties.value)
+    .filter((value): value is number => value != null), [mapLayer.layer]);
   // The ranking card speaks for the profile's own lens; a manually picked metric gets a plain one.
   const profileLens = metricChoice === "auto" && situation?.rank ? situation.rank : null;
 
@@ -160,6 +190,28 @@ export function SiriMapWorkspace() {
   function handlePickRegion(pick: RegionPick) {
     const known = profileLens?.entries.find((entry) => entry.regionId === pick.regionId);
     selectRegion(known ?? { regionId: pick.regionId, name: pick.name, score: pick.score, value: pick.value, isYou: false, population: pick.population, details: [] }, pick.position, pick.of, pick.anchor);
+  }
+
+  // A pick from the rail or the ranking: the layer says where it stands, and the card opens beside its middle.
+  function pickRegionById(regionId: string) {
+    const features = mapLayer.layer?.features ?? [];
+    const feature = features.find((item) => item.properties.region_id === regionId);
+    if (!feature) return;
+    const props = feature.properties;
+    const ordered = [...features].sort((a, b) => (b.properties.normalised ?? -1) - (a.properties.normalised ?? -1));
+    const known = profileLens?.entries.find((entry) => entry.regionId === regionId);
+    selectRegion(
+      known ?? { regionId, name: props.name, score: props.normalised ?? null, value: props.value ?? null, isYou: false, population: props.population ?? null, details: [] },
+      ordered.findIndex((item) => item.properties.region_id === regionId) + 1,
+      ordered.length,
+    );
+  }
+
+  function changeLevel(next: Level) {
+    // Region ids differ between levels.
+    setLevel(next);
+    setSelectedRegion(null);
+    if (metricChoice === "auto") setMetricChoice(situation?.choropleth.metric ?? "fire_risk");
   }
 
   const regionAnchor = selectedRegion
@@ -234,6 +286,11 @@ export function SiriMapWorkspace() {
             onBasemapChange={setBasemap}
             is3D={is3D}
             onIs3DChange={setIs3D}
+            showData={showData}
+            onShowDataChange={setShowData}
+            wind={wind}
+            onWindChange={setWind}
+            notificationCount={me ? notifications.data?.count ?? 0 : null}
           >
             <AccountMenu />
           </MapHeader>
@@ -263,6 +320,10 @@ export function SiriMapWorkspace() {
             basemap={basemap}
             warnings={spatial.warnings}
             choropleth={choropleth}
+            layer={mapLayer.layer}
+            layerError={mapLayer.error}
+            showData={showData}
+            wind={wind}
             selectedRegionId={selectedRegion?.entry.regionId ?? null}
             onSelectRegion={handlePickRegion}
             events={events}
@@ -279,6 +340,16 @@ export function SiriMapWorkspace() {
               if (selectedRegion) setRegionCenter({ regionId: selectedRegion.entry.regionId, center });
             }}
           >
+            {tacticalPlan && (
+              <ResponderRouteLayers
+                plan={tacticalPlan}
+                activeLeg={tacticalLeg}
+                onSelectPoi={(poi) => {
+                  setCamera({ coords: poi.coords, zoom: 14, zoomMode: "atLeast" });
+                }}
+              />
+            )}
+
             {/* Cards open beside what was picked and follow it while the map moves. */}
             <AnimatePresence>
               {selectedIncident && (
@@ -289,6 +360,10 @@ export function SiriMapWorkspace() {
                     onDispatchOrder={setPreviewIncident}
                     onCopyGeoJSON={handleCopyGeoJSON}
                     onOpenSidebar={() => setIsSidebarOpen(true)}
+                    onOpenResponderRoute={(incident) => {
+                      setTacticalIncident(incident);
+                      setIsTacticalDialogOpen(true);
+                    }}
                   />
                 </AnchoredCard>
               )}
@@ -297,6 +372,7 @@ export function SiriMapWorkspace() {
                   <RegionCard
                     entry={selectedRegion.entry}
                     position={selectedRegion.position}
+                    level={choropleth?.level === "kabkota" ? "kabkota" : "provinsi"}
                     rank={profileLens ?? {
                       metric: choropleth?.metric ?? "",
                       metricLabel: choropleth?.label ?? "Skor wilayah",
@@ -308,11 +384,32 @@ export function SiriMapWorkspace() {
                     }}
                     onClose={() => setSelectedRegion(null)}
                     onAsk={handleAsk}
+                    onShowDetail={() => setIsSidebarOpen(true)}
                   />
                 </AnchoredCard>
               )}
             </AnimatePresence>
           </MapViewport>
+
+          <AnimatePresence>
+            {tacticalPlan && (
+              <ResponderRoutePanel
+                plan={tacticalPlan}
+                activeLeg={tacticalLeg}
+                onLegChange={setTacticalLeg}
+                onFocusCoords={(coords) =>
+                  setCamera({ coords, zoom: 14, zoomMode: "atLeast" })
+                }
+                onChangeOrigin={() => {
+                  setTacticalIncident(
+                    incidents.find((i) => i.id === tacticalPlan.incidentId) ?? null
+                  );
+                  setIsTacticalDialogOpen(true);
+                }}
+                onClose={() => setTacticalPlan(null)}
+              />
+            )}
+          </AnimatePresence>
         </main>
 
         <SidePanel
@@ -340,7 +437,32 @@ export function SiriMapWorkspace() {
               onAsk={handleAsk}
             />
           }
-          explore={<PublicDataPanel onMetric={setMetricChoice} />}
+          explore={
+            <PublicDataPanel
+              rail={
+                <LayerRail
+                  metrics={metrics}
+                  active={metricChoice}
+                  onPick={setMetricChoice}
+                  level={metricChoice === "auto" ? situation?.choropleth.level ?? "provinsi" : level}
+                  onLevelChange={changeLevel}
+                  regions={regionList}
+                  onPickRegion={pickRegionById}
+                />
+              }
+            />
+          }
+          ranking={<RankPanel layer={mapLayer.layer} label={choropleth?.label} selectedRegionId={selectedRegion?.entry.regionId ?? null} onSelect={pickRegionById} />}
+          detail={selectedRegion && (
+            <RegionDetail
+              key={selectedRegion.entry.regionId}
+              regionId={selectedRegion.entry.regionId}
+              metrics={metrics}
+              activeMetric={choropleth?.metric ?? null}
+              peerValues={peerValues}
+              onClose={() => setSelectedRegion(null)}
+            />
+          )}
         />
 
         {/* Kodama floats centred above the dock that opened it, Siri-style, so the map and panel keep their width. */}
@@ -411,6 +533,21 @@ export function SiriMapWorkspace() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ResponderDialog
+        incident={tacticalIncident}
+        isOpen={isTacticalDialogOpen}
+        onClose={() => setIsTacticalDialogOpen(false)}
+        onSubmit={async (req) => {
+          const plan = await calculateResponderRoute(req);
+          setTacticalPlan(plan);
+          setTacticalLeg("both");
+          setCamera({ coords: req.incidentCoords, zoom: 12.5, zoomMode: "atLeast" });
+          toast.success("Rute taktis berhasil dihitung", {
+            description: `Akses masuk regu & koridor evakuasi warga siap ditampilkan.`,
+          });
+        }}
+      />
     </div>
   );
 }

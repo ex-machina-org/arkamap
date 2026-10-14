@@ -2,15 +2,21 @@
 
 import type { ReactNode, Ref } from "react";
 import {
-  RiArrowLeftLine,
+  RiBarChartBoxLine,
   RiCloseLine,
+  RiDashboardLine,
+  RiEyeLine,
+  RiEyeOffLine,
+  RiNotification3Line,
   RiSearchLine,
   RiStackLine,
+  RiWindyLine,
 } from "@remixicon/react";
 import { Button, ButtonLink } from "@/components/base/buttons/button";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
 import { Kbd } from "@/components/base/kbd/kbd";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { BASEMAPS, BASEMAP_ORDER } from "./atlas";
 import type { BasemapType } from "./types";
 
 interface MapHeaderProps {
@@ -23,6 +29,13 @@ interface MapHeaderProps {
   onBasemapChange: (b: BasemapType) => void;
   is3D: boolean;
   onIs3DChange: (value: boolean) => void;
+  /** Off shows the plain basemap under the regions. */
+  showData: boolean;
+  onShowDataChange: (value: boolean) => void;
+  wind: boolean;
+  onWindChange: (value: boolean) => void;
+  /** Active notifications; the alerts page needs a session, so guests get no bell. */
+  notificationCount: number | null;
   /** Account entry, rendered last. */
   children?: ReactNode;
 }
@@ -38,9 +51,15 @@ export function MapHeader({
   onBasemapChange,
   is3D,
   onIs3DChange,
+  showData,
+  onShowDataChange,
+  wind,
+  onWindChange,
+  notificationCount,
   children,
 }: MapHeaderProps) {
-  const basemapLabel = basemap === "satellite" ? "Ganti ke peta jalan" : "Ganti ke satelit";
+  const nextBasemap = BASEMAP_ORDER[(BASEMAP_ORDER.indexOf(basemap) + 1) % BASEMAP_ORDER.length];
+  const basemapLabel = `Peta dasar: ${BASEMAPS[basemap].label}. Ganti ke ${BASEMAPS[nextBasemap].label}`;
 
   return (
     // Overlays the top of the map: the empty space between pieces stays draggable map.
@@ -48,11 +67,11 @@ export function MapHeader({
       {signedIn && (
         <ButtonLink
           href="/dashboard"
-          variant="secondary"
+          variant="primary"
           size="small"
-          leadingIcon={RiArrowLeftLine}
+          leadingIcon={RiDashboardLine}
           aria-label="Kembali ke dashboard"
-          className="pointer-events-auto shrink-0 shadow-2xs max-2xl:w-9 max-2xl:px-0 [&>span]:max-2xl:hidden"
+          className="pointer-events-auto shrink-0 max-2xl:w-9 max-2xl:px-0 [&>span]:max-2xl:hidden"
         >
           Dashboard
         </ButtonLink>
@@ -90,7 +109,7 @@ export function MapHeader({
       </div>
 
       <div className="pointer-events-auto ml-auto flex shrink-0 items-center gap-2 [&>*]:shadow-2xs">
-        {/* xl and up: both choices visible. Below xl: one tap, to save width. */}
+        {/* 2xl and up: every basemap visible. Below: one tap cycles them, to save width. */}
         <SegmentedControl
           aria-label="Peta dasar"
           selectedKeys={[basemap]}
@@ -98,10 +117,13 @@ export function MapHeader({
             const k = Array.from(keys)[0] as BasemapType | undefined;
             if (k) onBasemapChange(k);
           }}
-          className="max-xl:hidden"
+          className="max-2xl:hidden"
         >
-          <SegmentedControlItem id="satellite" className="px-3 text-caption-1-medium">Satelit</SegmentedControlItem>
-          <SegmentedControlItem id="street" className="px-3 text-caption-1-medium">Peta jalan</SegmentedControlItem>
+          {BASEMAP_ORDER.map((id) => (
+            <SegmentedControlItem key={id} id={id} className="px-3 text-caption-1-medium">
+              <span title={BASEMAPS[id].hint}>{BASEMAPS[id].label}</span>
+            </SegmentedControlItem>
+          ))}
         </SegmentedControl>
         <Tooltip>
           <TooltipTrigger
@@ -112,12 +134,51 @@ export function MapHeader({
                 iconOnly
                 leadingIcon={RiStackLine}
                 aria-label={basemapLabel}
-                onClick={() => onBasemapChange(basemap === "satellite" ? "street" : "satellite")}
-                className="xl:hidden"
+                onClick={() => onBasemapChange(nextBasemap)}
+                className="2xl:hidden"
               />
             }
           />
           <TooltipContent side="bottom">{basemapLabel}</TooltipContent>
+        </Tooltip>
+
+        {/* The regions deliberately cover the basemap, so this is how to see what is underneath. */}
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant={showData ? "primary" : "secondary"}
+                size="small"
+                leadingIcon={showData ? RiEyeLine : RiEyeOffLine}
+                aria-pressed={showData}
+                aria-label={showData ? "Sembunyikan data wilayah" : "Tampilkan data wilayah"}
+                onClick={() => onShowDataChange(!showData)}
+                className="max-xl:w-9 max-xl:px-0 [&>span]:max-xl:hidden"
+              >
+                Data
+              </Button>
+            }
+          />
+          <TooltipContent side="bottom">{showData ? "Sembunyikan warna wilayah, lihat peta polos" : "Tampilkan warna wilayah"}</TooltipContent>
+        </Tooltip>
+        {/* Direction is hard to read as a number, and it decides where smoke from a fire drifts. */}
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant={wind ? "primary" : "secondary"}
+                size="small"
+                leadingIcon={RiWindyLine}
+                aria-pressed={wind}
+                aria-label={wind ? "Sembunyikan arah angin" : "Tampilkan arah angin"}
+                onClick={() => onWindChange(!wind)}
+                className="max-xl:w-9 max-xl:px-0 [&>span]:max-xl:hidden"
+              >
+                Angin
+              </Button>
+            }
+          />
+          <TooltipContent side="bottom">{wind ? "Sembunyikan arah angin" : "Tampilkan arah angin"}</TooltipContent>
         </Tooltip>
 
         <SegmentedControl
@@ -131,6 +192,32 @@ export function MapHeader({
           <SegmentedControlItem id="2d" className="px-3 text-caption-1-medium">2D</SegmentedControlItem>
           <SegmentedControlItem id="3d" className="px-3 text-caption-1-medium">3D</SegmentedControlItem>
         </SegmentedControl>
+
+        <Tooltip>
+          <TooltipTrigger
+            render={<ButtonLink href="/analisis" variant="secondary" size="small" iconOnly leadingIcon={RiBarChartBoxLine} aria-label="Analisis" />}
+          />
+          <TooltipContent side="bottom">Analisis</TooltipContent>
+        </Tooltip>
+        {notificationCount != null && (
+          // iconOnly drops a link's children, so the count rides beside it.
+          <span className="relative shrink-0">
+            <ButtonLink
+              href="/alerts"
+              variant="secondary"
+              size="small"
+              iconOnly
+              leadingIcon={RiNotification3Line}
+              title="Notifikasi"
+              aria-label={`Notifikasi${notificationCount > 0 ? `, ${notificationCount} aktif` : ""}`}
+            />
+            {notificationCount > 0 && (
+              <span aria-hidden="true" className="pointer-events-none absolute -top-1 -right-1 grid h-4 min-w-4 place-items-center rounded-full bg-status-rose-text px-1 text-caption-2-medium text-text-white">
+                {notificationCount > 99 ? "99+" : notificationCount}
+              </span>
+            )}
+          </span>
+        )}
 
         {children}
       </div>

@@ -141,7 +141,7 @@ function numberAt(row: Record<string, unknown> | undefined, key: string) {
  * overview) into what the map screen leads with: where, which lens, three
  * headline figures, and the regions ranked by the field's metric.
  */
-export function useSituation(view: View | undefined, signedIn: boolean): { situation: Situation | null; loading: boolean; error?: string; metricLabel: (metric: string) => string } {
+export function useSituation(view: View | undefined, signedIn: boolean): { situation: Situation | null; loading: boolean; error?: string; metricLabel: (metric: string) => string; metrics: DTO<"MetricDef">[] } {
   const [metrics, setMetrics] = useState<DTO<"MetricDef">[]>([]);
   const [fields, setFields] = useState<DTO<"FieldInfo">[]>([]);
   const overview = useApi(view ? null : "/public/overview", "PublicOverview");
@@ -281,5 +281,5 @@ export function useSituation(view: View | undefined, signedIn: boolean): { situa
   }, [view, signedIn, overview.data, table.data, decisionTable.data, decisionTable.error, areas, assessable, metrics, detailMetrics, rankMetric, provinceId, level, focus]);
 
   const metricLabel = (metric: string) => metrics.find((item) => item.metric === metric)?.label ?? metric.replaceAll("_", " ");
-  return { situation, loading: table.loading || overview.loading, error: table.error || overview.error, metricLabel };
+  return { situation, loading: table.loading || overview.loading, error: table.error || overview.error, metricLabel, metrics };
 }

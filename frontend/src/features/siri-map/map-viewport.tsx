@@ -12,6 +12,7 @@ import {
 import { cx } from "@/utils/cx";
 import { SpatialLayers, type ChoroplethSpec, type DockStatus, type RegionPick } from "./spatial-layers";
 import { HAZARDS, HAZARD_ORDER } from "./hazards";
+import type { MapLayer } from "./atlas";
 import type { BasemapType, HazardType, SpatialIncident } from "./types";
 
 const SATELLITE_STYLE: StyleSpecification = {
@@ -23,10 +24,48 @@ const SATELLITE_STYLE: StyleSpecification = {
         "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
       ],
       tileSize: 256,
+      maxzoom: 19,
       attribution: "Tiles © Esri, Maxar, Earthstar Geographics",
     },
+    // The imagery carries no names, so transparent road and place labels go on top.
+    labels: {
+      type: "raster",
+      tiles: [
+        "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",
+      ],
+      tileSize: 256,
+      maxzoom: 19,
+    },
   },
-  layers: [{ id: "imagery", type: "raster", source: "imagery" }],
+  layers: [
+    { id: "imagery", type: "raster", source: "imagery" },
+    { id: "imagery-labels", type: "raster", source: "labels", paint: { "raster-opacity": 0.9 } },
+  ],
+};
+
+// CyclOSM carries far more local detail than the street basemap: alleys, building outlines, kampung names.
+// openstreetmap.fr allows this traffic and CORS, unlike tile.openstreetmap.org.
+const detailStyle = (dark: boolean): StyleSpecification => ({
+  version: 8,
+  sources: {
+    cyclosm: {
+      type: "raster",
+      tiles: ["a", "b", "c"].map((host) => `https://${host}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png`),
+      tileSize: 256,
+      maxzoom: 18,
+      attribution: '© <a href="https://www.cyclosm.org/">CyclOSM</a> · © OpenStreetMap',
+    },
+  },
+  layers: [
+    { id: "detail-bg", type: "background", paint: { "background-color": dark ? "#0a1014" : "#ede9e1" } },
+    // A light style; dimmed in dark mode so it is not a glaring slab, but not so far that the detail is lost.
+    { id: "detail", type: "raster", source: "cyclosm", paint: { "raster-opacity": dark ? 0.8 : 0.92, "raster-saturation": -0.12, "raster-brightness-max": dark ? 0.62 : 1 } },
+  ],
+});
+
+const BASEMAP_STYLES = {
+  satellite: { light: SATELLITE_STYLE, dark: SATELLITE_STYLE },
+  detail: { light: detailStyle(false), dark: detailStyle(true) },
 };
 
 /** Above this many incidents the GPU cluster layers draw the points and only the selected one gets a DOM pin. */
@@ -36,10 +75,10 @@ const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 const PIN_OUTLINE = "#ffffff";
 /** Indonesia spans roughly 95°E to 141°E and 11°S to 6°N; the margin keeps border provinces fully visible without letting users pan into other regions. */
 const INDONESIA_BOUNDS: [[number, number], [number, number]] = [
-  [91, -14],
-  [145, 10],
+  [85, -19],
+  [151, 15],
 ];
-const MIN_ZOOM = 3.5;
+const MIN_ZOOM = 3;
 
 /** A camera request. A new object is a new request, so focusing the same incident twice still moves the map. */
 export interface CameraTarget {
@@ -150,6 +189,11 @@ interface MapViewportProps {
   introCamera?: boolean;
   warnings?: FeatureCollection;
   choropleth: ChoroplethSpec | null;
+  layer?: MapLayer;
+  layerError?: string;
+  /** Off shows the plain basemap, for comparing against the coloured regions. */
+  showData: boolean;
+  wind: boolean;
   selectedRegionId?: string | null;
   onSelectRegion?: (pick: RegionPick) => void;
   onRegionCenter?: (center: [number, number]) => void;
@@ -173,6 +217,10 @@ export function MapViewport({
   introCamera = false,
   warnings,
   choropleth,
+  layer,
+  layerError,
+  showData,
+  wind,
   selectedRegionId,
   onSelectRegion,
   onRegionCenter,
@@ -214,16 +262,13 @@ export function MapViewport({
         zoom={introCamera ? camera.zoom - 0.8 : camera.zoom}
         maxBounds={INDONESIA_BOUNDS}
         minZoom={MIN_ZOOM}
-        styles={
-          basemap === "satellite"
-            ? { light: SATELLITE_STYLE, dark: SATELLITE_STYLE }
-            : undefined
-        }
+        // "heat" keeps the street map underneath: the temperature surface is translucent and needs it.
+        styles={basemap === "satellite" || basemap === "detail" ? BASEMAP_STYLES[basemap] : undefined}
         className="size-full"
       >
         <MapCameraController target={camera} pitch={is3D ? 48 : 0} intro={introCamera} />
 
-        <SpatialLayers warnings={warnings} choropleth={choropleth} selectedRegionId={selectedRegionId} onSelectRegion={onSelectRegion} onRegionCenter={onRegionCenter} buildings={is3D} events={events} focus={focus} boundary={boundary} nationalMask={nationalMask} status={status} />
+        <SpatialLayers warnings={warnings} choropleth={choropleth} layer={layer} layerError={layerError} showData={showData} basemap={basemap} wind={wind} selectedRegionId={selectedRegionId} onSelectRegion={onSelectRegion} onRegionCenter={onRegionCenter} buildings={is3D} events={events} focus={focus} boundary={boundary} nationalMask={nationalMask} status={status} />
         <MapControls position="bottom-right" showCompass showFullscreen showZoom />
 
         {groups.map(({ type, data }) => {

@@ -98,26 +98,25 @@ export function MapDock({
   return (
     <footer aria-label="Navigasi peta" className="relative z-30 flex h-12 w-full shrink-0 select-none items-center gap-2">
       <div className="flex shrink-0 items-center gap-1 md:flex-1">
-        <a
-          href="/dashboard"
-          title="Kembali ke dashboard"
-          aria-label="Arkamap, kembali ke dashboard"
-          className={cx("button-press-motion grid size-10 shrink-0 place-items-center rounded-xl text-text-primary hover:bg-background-primary-hover", FOCUS)}
+        <button
+          type="button"
+          aria-pressed={isCopilotActive}
+          aria-label="Tanya Kodama"
+          onClick={onToggleCopilot}
+          className={cx(
+            "button-press-motion flex h-10 shrink-0 items-center gap-2 rounded-full pr-1.5 pl-1.5 lg:pr-3.5",
+            FOCUS,
+            isCopilotActive
+              ? "bg-linear-to-b from-accent-500 to-accent-600 text-text-white shadow-nav-selected"
+              : "bg-background-secondary-default text-text-primary shadow-sidebar hover:bg-background-secondary-hover",
+          )}
         >
-          <ArkamapLogo size={26} />
-        </a>
-        <DockTooltip label={isSidebarOpen ? "Sembunyikan panel" : "Buka panel"}>
-          <button
-            type="button"
-            aria-label={isSidebarOpen ? "Sembunyikan panel" : "Buka panel"}
-            aria-pressed={isSidebarOpen}
-            onClick={onToggleSidebar}
-            className={cx("button-press-motion grid size-9 shrink-0 place-items-center rounded-xl", FOCUS, QUIET)}
-          >
-            {/* The panel sits right of the map, so the icon is mirrored to point that way. */}
-            <PanelIcon className="size-5 -scale-x-100" aria-hidden="true" />
-          </button>
-        </DockTooltip>
+          <KodamaMark className="size-7" />
+          <span className="hidden text-body-medium lg:inline">Tanya Kodama</span>
+        </button>
+        <div className="hidden md:block">
+          <ThemeToggle collapsed />
+        </div>
       </div>
 
       {/* The one loud element: what the map shows, filterable, with live counts. */}
@@ -149,25 +148,26 @@ export function MapDock({
       </nav>
 
       <div className="flex shrink-0 items-center justify-end gap-1 md:flex-1">
-        <button
-          type="button"
-          aria-pressed={isCopilotActive}
-          aria-label="Tanya Kodama"
-          onClick={onToggleCopilot}
-          className={cx(
-            "button-press-motion flex h-10 shrink-0 items-center gap-2 rounded-full pr-1.5 pl-1.5 lg:pr-3.5",
-            FOCUS,
-            isCopilotActive
-              ? "bg-linear-to-b from-accent-500 to-accent-600 text-text-white shadow-nav-selected"
-              : "bg-background-secondary-default text-text-primary shadow-sidebar hover:bg-background-secondary-hover",
-          )}
+        <a
+          href="/dashboard"
+          title="Kembali ke dashboard"
+          aria-label="Arkamap, kembali ke dashboard"
+          className={cx("button-press-motion grid size-10 shrink-0 place-items-center rounded-xl text-text-primary hover:bg-background-primary-hover", FOCUS)}
         >
-          <KodamaMark className="size-7" />
-          <span className="hidden text-body-medium lg:inline">Tanya Kodama</span>
-        </button>
-        <div className="hidden md:block">
-          <ThemeToggle collapsed />
-        </div>
+          <ArkamapLogo size={26} />
+        </a>
+        <DockTooltip label={isSidebarOpen ? "Sembunyikan panel" : "Buka panel"}>
+          <button
+            type="button"
+            aria-label={isSidebarOpen ? "Sembunyikan panel" : "Buka panel"}
+            aria-pressed={isSidebarOpen}
+            onClick={onToggleSidebar}
+            className={cx("button-press-motion grid size-9 shrink-0 place-items-center rounded-xl", FOCUS, QUIET)}
+          >
+            {/* The panel sits right of the map, so the icon is mirrored to point that way. */}
+            <PanelIcon className="size-5 -scale-x-100" aria-hidden="true" />
+          </button>
+        </DockTooltip>
       </div>
     </footer>
   );

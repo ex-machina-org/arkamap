@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
-import { RiCloseLine, RiFileCopyLine, RiShieldCheckLine, RiSidebarUnfoldLine } from "@remixicon/react";
+import { RiCloseLine, RiFileCopyLine, RiRouteLine, RiShieldCheckLine, RiSidebarUnfoldLine } from "@remixicon/react";
 import { Button } from "@/components/base/buttons/button";
 import { absoluteTime, formatCoords, relativeTime } from "./format";
 import { HAZARDS } from "./hazards";
@@ -13,6 +13,7 @@ interface MapIncidentCardProps {
   onDispatchOrder: (incident: SpatialIncident) => void;
   onCopyGeoJSON: (incident: SpatialIncident) => void;
   onOpenSidebar: () => void;
+  onOpenResponderRoute?: (incident: SpatialIncident) => void;
 }
 
 export function MapIncidentCard({
@@ -21,6 +22,7 @@ export function MapIncidentCard({
   onDispatchOrder,
   onCopyGeoJSON,
   onOpenSidebar,
+  onOpenResponderRoute,
 }: MapIncidentCardProps) {
   const reduce = useReducedMotion();
   const hazard = HAZARDS[incident.hazardType];
@@ -64,6 +66,16 @@ export function MapIncidentCard({
       </dl>
 
       <div className="mt-3 flex flex-wrap gap-2">
+        {onOpenResponderRoute && (
+          <Button
+            variant="primary"
+            size="small"
+            leadingIcon={RiRouteLine}
+            onClick={() => onOpenResponderRoute(incident)}
+          >
+            Rute Taktis & Evakuasi
+          </Button>
+        )}
         <Button variant="secondary" size="small" leadingIcon={RiFileCopyLine} onClick={() => onCopyGeoJSON(incident)}>
           Salin GeoJSON
         </Button>
