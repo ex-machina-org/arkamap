@@ -50,6 +50,7 @@ import {
   calculateResponderRoute,
   type TacticalPlan,
 } from "./responder-route";
+import { cameraForBbox, readLastRegion } from "./region-view";
 
 const FOCUS_ZOOM = 11.4;
 const NATIONAL_VIEW: CameraTarget = { coords: [118, -2.5], zoom: 4.6, zoomMode: "exact" };
@@ -86,7 +87,11 @@ export function SiriMapWorkspace() {
   const incidents = spatial.incidents;
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
 
-  const [camera, setCamera] = useState<CameraTarget>(NATIONAL_VIEW);
+  // A returning visitor opens on the region they looked at last; a watched region replaces it once the profile loads.
+  const [camera, setCamera] = useState<CameraTarget>(() => {
+    const last = readLastRegion();
+    return last ? cameraForBbox(last) : NATIONAL_VIEW;
+  });
   const [introCamera] = useState(isFirstVisit);
   const [is3D, setIs3D] = useState(false);
   const [basemap, setBasemap] = useState<BasemapType>("satellite");
