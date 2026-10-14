@@ -44,6 +44,7 @@ export type AppShellNavItem = {
   label: string;
   icon: ComponentType<{ className?: string; "aria-hidden"?: boolean | "true" | "false" }>;
   badge?: string | number;
+  tone?: "danger";
   href?: string;
   section?: string;
   children?: AppShellNavChild[];
@@ -164,6 +165,7 @@ export function JointsAppShell({
     label: item.label,
     icon: item.icon,
     badge: item.badge,
+    tone: item.tone,
     href: item.href,
     section: item.section,
     children: item.children?.map(child => ({

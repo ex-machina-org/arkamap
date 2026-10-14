@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { RiMailLine, RiPaletteLine, RiSparklingLine, RiUser3Line, RiUserSettingsLine } from "@remixicon/react";
+import { RiMailLine, RiPaletteLine, RiSparklingLine, RiTeamLine, RiUser3Line, RiUserSettingsLine } from "@remixicon/react";
 import { readThreads, writeThreads } from "@/components/application/agent-chat/thread-store";
 import { ThemeToggle } from "@/components/application/theme/theme-toggle";
 import { Button } from "@/components/base/buttons/button";
@@ -9,11 +9,12 @@ import { Input } from "@/components/base/input/input";
 import { useSession } from "@/hooks/use-session";
 import { changePassword } from "@/lib/api/auth";
 import { KODAMA_THREADS_KEY } from "@/lib/kodama";
+import { ArkamapSettingsCredits } from "./arkamap-settings-credits";
 import { ArkamapSettingsProfiles } from "./arkamap-settings-profiles";
 import { SettingsModal, type SettingsGroup } from "./settings-modal";
 import { SettingsCard, SettingsRow, SettingsSectionLabel, SettingsValueField } from "./settings-rows";
 
-export type ArkamapSettingsPage = "account" | "profiles" | "appearance" | "kodama";
+export type ArkamapSettingsPage = "account" | "profiles" | "appearance" | "kodama" | "credits";
 
 function AccountPage({ onSaved }: { onSaved: () => void }) {
   const { me } = useSession();
@@ -133,6 +134,10 @@ export function ArkamapSettingsModal({
         { id: "appearance", label: "Tampilan", icon: RiPaletteLine, render: () => <AppearancePage /> },
         { id: "kodama", label: "Kodama", icon: RiSparklingLine, render: () => <KodamaPage /> },
       ],
+    },
+    {
+      label: "Tentang",
+      items: [{ id: "credits", label: "Credits", icon: RiTeamLine, render: () => <ArkamapSettingsCredits /> }],
     },
   ];
   return (

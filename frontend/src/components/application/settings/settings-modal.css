@@ -1,0 +1,96 @@
+/* Settings modal open/close. Keyframes instead of a class-flip transition so the
+ * entrance plays on insertion and cannot be skipped when the panel commits in
+ * its final state. Duration matches the unmount delay in settings-modal.tsx. */
+@keyframes settings-modal-in {
+  from {
+    opacity: 0;
+    scale: 0.85;
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+    filter: blur(0);
+  }
+}
+
+@keyframes settings-modal-out {
+  from {
+    opacity: 1;
+    scale: 1;
+    filter: blur(0);
+  }
+  to {
+    opacity: 0;
+    scale: 0.85;
+    filter: blur(4px);
+  }
+}
+
+@keyframes settings-modal-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes settings-modal-backdrop-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.settings-modal-panel {
+  animation: settings-modal-in 300ms cubic-bezier(0.32, 0.72, 0, 1) both;
+  will-change: opacity, scale, filter;
+}
+
+.settings-modal-panel[data-closing] {
+  animation-name: settings-modal-out;
+}
+
+.settings-modal-backdrop {
+  animation: settings-modal-backdrop-in 300ms ease-out both;
+}
+
+.settings-modal-backdrop[data-closing] {
+  animation-name: settings-modal-backdrop-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-modal-panel {
+    animation-duration: 150ms;
+    animation-name: settings-modal-backdrop-in;
+  }
+
+  .settings-modal-panel[data-closing] {
+    animation-name: settings-modal-backdrop-out;
+  }
+}
+
+/* Credits page easter egg, played once when the secret is unlocked. */
+@keyframes credits-wiggle {
+  0%, 100% { rotate: 0deg; }
+  20% { rotate: -6deg; }
+  40% { rotate: 5deg; }
+  60% { rotate: -3deg; }
+  80% { rotate: 2deg; }
+}
+
+@keyframes credits-hop {
+  0%, 100% { translate: 0 0; }
+  40% { translate: 0 -8px; }
+  70% { translate: 0 1px; }
+}
+
+@keyframes credits-reveal {
+  from { opacity: 0; translate: 0 6px; filter: blur(2px); }
+  to { opacity: 1; translate: 0 0; filter: blur(0); }
+}
+
+.credits-wiggle { animation: credits-wiggle 500ms ease-in-out; }
+.credits-hop { animation: credits-hop 450ms cubic-bezier(0.3, 0.7, 0.4, 1) both; }
+.credits-reveal { animation: credits-reveal 300ms ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .credits-wiggle,
+  .credits-hop,
+  .credits-reveal { animation: none; }
+}

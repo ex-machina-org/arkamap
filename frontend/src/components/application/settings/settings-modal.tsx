@@ -19,6 +19,7 @@ import {
   RiToolsFill,
 } from "@remixicon/react";
 import { cx } from "@/utils/cx";
+import "./settings-modal.css";
 import { SettingsGeneral } from "./settings-general";
 import { SettingsProfile } from "./settings-profile";
 import { SettingsStorage } from "./settings-storage";
@@ -41,8 +42,8 @@ import { SettingsTools } from "./settings-tools";
  *             the page itself scrolls when taller than the shell (General).
  *
  * Open/close animation: the panel fades + blurs in from scale 0.85 (300ms),
- * the backdrop cross-fades; the same transition plays in reverse on close,
- * and the modal unmounts only after the exit transition finishes.
+ * the backdrop cross-fades; the same animation plays in reverse on close,
+ * and the modal unmounts only after the exit animation finishes.
  */
 
 export type SettingsPage = "general" | "profile" | "storage" | "tools";
@@ -136,10 +137,9 @@ export function SettingsModal({
   const current = sections.find((section) => section.id === page && section.render)
     ?? sections.find((section) => section.render);
 
-  // Mount/visible two-phase state so both the enter and the exit play the
-  // full fade + blur + scale transition before the DOM goes away.
+  // The DOM outlives `isOpen` by the exit animation, so the close plays
+  // before it goes away. Enter and exit are CSS keyframes (globals.css).
   const [mounted, setMounted] = useState(false);
-  const [visible, setVisible] = useState(false);
   const unmountTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -169,11 +169,7 @@ export function SettingsModal({
       if (unmountTimer.current) clearTimeout(unmountTimer.current);
       setPage(defaultPage);
       setMounted(true);
-      // Double rAF: the panel must commit its hidden state before the
-      // transition to visible starts, or the browser skips the animation.
-      requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true)));
     } else {
-      setVisible(false);
       setSavedPhase("hidden");
       unmountTimer.current = setTimeout(() => setMounted(false), 320);
     }
@@ -195,7 +191,10 @@ export function SettingsModal({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [isOpen, onClose]);
 
-  if (!mounted || typeof document === "undefined") return null;
+  // Rendering on `isOpen` itself (not only `mounted`) puts the panel in the
+  // very render that opens it, so the entrance keyframes start immediately.
+  if ((!isOpen && !mounted) || typeof document === "undefined") return null;
+  const closing = !isOpen;
 
   return createPortal(
     <div className="fixed inset-0 z-100 flex items-center justify-center p-4" role="presentation">
@@ -205,24 +204,18 @@ export function SettingsModal({
         aria-label={closeLabel}
         tabIndex={-1}
         onClick={onClose}
-        className={cx(
-          "absolute inset-0 cursor-default bg-black/70 transition-opacity duration-300 ease-out",
-          visible ? "opacity-100" : "opacity-0",
-        )}
+        data-closing={closing ? "" : undefined}
+        className="settings-modal-backdrop absolute inset-0 cursor-default bg-black/70"
       />
 
-      {/* Animated wrapper — carries the open/close transition for the panel
+      {/* Animated wrapper — carries the open/close animation for the panel
           AND the saved toast, which straddles the panel's bottom edge and so
-          must live outside the panel's overflow-clip. */}
+          must live outside the panel's overflow-clip. The blur stays at 4px on
+          purpose: a bigger one re-filters the whole 871×614 panel every frame
+          and made the close stutter. */}
       <div
-        className={cx(
-          "relative",
-          // Kept light on purpose: an 8px blur over the full 871×614 panel
-          // forces a huge re-filter every frame of the scale-down, which is
-          // what made the close stutter. 4px + GPU promotion stays smooth.
-          "transform-gpu transition-[opacity,transform,filter] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] will-change-[opacity,transform,filter]",
-          visible ? "scale-100 opacity-100 blur-0" : "scale-[0.85] opacity-0 blur-[4px]",
-        )}
+        data-closing={closing ? "" : undefined}
+        className="settings-modal-panel relative"
       >
       {/* Panel */}
       <div
@@ -343,8 +336,8 @@ export function SettingsModal({
         className={cx(
           "pointer-events-none absolute bottom-0 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1",
           "rounded-full border border-border-button-default bg-background-primary-default py-1 pr-2.5 pl-1.5 shadow-dropdown",
-          "transition-[opacity,transform,filter] duration-200 ease-out",
-          savedPhase === "shown" && "translate-y-1/2 opacity-100 scale-100 blur-0",
+          "transition-[opacity,translate,scale,filter] duration-200 ease-out",
+          savedPhase === "shown" && "translate-y-1/2 opacity-100 scale-100 blur-[0px]",
           // Starts below the resting spot, rises in; keeps drifting up on exit.
           savedPhase === "hidden" && "translate-y-[calc(50%+12px)] opacity-0 scale-90 blur-[2px]",
           savedPhase === "leaving" && "translate-y-[calc(50%-10px)] opacity-0 scale-90 blur-[2px]",

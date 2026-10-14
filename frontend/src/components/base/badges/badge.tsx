@@ -10,9 +10,10 @@ import { cx, sortCx } from "@/utils/cx";
  *   - px 4, py 1, radius/sm (4px)
  *   - primary → bg color/blue/400, white text (sits on the selected nav item)
  *   - neutral → bg color/neutral/200, text/secondary
+ *   - danger  → error foreground, white text (an active danger on the item)
  */
 
-type BadgeColor = "primary" | "neutral";
+type BadgeColor = "primary" | "neutral" | "danger";
 
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   color?: BadgeColor;
@@ -24,6 +25,7 @@ const styles = sortCx({
   color: {
     primary: "bg-accent-400 text-white",
     neutral: "bg-badge-neutral-background text-text-secondary",
+    danger: "bg-notification-error-foreground text-white",
   },
 });
 
