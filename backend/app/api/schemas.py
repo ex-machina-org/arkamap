@@ -617,6 +617,65 @@ class RegionReport(BaseModel):
     sources: list[SourceFreshness]
 
 
+# /agent
+class ToolCallInfo(BaseModel):
+    tool: str
+    error: str | None = None
+
+
+class TokenUsage(BaseModel):
+    input: int
+    output: int
+    budget: int
+
+
+class ClarifyOption(BaseModel):
+    label: str = Field(description="teks tombol")
+    question: str = Field(description="pertanyaan lengkap yang dikirim bila tombol dipilih")
+    description: str | None = Field(None, description="isi pilihan ini, mis. data apa saja yang ada di dalamnya")
+
+
+class Clarify(BaseModel):
+    """The Agent asks back instead of guessing, or offers next steps after an answer.
+    The UI shows few `options` as buttons and many as a list, each with its
+    `description`, plus its own "Lainnya" (free text). A reply with an option's
+    number or label picks it; another short reply continues the asked question."""
+    question: str
+    options: list[ClarifyOption]
+
+
+class ChatResponse(BaseModel):
+    session_id: str
+    answer: str
+    skill: Literal["ranking", "region", "events", "alerts", "trend", "facilities", "my_data", "guide", "off_topic",
+                   "clarify"] = Field(
+        description="my_data = data akun yang login (alat IoT, profil); guide = cara memakai Arkamap (dari panduan, tanpa data); off_topic = di luar cakupan, jawaban tetap; "
+                    "clarify = bertanya balik, lihat `clarify`")
+    clarify: Clarify | None = Field(None, description="diisi bila Agent bertanya balik; `answer` berisi pertanyaannya")
+    route_source: Literal["llm:gemini", "llm:openrouter", "llm:deepseek", "jev", "keyword"] = Field(
+        description="siapa yang membaca pertanyaan: LLM pertama yang berhasil; bila semua gagal, Jev memilih skill; "
+                    "terakhir aturan kata kunci")
+    topic: str | None = Field(None, description="skill guide: topik panduan yang dipakai")
+    fallback: str | None = Field(None, description="null = jawaban normal (LLM, atau jawaban tetap untuk off_topic); "
+                                                   "teks = alasan ringkasan template ditambahkan di akhir jawaban")
+    models: list[str] = Field(default_factory=list, description="penulis jawaban berurutan: gemini, openrouter, deepseek; "
+                                                                  "lebih dari satu = cadangan melanjutkan jawaban yang sudah tampil")
+    context: dict[str, Any] = Field(description="mis. {'region': {id, name, level}}")
+    tokens: TokenUsage
+    tool_calls: list[ToolCallInfo]
+    sources: list[str]
+    viz: list[dict[str, Any]] = Field(description="komponen untuk dirender; bentuk per `type` di docs/VIZ.md")
+
+
+class SessionState(BaseModel):
+    history: list[dict[str, str]]
+    context: dict[str, Any]
+    turns: int
+    tokens_in: int
+    tokens_out: int
+    budget: int
+
+
 class IsochroneFeature(BaseModel):
     type: Literal["Feature"] = "Feature"
     properties: dict[str, Any]
