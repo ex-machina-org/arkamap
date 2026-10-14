@@ -5,7 +5,7 @@ import { Button } from "@/components/base/buttons/button";
 import { notifySession } from "@/hooks/use-session";
 import type { DTO } from "@/lib/api/client";
 import { cx } from "@/utils/cx";
-import background from "@/assets/login-page.png";
+import background from "@/assets/login-page.webp";
 import { KenalanForm } from "./kenalan-form";
 
 const steps = [

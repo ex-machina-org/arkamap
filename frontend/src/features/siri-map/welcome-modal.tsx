@@ -4,7 +4,7 @@ import { RiArrowRightLine, RiCloseLine } from "@remixicon/react";
 import { Button } from "@/components/base/buttons/button";
 import { LoginModal } from "@/components/application/auth/login-modal";
 import { authenticate } from "@/lib/api/auth";
-import welcomeCover from "@/assets/login-page-dithered.png";
+import welcomeCover from "@/assets/login-page-dithered.webp";
 import intelligenceCover from "@/assets/blue-ridge-main-dithered.png";
 import { cx } from "@/utils/cx";
 import { WelcomeArt } from "./welcome-art";
