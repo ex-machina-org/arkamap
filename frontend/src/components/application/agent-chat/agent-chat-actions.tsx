@@ -82,9 +82,9 @@ export function AgentChatActions({
         className={ACTION_BUTTON}
       >
         {shared ? (
-          <RiCheckLine className="size-[18px] shrink-0" aria-hidden />
+          <RiCheckLine className="size-4.5 shrink-0" aria-hidden />
         ) : (
-          <RiUploadLine className="size-[18px] shrink-0" aria-hidden />
+          <RiUploadLine className="size-4.5 shrink-0" aria-hidden />
         )}
       </button>
 
@@ -94,7 +94,7 @@ export function AgentChatActions({
           isDisabled={disabled}
           className={cx(ACTION_BUTTON, menuOpen && "bg-background-primary-hover text-text-primary")}
         >
-          <RiMoreFill className="size-[18px] shrink-0" aria-hidden />
+          <RiMoreFill className="size-4.5 shrink-0" aria-hidden />
         </DropdownTrigger>
 
         <DropdownPopover

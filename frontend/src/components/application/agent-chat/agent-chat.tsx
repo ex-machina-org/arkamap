@@ -16,7 +16,7 @@ import {
   type HistoryCopy,
 } from "@/components/application/agent-chat/agent-chat-history";
 import { AgentMessage } from "@/components/application/agent-chat/agent-chat-message";
-import { AgentComposer, type ComposerMention } from "@/components/application/agent-chat/agent-composer";
+import { AgentComposer, type ComposerMention, type ComposerProvider } from "@/components/application/agent-chat/agent-composer";
 import {
   orderThreads,
   readThreads,
@@ -131,6 +131,8 @@ export function AgentChat({
   renderEmpty,
   transcriptClassName,
   copy: copyOverrides,
+  providers,
+  providersNote,
   storageKey = STORAGE_KEY,
   initialThreadId,
   voiceLanguage,
@@ -159,6 +161,9 @@ export function AgentChat({
   /** Extra classes on the scrolling transcript, e.g. a backdrop behind the messages. */
   transcriptClassName?: string;
   copy?: Partial<AgentChatCopy>;
+  /** The models behind the assistant; shown with their roles in the composer's status row. */
+  providers?: ComposerProvider[];
+  providersNote?: string;
   storageKey?: string;
   /** Opens this stored thread instead of a fresh one, e.g. when a side panel hands over. */
   initialThreadId?: string;
@@ -611,7 +616,7 @@ export function AgentChat({
                   "hover:bg-background-primary-hover hover:text-foreground-icon-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring",
                 )}
               >
-                <RiLayoutRightLine className="size-[18px] shrink-0" aria-hidden />
+                <RiLayoutRightLine className="size-4.5 shrink-0" aria-hidden />
               </button>
             </header>
 
@@ -623,7 +628,7 @@ export function AgentChat({
                   ref={scrollRef}
                   onScroll={(event) => setScrolledUnder(event.currentTarget.scrollTop > 0)}
                   className={cx(
-                    "min-h-0 flex-1 overflow-y-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+                    "min-h-0 flex-1 overflow-y-auto scroll-smooth scrollbar-none [&::-webkit-scrollbar]:hidden",
                     transcriptClassName,
                   )}
                 >
@@ -686,6 +691,8 @@ export function AgentChat({
                       mentions={mentions}
                       model={probe.model}
                       provider={custom ? copy.provider : demoActive ? "Demo mode" : (probe.label ?? probe.provider)}
+                      providers={providers}
+                      providersNote={providersNote}
                       messageCount={messages.length}
                     />
                   </div>

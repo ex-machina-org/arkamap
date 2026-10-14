@@ -154,7 +154,7 @@ export function AgentChatHistory<T extends ChatThreadSummary>({
         // way the Pro template seats its code panel: same surface and radius as
         // the chat card, separated by the workspace gap. Full height, and its
         // own padding, since it no longer borrows the chat card's.
-        "flex h-full w-[260px] shrink-0 flex-col gap-6 overflow-hidden rounded-3xl bg-background-secondary-default p-3",
+        "flex h-full w-65 shrink-0 flex-col gap-6 overflow-hidden rounded-3xl bg-background-secondary-default p-3",
         className,
       )}
     >
@@ -193,7 +193,7 @@ export function AgentChatHistory<T extends ChatThreadSummary>({
         )}
       </div>
 
-      <div className="-mt-3 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto [scrollbar-width:none]">
+      <div className="-mt-3 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto scrollbar-none">
         {found ? (
           <Section label={copy.results(found.length)}>
             {found.length ? found.map(row) : <p className="px-2 text-body-2-regular text-text-tertiary">{copy.noMatches}</p>}
@@ -357,7 +357,7 @@ function AccountMenu({ threads }: { threads: ChatThreadSummary[] }) {
             aria-expanded={usageOpen}
             className="flex w-full cursor-pointer items-center gap-2 rounded-2lg px-2 py-1.5 text-left transition-colors hover:bg-background-primary-hover"
           >
-            <RiSpeedUpLine className="size-[18px] shrink-0 text-foreground-icon-secondary" aria-hidden />
+            <RiSpeedUpLine className="size-4.5 shrink-0 text-foreground-icon-secondary" aria-hidden />
             <span className="flex-1 truncate text-body-medium whitespace-nowrap text-text-primary">
               Usage left
             </span>
@@ -388,13 +388,13 @@ function AccountMenu({ threads }: { threads: ChatThreadSummary[] }) {
           )}
 
           <DropdownItem onSelect={close} className="px-2 py-1.5">
-            <RiSendPlaneLine className="size-[18px] shrink-0 text-foreground-icon-secondary" aria-hidden />
+            <RiSendPlaneLine className="size-4.5 shrink-0 text-foreground-icon-secondary" aria-hidden />
             <span className="truncate text-body-medium whitespace-nowrap text-text-primary">
               Invite a friend
             </span>
           </DropdownItem>
           <DropdownItem onSelect={close} className="px-2 py-1.5">
-            <RiSettings3Line className="size-[18px] shrink-0 text-foreground-icon-secondary" aria-hidden />
+            <RiSettings3Line className="size-4.5 shrink-0 text-foreground-icon-secondary" aria-hidden />
             <span className="truncate text-body-medium whitespace-nowrap text-text-primary">
               Settings
             </span>
@@ -405,7 +405,7 @@ function AccountMenu({ threads }: { threads: ChatThreadSummary[] }) {
 
         <DropdownGroup>
           <DropdownItem onSelect={logOut} className="px-2 py-1.5">
-            <RiLogoutBoxRLine className="size-[18px] shrink-0 text-foreground-icon-secondary" aria-hidden />
+            <RiLogoutBoxRLine className="size-4.5 shrink-0 text-foreground-icon-secondary" aria-hidden />
             <span className="truncate text-body-medium whitespace-nowrap text-text-primary">
               Log out
             </span>
