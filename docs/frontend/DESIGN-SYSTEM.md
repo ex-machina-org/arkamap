@@ -55,6 +55,16 @@ The accent ramp in `index.css` uses the export's green. Primary action/selection
 
 Inter Variable is self-hosted. Use BoardUI `text-body-*`, `text-caption-*`, and heading utilities for its components. Type scale and normalized values are recorded in [Design system specification](../../DESIGN.md).
 
+## Motion, hover, and scrollbars
+
+These rules are adapted from [Fluid Functionalism](https://www.fluidfunctionalism.com/docs/). Its size ladder, type scale, and surface ladder are not adopted; BoardUI keeps those.
+
+- **Springs:** animate with the tiers in `src/lib/springs.ts` instead of hand-written durations. `fast` (0.08s) for hover, fades, and tooltips; `moderate` (0.16s, no overshoot) for dropdowns, tabs, and drawers; `slow` (0.24s, slight bounce) for dialogs and large surfaces. Exits use the tier's `.exit` tween, which is quicker than the enter. Animate `transform` and `opacity`, not `top`, `left`, `width`, or `height`.
+- **Reduced motion:** `main.tsx` wraps the app in `<MotionConfig reducedMotion="user">`, which drops transform and layout animation but keeps opacity and color fades. CSS animations still need their own `prefers-reduced-motion` rule.
+- **Fluid hover:** a list of click targets can share one highlight that glides to the row nearest the pointer, using `useFluidHover` (`src/hooks/use-fluid-hover.ts`) and `FluidHoverHighlight` (`src/components/base/fluid-hover/`). Rows that join the list drop their CSS hover fill and become `relative` so they paint above the highlight. Use one list per group of alternatives; the dashboard sidebar uses one per section. Skip it where a wrong click is costly, where only some items are clickable, or where rows move while scrolling.
+- **Scrollbars:** `globals.css` styles every scrollbar on precise pointers: a 10px track with a 4px thumb in the `scrollbar-thumb` tokens, which strengthen on hover and drag. Touch devices keep native scrollbars. Scrollers that hide their bar on purpose keep `[scrollbar-width:none]`. Add `scroll-fade` (or `scroll-fade-x`) to a scroller to dissolve content toward edges that have more to scroll; browsers without scroll-driven animations show no fade.
+- **Font:** Inter loads with its optical-size axis (`@fontsource-variable/inter/opsz.css`), so small text uses the more open text cut automatically.
+
 ## Responsive behavior
 
 Follow the selected shell's behavior and neighboring components. `JointsAppShell` changes navigation at `lg`; the design-system navigation changes at `md`. These are different layouts with explicit responsibilities, not a universal breakpoint. Keep JS and CSS decisions synchronized within each pattern. Reflow dense content instead of shrinking it; ensure overlays fit small screens and map controls remain usable.
