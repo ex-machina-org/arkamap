@@ -112,3 +112,18 @@ class FieldInfo(BaseModel):
     events: list[str]
     disaster_types: list[str] | None = None
     layers: list[Layer]
+
+
+class ClientOut(BaseModel):
+    id: int
+    name: str
+    note: str | None = None
+    key_prefix: str
+    created_at: datetime
+    last_used_at: datetime | None = None
+    revoked_at: datetime | None = None
+
+
+class ClientCreated(BaseModel):
+    client: ClientOut
+    api_key: str = Field(description="HANYA ditampilkan sekali; berikan ke tim frontend/mitra")
