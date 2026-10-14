@@ -384,7 +384,7 @@
         "type": "object"
       },
       "Clarify": {
-        "description": "The Agent could not tell what was meant and asks back instead of guessing.\nThe UI shows `options` as buttons plus its own \"Lainnya\" (free text); a short\nfree-text reply continues the asked question.",
+        "description": "The Agent asks back instead of guessing, or offers next steps after an answer.\nThe UI shows few `options` as buttons and many as a list, each with its\n`description`, plus its own \"Lainnya\" (free text). A reply with an option's\nnumber or label picks it; another short reply continues the asked question.",
         "properties": {
           "options": {
             "items": {
@@ -407,6 +407,18 @@
       },
       "ClarifyOption": {
         "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "isi pilihan ini, mis. data apa saja yang ada di dalamnya",
+            "title": "Description"
+          },
           "label": {
             "description": "teks tombol",
             "title": "Label",

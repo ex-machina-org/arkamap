@@ -575,6 +575,42 @@ METRICS = [
         "source_id": "open_meteo_aq",
     },
     {
+        "metric": "pm10_mean",
+        "aspect": "lingkungan",
+        "label": "PM10 rata-rata",
+        "unit": "µg/m³",
+        "description": ("Partikel PM10 permukaan 7 hari (model CAMS): debu jalan, konstruksi, asap. "
+                        "Baku mutu nasional 24 jam 75 µg/m³, pedoman WHO 45 µg/m³."),
+        "polarity": "high_bad",
+        "scale_min": 0,
+        "scale_max": 150,
+        "source_id": "open_meteo_aq",
+    },
+    {
+        "metric": "so2_mean",
+        "aspect": "lingkungan",
+        "label": "SO₂ rata-rata",
+        "unit": "µg/m³",
+        "description": ("Sulfur dioksida permukaan 7 hari (model CAMS): pembakaran batu bara dan minyak, "
+                        "gunung api. Baku mutu nasional 24 jam 75 µg/m³, pedoman WHO 40 µg/m³."),
+        "polarity": "high_bad",
+        "scale_min": 0,
+        "scale_max": 60,
+        "source_id": "open_meteo_aq",
+    },
+    {
+        "metric": "o3_max8h",
+        "aspect": "lingkungan",
+        "label": "O₃ tertinggi 8 jam",
+        "unit": "µg/m³",
+        "description": ("Rata-rata 8 jam ozon permukaan yang tertinggi dalam 7 hari (model CAMS); "
+                        "batasnya dihitung per 8 jam. Pedoman WHO 100 µg/m³."),
+        "polarity": "high_bad",
+        "scale_min": 0,
+        "scale_max": 160,
+        "source_id": "open_meteo_aq",
+    },
+    {
         "metric": "road_density",
         "aspect": "urban",
         "label": "Kepadatan jalan",

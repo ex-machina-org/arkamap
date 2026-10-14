@@ -267,6 +267,9 @@ Status berbagi berjalan `none → pending → approved | rejected`.
 
 - Tamu mendapat jawaban dari data publik saja. Pengguna yang masuk juga mendapat profil dan perangkat miliknya (tanpa alat uji).
 - `session_id` dari respons pertama dipakai lagi untuk pertanyaan lanjutan.
+- Batas 10 chat per menit per akun (atau per IP tamu) dan 60 per menit untuk semua; lebih dari itu 429 dengan `Retry-After`.
+- Bila pertanyaan bisa berarti beberapa hal, jawaban membawa `clarify = {question, options[]}`; tiap pilihan punya `label`, `question`, dan `description` (isi pilihan itu). Balasan berupa nomor atau label pilihan memilihnya. Setelah ringkasan wilayah, `clarify` juga dipakai untuk menawarkan langkah lanjutan.
+- Kolom chat boleh menyisipkan `@Token` (huruf dan angka, spasi jadi `_`): topik (`@udara`, `@cuaca`, `@gempa`, …), perangkat atau tabel milik pengguna (`@Sensor_Balikpapan_01`), atau penerbit sumber data (`@BMKG`). Token yang sama dengan nama perangkat atau tabel pengguna selalu dijawab dari data alat itu; token lain dibaca sebagai kata biasa.
 
 ## Mengubah kontrak
 

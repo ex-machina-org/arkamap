@@ -65,8 +65,20 @@ def _fetch(client: httpx.Client, url: str, params: dict, n: int, tries: int = 3)
 WX_METRICS = ["rain_30d", "dry_days", "humidity_mean", "temp_max_mean", "temp_max_peak",
               "wind_max", "wind_direction", "wind_speed", "solar_ghi",
               "uv_index_max", "heat_index_max", "wet_bulb_max"]
-AQ_METRICS = ["pm25_mean", "no2_mean", "co_mean", "pm25_forecast_max", "aqi_forecast_max"]
+AQ_METRICS = ["pm25_mean", "pm10_mean", "no2_mean", "so2_mean", "co_mean", "o3_max8h",
+              "pm25_forecast_max", "aqi_forecast_max"]
 FORECAST_HOURS = 48
+
+
+def ozone_max8h(hours: list[float | None]) -> float | None:
+    """The highest mean of 8 consecutive hours, oldest first; a window with fewer than
+    6 readings is skipped rather than averaged from a few hours."""
+    best = None
+    for i in range(len(hours) - 7):
+        w = [x for x in hours[i:i + 8] if x is not None]
+        if len(w) >= 6 and (best is None or sum(w) / len(w) > best):
+            best = sum(w) / len(w)
+    return best
 
 
 def _air_and_water(region_id: str, aq: dict, fl: dict, add, failed: dict) -> None:
@@ -100,11 +112,16 @@ def _air_and_water(region_id: str, aq: dict, fl: dict, add, failed: dict) -> Non
     # NO2 is the traffic pollutant: most of it at street level comes from
     # vehicle exhaust, so it is the keyless proxy for traffic emissions. CO
     # adds combustion (vehicles and burning).
-    for var, metric in (("pm2_5", "pm25_mean"), ("nitrogen_dioxide", "no2_mean"),
-                        ("carbon_monoxide", "co_mean")):
+    # PM10 and SO2 complete what the official index (ISPU) weighs; ozone below
+    for var, metric in (("pm2_5", "pm25_mean"), ("pm10", "pm10_mean"), ("nitrogen_dioxide", "no2_mean"),
+                        ("sulphur_dioxide", "so2_mean"), ("carbon_monoxide", "co_mean")):
         v = vals(var, past)
         if v:
             add(metric, sum(v) / len(v), "µg/m³", "open_meteo_aq", 3, True)
+    # ozone's limits are for 8-hour means, so its value is the highest 8-hour mean of the week
+    o3s = hourly.get("ozone") or []
+    if (o3 := ozone_max8h([o3s[i] if i < len(o3s) else None for i in past or []])) is not None:
+        add("o3_max8h", o3, "µg/m³", "open_meteo_aq", 3, True)
     # forecast: what the next two days look like, for health warnings.
     # Every air value is the CAMS model (no monitor network behind it), so it is flagged
     # modelled; and the US AQI scale ends at 500 ("hazardous"): Open-Meteo extrapolates
@@ -148,7 +165,7 @@ def ingest_climate() -> int:
             }, len(part)))
             aq.extend(_fetch(client, AIRQ, {
                 "latitude": lats, "longitude": lons,
-                "hourly": "pm2_5,nitrogen_dioxide,carbon_monoxide,us_aqi", "past_days": 7,
+                "hourly": "pm2_5,pm10,nitrogen_dioxide,sulphur_dioxide,carbon_monoxide,ozone,us_aqi", "past_days": 7,
                 "forecast_days": 3, "timezone": "UTC",
             }, len(part)))
             fl.extend(_fetch(client, FLOOD, {
