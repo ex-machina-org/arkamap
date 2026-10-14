@@ -14,7 +14,7 @@ const MAX_THREADS = 30;
 
 /** Newest message first, and trimmed from the oldest end. Pinned chats and chats filed
  *  in a folder were kept on purpose, so only loose ones count toward the limit.
- *  ponytail: kept chats are unbounded; cap them too if storage quota becomes a problem. */
+ *  Limit: kept chats are unbounded; cap them too if storage quota becomes a problem. */
 export function orderThreads(threads: StoredThread[]) {
   let loose = 0;
   return [...threads]

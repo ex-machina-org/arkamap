@@ -502,7 +502,7 @@ export function DashboardSidebar({
         {/* 2. Original AI Button Component (Superintelligence) in layout */}
         <div className={cx("w-full", !collapsed && "px-0.5")}>
           <DashboardSuperintelligenceButton
-            isSelected={selected === "siri-map" || selected === "superintelligence" || selected === "copilot"}
+            isSelected={selected === "siri-map" || selected === "superintelligence" || selected === "assistant"}
             collapsed={collapsed}
             onClick={onSuperintelligenceClick}
           />

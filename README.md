@@ -63,6 +63,8 @@ ARKAMAP_API_TARGET=http://127.0.0.1:8000 npm run dev
 
 Konfigurasi opsional dibaca dari `.env` di root repo (contoh di [.env.example](.env.example)): `GEMINI_API_KEY`, `OPENROUTER_API_KEY`, dan `DEEPSEEK_API_KEY` mengaktifkan LLM untuk Jev (tanpa itu Jev menjawab dari template). Nilai default compose hanya untuk evaluasi lokal; isi `POSTGRES_PASSWORD`, `JWT_SECRET`, dan `MQTT_BRIDGE_PASSWORD` sebelum dibuka ke publik. Hapus data: `docker compose down -v`.
 
+Data contoh perangkat IoT untuk mencoba tabel per nama dan versinya: `docker compose exec api python seed_iot_demo.py`. Skrip membuat akun `uji.versi@arkamap.local` (ubah lewat `IOT_DEMO_EMAIL`) dengan satu alat berisi tabel `cuaca` dua versi dan `Kualitas Udara`; kata sandi diambil dari `IOT_DEMO_PASSWORD` atau dibuat acak dan dicetak sekali. Menjalankannya lagi mengganti alat dan datanya.
+
 Chat Jev versi Chainlit untuk uji internal: `docker compose --profile chat up chat`, lalu buka http://127.0.0.1:8001.
 
 ## Pengembangan

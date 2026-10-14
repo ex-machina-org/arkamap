@@ -46,7 +46,7 @@ export const metricUnit = (metric: string) => REGION_METRICS[metric]?.unit ?? ""
 const PREFS_KEY = "arkamap-alert-categories-off";
 const ALL = ALERT_CATEGORIES.map(category => category.id);
 
-// ponytail: per browser, not per account; move to the user profile if people switch devices.
+// Limit: per browser, not per account; move to the user profile if people switch devices.
 function readPrefs(): Set<AlertCategory> {
   try {
     const value: unknown = JSON.parse(localStorage.getItem(PREFS_KEY) ?? "[]");
@@ -135,7 +135,7 @@ function readSeen(): string[] {
 export function useSeenAlerts() {
   const [seen, setSeen] = useState(() => new Set(readSeen()));
   const markSeen = (keys: string[]) => setSeen(prev => {
-    // ponytail: per browser, capped list; move server-side if read state must follow the account
+    // Limit: per browser, capped list; move server-side if read state must follow the account
     const next = [...prev, ...keys.filter(key => !prev.has(key))].slice(-SEEN_LIMIT);
     try { localStorage.setItem(SEEN_KEY, JSON.stringify(next)); } catch { /* remembered for this visit */ }
     return new Set(next);

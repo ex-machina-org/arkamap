@@ -9,7 +9,6 @@ import "./route-transition.css";
 
 const OnboardingScreen = lazy(() => import("@/features/onboarding/onboarding-screen").then(m => ({ default: m.OnboardingScreen })));
 const LandingPage = lazy(() => import("./app/landing/page"));
-const StoreLocatorPage = lazy(() => import("./app/store-locator/page"));
 // The annotation toolbar is a development aid; production builds never load it.
 const Agentation = import.meta.env.DEV ? lazy(() => import("agentation").then(m => ({ default: m.Agentation }))) : null;
 
@@ -125,8 +124,6 @@ export default function App() {
           <Suspense fallback={<div className="min-h-dvh bg-background-primary-default" />}><EnvironmentalDashboardPage /></Suspense>
         ) : routePath === "/login" ? (
           <Suspense fallback={<div className="min-h-dvh bg-background-primary-default" />}><LoginPage /></Suspense>
-        ) : routePath === "/prototype" ? (
-          <Suspense fallback={<div className="min-h-dvh bg-background-full" />}><StoreLocatorPage /></Suspense>
         ) : routePath === "/welcome" ? (
           <Suspense fallback={<div className="min-h-dvh bg-background-full" />}><LandingPage /></Suspense>
         ) : (
