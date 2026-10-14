@@ -10,6 +10,7 @@
 
 | Need | Default source | Contract |
 | --- | --- | --- |
+| Arkamap logo | `components/foundations/brand/arkamap-brand.tsx` | `ArkamapLockup` (mark plus wordmark, as in the dashboard sidebar) wherever the logo appears; `ArkamapMark` alone for icon-sized slots. |
 | Actions | `components/base/buttons/button.tsx` | `variant`: primary/secondary/ghost/danger; `size`: medium/small/xs; icon component references |
 | Text input, select, tabs, checkbox | Catalog's BoardUI `base` source | Read the selected API and preview before use |
 | Dialog, sheet, command, popover | Existing `components/ui` capability | Compose with BoardUI actions and semantic surface aliases |

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { RiCommandLine, RiLoginBoxLine, RiMoonLine, RiSearchLine, RiSunLine } from "@remixicon/react";
-import { ArkamapLogo } from "@/components/foundations/brand/logo";
+import { ArkamapLockup } from "@/components/foundations/brand/arkamap-brand";
 import { CatalogExportActions } from "./export-actions";
 import { CommandMenu } from "@/components/ui/command";
 import { LoginModal } from "@/components/application/auth/login-modal";
@@ -39,10 +39,8 @@ export default function DesignSystemPage() {
     <header className="sticky top-0 z-40 h-14 border-b border-border-button-default bg-background-primary-default/95 backdrop-blur-md">
       <div className="relative mx-auto flex h-full max-w-[1600px] items-center justify-between px-4 sm:px-6">
         <a href="/design-system" className="z-10 flex min-w-0 items-center gap-2.5" aria-label="Arkamap Design System overview">
-          <span className="flex size-8 items-center justify-center rounded-[10px] bg-background-secondary-default p-1 text-text-primary shadow-xs">
-            <ArkamapLogo size={20} />
-          </span>
-          <span className="hidden text-sm font-semibold tracking-tight sm:inline">Arkamap <span className="font-normal text-text-secondary">Design System</span></span>
+          <ArkamapLockup />
+          <span className="hidden text-body-medium text-text-secondary sm:inline">Design System</span>
         </a>
 
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-4">

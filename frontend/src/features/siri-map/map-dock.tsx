@@ -3,7 +3,7 @@
 import type { ComponentType, CSSProperties, ReactElement } from "react";
 import { RiDashboardLine, RiSidebarFoldLine, RiSidebarUnfoldLine } from "@remixicon/react";
 import { ThemeToggle } from "@/components/application/theme/theme-toggle";
-import { ArkamapLogo } from "@/components/foundations/brand/logo";
+import { ArkamapMark } from "@/components/foundations/brand/arkamap-brand";
 import { KodamaMark } from "@/components/foundations/brand/kodama-icon";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cx } from "@/utils/cx";
@@ -154,7 +154,7 @@ export function MapDock({
           aria-label="Arkamap, kembali ke dashboard"
           className={cx("button-press-motion grid size-10 shrink-0 place-items-center rounded-xl text-text-primary hover:bg-background-primary-hover", FOCUS)}
         >
-          <ArkamapLogo size={26} />
+          <ArkamapMark className="size-6.5" />
         </a>
         <DockTooltip label={isSidebarOpen ? "Sembunyikan panel" : "Buka panel"}>
           <button

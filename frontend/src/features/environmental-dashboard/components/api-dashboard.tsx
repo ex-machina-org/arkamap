@@ -1,5 +1,6 @@
 import { lazy, Suspense, type ReactNode } from "react";
 import { RiBroadcastLine, RiCheckboxCircleLine, RiPulseLine, RiErrorWarningLine } from "@remixicon/react";
+import { ArkamapLockup } from "@/components/foundations/brand/arkamap-brand";
 import { StatCards, type Stat } from "@/components/application/dashboard/stat-cards";
 import { Button } from "@/components/base/buttons/button";
 import { useApi } from "@/hooks/use-api";
@@ -46,23 +47,7 @@ export function ApiDashboard() {
   const { data, loading, error, refresh } = useApi("/me/dashboard?hours=24", "Dashboard");
   if (loading) return <DashboardSkeleton />;
   if (error) return <div className="flex flex-col items-center justify-center gap-4 rounded-2xl bg-background-secondary-default px-4 py-10 text-center">
-    <div className="flex items-center gap-2.5">
-      <span
-        aria-hidden="true"
-        className="block size-8 shrink-0 bg-accent-500 dark:bg-text-white -translate-y-0.5"
-        style={{
-          maskImage: "url(/brand/arkamap-icon.svg)",
-          WebkitMaskImage: "url(/brand/arkamap-icon.svg)",
-          maskRepeat: "no-repeat",
-          WebkitMaskRepeat: "no-repeat",
-          maskPosition: "center",
-          WebkitMaskPosition: "center",
-          maskSize: "contain",
-          WebkitMaskSize: "contain",
-        }}
-      />
-      <img src="/brand/arkamap-wordmark.svg" alt="Arkamap" className="block h-6 w-auto shrink-0 dark:invert" />
-    </div>
+    <ArkamapLockup />
     <p role="alert" className="text-body-regular text-text-secondary">{error}</p>
     <div className="flex items-center gap-2">
       <Button onClick={() => { window.history.pushState({}, "", "/login"); window.dispatchEvent(new PopStateEvent("popstate")); }}>Masuk</Button>
