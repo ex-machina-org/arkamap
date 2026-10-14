@@ -22,7 +22,6 @@ const SourcesPage = lazy(() => import("./app/sources/page"));
 const AlertsPage = lazy(() => import("./app/alerts/page"));
 const DeviceDetailPage = lazy(() => import("./app/devices/detail/page"));
 const MapPage = lazy(() => import("./app/map/page"));
-const AnalysisPage = lazy(() => import("./app/analisis/page"));
 const ChatPage = lazy(() => import("./app/chat/page"));
 
 // Signed-out visitors may only use the public map; every workspace route needs a session.
@@ -119,8 +118,6 @@ export default function App() {
           <SessionGate error={session.error} onRetry={() => void session.reload()} onLeave={() => goTo("/")} />
         ) : routePath === "/" || routePath === "/map" || routePath === "/siri-map" || routePath === "/atlas" || routePath === "/map-ai" || routePath === "/siri" ? (
           <Suspense fallback={<div className="min-h-dvh bg-background-full" />}><MapPage /></Suspense>
-        ) : routePath === "/analisis" ? (
-          <Suspense fallback={<div className="min-h-dvh bg-background-full" />}><AnalysisPage /></Suspense>
         ) : routePath === "/design-system" || routePath.startsWith("/design-system/") ? (
           <Suspense fallback={<div className="min-h-dvh bg-background-primary-default" />}><DesignSystemPage /></Suspense>
         ) : routePath === "/devices/new" ? (

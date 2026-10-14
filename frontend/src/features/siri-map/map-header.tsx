@@ -2,12 +2,10 @@
 
 import type { ReactNode, Ref } from "react";
 import {
-  RiBarChartBoxLine,
   RiCloseLine,
   RiDashboardLine,
   RiEyeLine,
   RiEyeOffLine,
-  RiNotification3Line,
   RiSearchLine,
   RiStackLine,
   RiWindyLine,
@@ -34,8 +32,6 @@ interface MapHeaderProps {
   onShowDataChange: (value: boolean) => void;
   wind: boolean;
   onWindChange: (value: boolean) => void;
-  /** Active notifications; the alerts page needs a session, so guests get no bell. */
-  notificationCount: number | null;
   /** Account entry, rendered last. */
   children?: ReactNode;
 }
@@ -55,7 +51,6 @@ export function MapHeader({
   onShowDataChange,
   wind,
   onWindChange,
-  notificationCount,
   children,
 }: MapHeaderProps) {
   const nextBasemap = BASEMAP_ORDER[(BASEMAP_ORDER.indexOf(basemap) + 1) % BASEMAP_ORDER.length];
@@ -192,32 +187,6 @@ export function MapHeader({
           <SegmentedControlItem id="2d" className="px-3 text-caption-1-medium">2D</SegmentedControlItem>
           <SegmentedControlItem id="3d" className="px-3 text-caption-1-medium">3D</SegmentedControlItem>
         </SegmentedControl>
-
-        <Tooltip>
-          <TooltipTrigger
-            render={<ButtonLink href="/analisis" variant="secondary" size="small" iconOnly leadingIcon={RiBarChartBoxLine} aria-label="Analisis" />}
-          />
-          <TooltipContent side="bottom">Analisis</TooltipContent>
-        </Tooltip>
-        {notificationCount != null && (
-          // iconOnly drops a link's children, so the count rides beside it.
-          <span className="relative shrink-0">
-            <ButtonLink
-              href="/alerts"
-              variant="secondary"
-              size="small"
-              iconOnly
-              leadingIcon={RiNotification3Line}
-              title="Notifikasi"
-              aria-label={`Notifikasi${notificationCount > 0 ? `, ${notificationCount} aktif` : ""}`}
-            />
-            {notificationCount > 0 && (
-              <span aria-hidden="true" className="pointer-events-none absolute -top-1 -right-1 grid h-4 min-w-4 place-items-center rounded-full bg-status-rose-text px-1 text-caption-2-medium text-text-white">
-                {notificationCount > 99 ? "99+" : notificationCount}
-              </span>
-            )}
-          </span>
-        )}
 
         {children}
       </div>
