@@ -41,7 +41,7 @@ def region_report(region_id: str, days: int = Query(30, ge=1, le=365)) -> dict:
 
     disasters = [f["properties"] for f in routes.disasters(
         days=days, limit=50, type=None, min_alert=0, region_id=region_id)["features"]]
-    alerts = [a for a in routes.notifications()["region_alerts"] if a["region_id"] == region_id]
+    alerts = [a for a in routes.notifications(region_id)["region_alerts"] if a["region_id"] == region_id]
 
     used = {i.source_id for i in region.indicators} | {
         "usgs_quake", "emsc_quake", "firms_viirs", "firms_extra", "gdacs", "nasa_eonet"}
