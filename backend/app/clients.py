@@ -20,7 +20,7 @@ from .db import execute, query_one
 EXEMPT = {"/api/health", "/api/ingest"}
 CACHE_S = 60          # a revoked key keeps working at most this long
 TOUCH_S = 300         # last_used_at is written at most this often per key
-_cache: dict[str, tuple[float, int | None]] = {}   # ponytail: per-process cache
+_cache: dict[str, tuple[float, int | None]] = {}   # per-process cache
 _touched: dict[int, float] = {}
 
 _header = APIKeyHeader(name="X-API-Key", auto_error=False,

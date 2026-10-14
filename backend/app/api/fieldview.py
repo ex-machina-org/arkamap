@@ -97,7 +97,7 @@ def alerts(field: dict, region: dict | None) -> dict:
 def felt_radius_km(mag: float) -> float:
     """How far a quake is roughly felt, from magnitude alone:
     10^(0.5 M - 0.6) km (M5 ~ 80 km, M6 ~ 250 km, M7 ~ 500 km, capped).
-    ponytail: ignores depth and soil; a real shaking map (BMKG/USGS
+    Limit: ignores depth and soil; a real shaking map (BMKG/USGS
     ShakeMap) would replace this if ingested."""
     return min(10 ** (0.5 * mag - 0.6), 500.0)
 

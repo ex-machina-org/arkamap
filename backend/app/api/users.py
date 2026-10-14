@@ -122,7 +122,7 @@ class ModerateIn(BaseModel):
 
 # ── helpers ─────────────────────────────────────────────────────────────
 
-_login_hits: dict[str, deque] = defaultdict(deque)  # ponytail: in-process; Redis if multi-worker
+_login_hits: dict[str, deque] = defaultdict(deque)  # in-process; Redis if multi-worker
 
 
 def client_ip(request: Request) -> str:

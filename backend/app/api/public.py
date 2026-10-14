@@ -11,7 +11,7 @@ from .schemas import FieldInfo, ModeInfo, PublicOverview, ScoreWeights
 
 router = APIRouter()
 
-_cache: dict = {}   # ponytail: per-process 5-minute cache; the landing page is the hot path
+_cache: dict = {}   # per-process 5-minute cache; the landing page is the hot path
 TTL_S = 300
 
 

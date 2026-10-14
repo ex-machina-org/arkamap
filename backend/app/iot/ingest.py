@@ -45,7 +45,7 @@ MAX_FIELDS = 100
 MAX_DEPTH = 4
 MAX_NAMES = 10            # data tables per device: a typo in "nama" must not make dozens
 DEFAULT_NAME = "default"  # transition: readings sent without "nama"
-MIN_INTERVAL_S = 1.0      # per device; ponytail: in-process, per worker/bridge
+MIN_INTERVAL_S = 1.0      # per device; kept in-process, per worker/bridge
 # Without the sensor's own "waktu", a resend and a genuinely unchanged
 # reading look identical, so any window longer than the sensor's own
 # interval drops real data (60 s kept one reading a minute from a sensor

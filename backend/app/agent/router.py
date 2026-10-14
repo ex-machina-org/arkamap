@@ -29,7 +29,7 @@ PLANNER_CAP_S = 3.5
 JEV_TIMEOUT_S = 3
 # Gemini refuses a request deadline under 10 s, so its cap is ours: the call runs
 # here and is abandoned (it ends by itself at 10 s) when it takes longer.
-# ponytail: an abandoned call holds a worker up to 10 s; raise max_workers if plans queue
+# Limit: an abandoned call holds a worker up to 10 s; raise max_workers if plans queue
 _PLAN_POOL = ThreadPoolExecutor(max_workers=8, thread_name_prefix="plan")
 
 

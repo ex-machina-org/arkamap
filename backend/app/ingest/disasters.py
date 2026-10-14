@@ -130,7 +130,7 @@ def dedupe() -> int:
     """Delete EONET rows GDACS already has. GDACS wins: it carries the alert
     level. Match on the shared GDACS id, or, when EONET got the event from
     elsewhere, on same type within 1 degree and 3 days of start."""
-    # ponytail: fixed 1 deg / 3 day window; tighten if distinct events merge
+    # Limit: fixed 1 deg / 3 day window; tighten if distinct events merge
     # also clears rows stored before the Indonesia filter existed
     outside = execute(
         """

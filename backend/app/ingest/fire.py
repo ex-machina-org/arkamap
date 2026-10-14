@@ -207,7 +207,7 @@ SATELLITES = {"N": "VIIRS S-NPP", "N20": "VIIRS NOAA-20", "N21": "VIIRS NOAA-21"
 def refresh_static_cells() -> int:
     """Rebuild static_heat_cell from every stored non-low hotspot of the
     lookback period, all satellites. Returns the number of static cells."""
-    # ponytail: full scan of the period's hotspots twice a day; keep a running
+    # Limit: full scan of the period's hotspots twice a day; keep a running
     # per-cell tally if the observation table outgrows that
     with conn() as c, c.cursor() as cur:
         cur.execute("DELETE FROM static_heat_cell")
