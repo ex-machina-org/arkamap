@@ -33,6 +33,9 @@ JWT_DAYS = int(os.getenv("JWT_DAYS", "7"))
 # Emails that become admins on signup (moderate community data).
 ADMIN_EMAILS = {e.strip().lower() for e in os.getenv("ADMIN_EMAILS", "").split(",") if e.strip()}
 
+# Public base URL the sensor examples point at (app/iot/quickstart.py).
+PUBLIC_URL = os.getenv("PUBLIC_URL", "http://localhost:8000").rstrip("/")
+
 # Every /api/* request must carry a valid X-API-Key (an issued app key or
 # one of API_KEYS). Off in local dev so tests and curl work without keys;
 # turn it on wherever the API is exposed.

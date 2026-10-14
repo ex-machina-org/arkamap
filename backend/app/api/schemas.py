@@ -4,6 +4,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from ..iot.categories import Category as SensorCategory
+
 
 class SourceInfo(BaseModel):
     id: str
@@ -661,3 +663,78 @@ class HistorySeries(BaseModel):
 
 class IndicatorHistory(BaseModel):
     series: list[HistorySeries]
+
+
+class WidgetSpec(BaseModel):
+    field: str = Field(description="key di data sensor (bersarang diratakan: 'cuaca.suhu')")
+    label: str
+    unit: str | None = None
+    semantic: str
+    widget: Literal["line", "gauge", "stat", "bar", "status", "map", "table"]
+    group: str
+    compare_metric: str | None = Field(None, description="metrik wilayah kita yang sebanding (satuan sama)")
+    hidden: bool = False
+    pair_field: str | None = Field(None, description="widget map: field longitude pasangan; field ini latitude")
+    category: SensorCategory = Field("lainnya", description="kategori tetap field ini")
+    category_by: Literal["rule", "ai", "user"] | None = Field(
+        None, description="rule = sementara (AI akan menilai ulang); ai/user = terkonfirmasi")
+    by: Literal["rule", "ai", "user"] | None = Field(None, description="siapa yang menata widget ini")
+
+
+class DeviceOut(BaseModel):
+    id: int
+    name: str
+    category: str | None = Field(None, description="petunjuk opsional dari pemilik; kategori sebenarnya per field")
+    key_prefix: str = Field(description="awal API key, untuk mengenali key; key penuh hanya diberikan sekali")
+    mqtt_username: str = Field(description="username MQTT; password = API key")
+    mqtt_topic: str = Field(description="satu-satunya topik yang boleh dipakai perangkat ini untuk publish")
+    region_id: str | None = None
+    region_name: str | None = None
+    lat: float | None = None
+    lon: float | None = None
+    visibility: Literal["private", "community"]
+    community_status: Literal["none", "pending", "approved", "rejected"]
+    community_note: str | None = None
+    layout: list[WidgetSpec] | None = None
+    layout_by: Literal["ai", "rule", "user"] | None = None
+    last_seen_at: datetime | None = None
+    created_at: datetime
+    dup_count: int = Field(0, description="kiriman ulang yang diabaikan (data sama dalam 1 detik, atau data dan waktu sama)")
+    rejected_count: int = Field(0, description="kiriman yang ditolak (format salah, terlalu cepat, dst.)")
+    last_error: str | None = Field(None, description="alasan penolakan terakhir, untuk ditampilkan ke pemilik")
+    last_error_at: datetime | None = None
+    warning_count: int = Field(0, description='kiriman yang diterima tanpa "nama" atau "waktu" (masa transisi)')
+    last_warning: str | None = Field(None, description="peringatan terakhir untuk pemilik; data tetap disimpan")
+    last_warning_at: datetime | None = None
+    test_expires_at: datetime | None = Field(None, description="diisi = alat uji; terhapus otomatis setelah waktu ini")
+
+
+class QuickstartMqtt(BaseModel):
+    url: str
+    username: str
+    password: str
+    topic: str
+    qos: int
+
+
+class Quickstart(BaseModel):
+    """Contoh siap tempel untuk satu perangkat. Saat dibuat/rotasi berisi key
+    asli; lewat GET /me/devices/{id}/quickstart berisi <API_KEY>."""
+    url: str
+    headers: dict[str, str]
+    mqtt: QuickstartMqtt
+    payload: dict = Field(description="contoh JSON yang valid")
+    rules: list[str]
+    snippets: dict[str, str] = Field(description="curl, python, python_mqtt, esp32_arduino")
+
+
+class DeviceCreated(BaseModel):
+    device: DeviceOut
+    api_key: str = Field(description="HANYA ditampilkan sekali; simpan di sensor")
+    quickstart: Quickstart
+
+
+class KeyRotated(BaseModel):
+    api_key: str
+    key_prefix: str
+    quickstart: Quickstart
