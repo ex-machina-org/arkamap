@@ -10,7 +10,7 @@ export interface components {
     "ChatRequest": { "question": string; "session_id"?: string | null; };
     "ChatResponse": { "answer": string; "clarify"?: components["schemas"]["Clarify"] | null; "context": Record<string, unknown>; "fallback"?: string | null; "models"?: Array<string>; "route_source": "llm:gemini" | "llm:openrouter" | "llm:deepseek" | "jev" | "keyword"; "session_id": string; "skill": "ranking" | "region" | "events" | "alerts" | "trend" | "facilities" | "my_data" | "guide" | "off_topic" | "clarify"; "sources": Array<string>; "tokens": components["schemas"]["TokenUsage"]; "tool_calls": Array<components["schemas"]["ToolCallInfo"]>; "topic"?: string | null; "viz": Array<Record<string, unknown>>; };
     "Clarify": { "options": Array<components["schemas"]["ClarifyOption"]>; "question": string; };
-    "ClarifyOption": { "label": string; "question": string; };
+    "ClarifyOption": { "description"?: string | null; "label": string; "question": string; };
     "ClassificationStats": { "building": Record<string, number>; "quake_urgency": Record<string, number>; "total_buildings": number; "total_quakes_classified": number; };
     "ClientCreated": { "api_key": string; "client": components["schemas"]["ClientOut"]; };
     "ClientIn": { "name": string; "note"?: string | null; };
