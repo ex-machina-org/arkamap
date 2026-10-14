@@ -115,8 +115,9 @@ TOPICS: dict[str, tuple[str, str, tuple[str, ...], str]] = {
         "Cara memakai dashboard, profil pantauan (Kenalan), mode Protected/Responden/Plan, peta, berbagi alat ke komunitas.",
         ("dashboard", "profil", "kenalan", "mode", "protected", "responden", "plan", "peta", "map",
          "komunitas", "berbagi", "share", "wilayah pantauan"),
-        "Dashboard akun menyesuaikan diri dengan profil pantauan. Lengkapi lewat Kenalan: tulis peran "
-        "dan tujuanmu dengan bebas, pilih wilayah (opsional) dan mode, atau biarkan AI memilih mode:\n"
+        "Dashboard akun menyesuaikan diri dengan profil pantauan. Buat profil lewat Tambah Profil di pilihan "
+        "profil: tulis peran dan masalah yang ingin diatasi, pilih wilayahnya, lalu pilih mode sendiri "
+        "atau biarkan AI memilih:\n"
         "- Protected (tanggap darurat): kejadian terbaru, lokasi dan penduduk terdampak, peringatan yang "
         "sedang berlaku.\n"
         "- Responden (pencegahan): tingkat risiko sekarang, prakiraan 1-3 hari, dan wilayah yang perlu "
