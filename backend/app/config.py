@@ -5,6 +5,10 @@ DATABASE_URL = os.getenv(
     "postgresql://atlas:atlas@localhost:5433/atlas",
 )
 
+# NASA FIRMS regional feeds need no key; the area API does. If a key is
+# present we use the finer area endpoint, otherwise the regional CSV.
+FIRMS_MAP_KEY = os.getenv("FIRMS_MAP_KEY", "").strip()
+
 # Indonesia bounding box (lon/lat)
 IDN_BBOX = (95.0, -11.0, 141.0, 6.0)
 
@@ -28,6 +32,9 @@ JWT_SECRET = os.getenv("JWT_SECRET", "dev-only-secret-change-me")
 JWT_DAYS = int(os.getenv("JWT_DAYS", "7"))
 # Emails that become admins on signup (moderate community data).
 ADMIN_EMAILS = {e.strip().lower() for e in os.getenv("ADMIN_EMAILS", "").split(",") if e.strip()}
+
+# Public base URL the sensor examples point at (app/iot/quickstart.py).
+PUBLIC_URL = os.getenv("PUBLIC_URL", "http://localhost:8000").rstrip("/")
 
 # Every /api/* request must carry a valid X-API-Key (an issued app key or
 # one of API_KEYS). Off in local dev so tests and curl work without keys;

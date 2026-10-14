@@ -1220,6 +1220,19 @@
             "title": "Rejected Count",
             "type": "integer"
           },
+          "test_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "diisi = alat uji; terhapus otomatis setelah waktu ini",
+            "title": "Test Expires At"
+          },
           "visibility": {
             "enum": [
               "private",
@@ -1742,6 +1755,92 @@
           "layers"
         ],
         "title": "FieldInfo",
+        "type": "object"
+      },
+      "FireAlert": {
+        "description": "Possible fires in one kabkota: hotspots outside known static heat\n(industry, flares, volcanoes) seen on at least two satellite passes.",
+        "properties": {
+          "clusters": {
+            "description": "sel ~1 km yang terdeteksi panas berulang",
+            "title": "Clusters",
+            "type": "integer"
+          },
+          "confirmed": {
+            "description": "true = GDACS melaporkan kebakaran hutan dalam radius 0,5°",
+            "title": "Confirmed",
+            "type": "boolean"
+          },
+          "detections": {
+            "description": "jumlah deteksi satelit di sel-sel itu",
+            "title": "Detections",
+            "type": "integer"
+          },
+          "first_seen": {
+            "format": "date-time",
+            "title": "First Seen",
+            "type": "string"
+          },
+          "frp_max": {
+            "description": "Fire Radiative Power tertinggi (MW)",
+            "title": "Frp Max",
+            "type": "number"
+          },
+          "last_seen": {
+            "format": "date-time",
+            "title": "Last Seen",
+            "type": "string"
+          },
+          "lat": {
+            "title": "Lat",
+            "type": "number"
+          },
+          "lon": {
+            "description": "titik terkuat",
+            "title": "Lon",
+            "type": "number"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "province": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Province"
+          },
+          "region_id": {
+            "title": "Region Id",
+            "type": "string"
+          },
+          "satellites": {
+            "description": "satelit yang mendeteksi, mis. 'VIIRS NOAA-20'",
+            "items": {
+              "type": "string"
+            },
+            "title": "Satellites",
+            "type": "array"
+          }
+        },
+        "required": [
+          "region_id",
+          "name",
+          "clusters",
+          "detections",
+          "satellites",
+          "frp_max",
+          "first_seen",
+          "last_seen",
+          "lon",
+          "lat",
+          "confirmed"
+        ],
+        "title": "FireAlert",
         "type": "object"
       },
       "Focus": {
@@ -3861,6 +3960,15 @@
               "$ref": "#/components/schemas/DisasterAlert"
             },
             "title": "Disaster Alerts",
+            "type": "array"
+          },
+          "fire_alerts": {
+            "default": [],
+            "description": "kemungkinan kebakaran per kab/kota, 48 jam terakhir",
+            "items": {
+              "$ref": "#/components/schemas/FireAlert"
+            },
+            "title": "Fire Alerts",
             "type": "array"
           },
           "quake_alerts": {
@@ -7029,7 +7137,7 @@
   "paths": {
     "/api/admin/refresh": {
       "post": {
-        "description": "Kick off ingest without waiting for the schedule.",
+        "description": "Kick off ingest without waiting for the schedule. Admin accounts only.",
         "operationId": "trigger_refresh_api_admin_refresh_post",
         "parameters": [
           {
@@ -7070,6 +7178,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Trigger Refresh",
@@ -7080,7 +7191,7 @@
     },
     "/api/admin/refresh-buildings": {
       "post": {
-        "description": "(Re)start the continuous buildings prewarm loop if it isn't already\nrunning — useful after it's finished once and Overpass has since added\nnew footprints. run_forever()'s own _running guard makes this a no-op\nif a loop is already in flight.",
+        "description": "(Re)start the continuous buildings prewarm loop if it isn't already\nrunning — useful after it's finished once and Overpass has since added\nnew footprints. run_forever()'s own _running guard makes this a no-op\nif a loop is already in flight. Admin accounts only.",
         "operationId": "trigger_buildings_refresh_api_admin_refresh_buildings_post",
         "responses": {
           "200": {
@@ -7099,6 +7210,9 @@
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
           }
         ],
         "summary": "Trigger Buildings Refresh",
@@ -10847,8 +10961,26 @@
     },
     "/api/notifications": {
       "get": {
-        "description": "What needs attention right now, computed from data already stored —\nnot a persisted notification log. There is no read/unread state here on\npurpose: nothing asked for one, and a snapshot answers \"what's urgent\ntoday\" without a table that has to be kept in sync.",
+        "description": "What needs attention right now, computed from data already stored —\nnot a persisted notification log. There is no read/unread state here on\npurpose: nothing asked for one, and a snapshot answers \"what's urgent\ntoday\" without a table that has to be kept in sync.\n\nregion_id narrows everything but source health to that region: points\nwithin it (quakes with in_region's 1° offshore margin, disasters 0.5°),\nindicators of it and its child regions, warnings touching it, possible\nfires detected inside it (ingest/fire.py possible_fires).",
         "operationId": "notifications_api_notifications_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "region_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Region Id"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -10859,6 +10991,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [

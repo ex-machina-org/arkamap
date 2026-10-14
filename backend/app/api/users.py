@@ -1,4 +1,5 @@
-"""Accounts and profiles."""
+"""Accounts, profiles and IoT devices."""
+import logging
 import time
 from collections import defaultdict, deque
 
@@ -9,13 +10,18 @@ from psycopg import errors
 from psycopg.types.json import Jsonb
 from pydantic import BaseModel, Field
 
-from ..auth import current_user, hash_password, make_token, verify_password
-from ..config import ADMIN_EMAILS
+from ..auth import current_user, hash_password, make_token, new_device_key, verify_password
+from ..config import ADMIN_EMAILS, IDN_BBOX
 from .. import fields, modes
 from ..db import conn, execute, query, query_one
+from ..iot import broker
+from ..iot import layout as iot_layout
+from ..iot import quickstart
+from ..iot.categories import Category, majority
 from ..iot import relevance
-from .schemas import AuthOut, ErrorResponse, MeOut
+from .schemas import AuthOut, DeviceCreated, DeviceOut, ErrorResponse, KeyRotated, MeOut, Quickstart, WidgetSpec
 
+log = logging.getLogger(__name__)
 router = APIRouter()
 
 # ── request bodies ──────────────────────────────────────────────────────
@@ -43,6 +49,41 @@ class ProfileIn(BaseModel):
         None, description="kosong = AI memilih dari penjelasan; lihat GET /api/modes")
 
 
+class Location(BaseModel):
+    """From the browser's geolocation ("lokasi saat ini") or a map pick; the
+    backend doesn't care which, it only stores the point."""
+    lat: float = Field(ge=-90, le=90)
+    lon: float = Field(ge=-180, le=180)
+
+
+class DeviceIn(BaseModel):
+    """Everything optional: one click gives a key. Categories are decided
+    per field from the data itself."""
+    name: str | None = Field(None, min_length=1, max_length=100, description="kosong = 'Perangkat N'")
+    category: str | None = Field(None, min_length=1, max_length=50, description="petunjuk opsional untuk AI")
+    location: Location | None = None
+
+
+class DeviceUpdate(BaseModel):
+    name: str | None = Field(None, min_length=1, max_length=100)
+    category: str | None = Field(None, min_length=1, max_length=50)
+    location: Location | None = None
+
+
+class ShareIn(BaseModel):
+    share: bool = Field(description="true = ajukan ke komunitas (ditinjau admin); false = privat")
+
+
+class WidgetEdit(BaseModel):
+    field: str
+    label: str | None = Field(None, max_length=100)
+    unit: str | None = Field(None, max_length=30)
+    widget: iot_layout.Widget | None = None
+    group: str | None = Field(None, max_length=50)
+    hidden: bool | None = None
+    category: Category | None = Field(None, description="kategori tetap; pilihan user tidak ditimpa AI")
+
+
 class PasswordChange(BaseModel):
     old_password: str = Field(max_length=128)
     new_password: str = Field(min_length=8, max_length=128)
@@ -68,6 +109,44 @@ def _login_limit(ip: str) -> None:
     if len(q) >= 10:
         raise HTTPException(429, "terlalu banyak percobaan masuk; coba lagi 5 menit lagi")
     q.append(now)
+
+
+def _point_region(loc: Location) -> str:
+    """kabkota under the point (nearest within ~5 km for coastal points)."""
+    w, s, e, n = IDN_BBOX
+    row = None
+    if w <= loc.lon <= e and s <= loc.lat <= n:
+        row = query_one(
+            """
+            SELECT id FROM region
+            WHERE level = 'kabkota' AND population IS NOT NULL
+              AND ST_DWithin(geom, ST_SetSRID(ST_MakePoint(%(lon)s, %(lat)s), 4326), 0.05)
+            ORDER BY geom <-> ST_SetSRID(ST_MakePoint(%(lon)s, %(lat)s), 4326) LIMIT 1
+            """, {"lon": loc.lon, "lat": loc.lat})
+    if not row:
+        raise HTTPException(400, "lokasi di luar Indonesia")
+    return row["id"]
+
+
+_DEVICE_COLS = """d.id, d.name, d.category, d.key_prefix,
+    'dev' || d.id AS mqtt_username, 'ingest/dev' || d.id AS mqtt_topic, d.region_id, r.name AS region_name,
+    ST_Y(d.geom) AS lat, ST_X(d.geom) AS lon, d.visibility, d.community_status,
+    d.community_note, d.layout, d.layout_by, d.layout_stale, d.last_seen_at, d.created_at,
+    d.dup_count, d.rejected_count, d.last_error, d.last_error_at,
+    d.warning_count, d.last_warning, d.last_warning_at, d.test_expires_at"""
+
+
+def _own_device(user: dict, device_id: int) -> dict:
+    d = query_one(f"SELECT {_DEVICE_COLS}, d.user_id FROM device d"
+                  " LEFT JOIN region r ON r.id = d.region_id"
+                  " WHERE d.id = %s AND d.user_id = %s", (device_id, user["id"]))
+    if not d:
+        raise HTTPException(404, "perangkat tidak ditemukan")
+    return d
+
+
+def _public(d: dict) -> dict:
+    return {k: v for k, v in d.items() if k not in ("user_id", "layout_stale")}
 
 
 # ── auth ────────────────────────────────────────────────────────────────
@@ -235,3 +314,161 @@ def delete_profile(profile_id: int, user: dict = Depends(current_user)) -> dict:
     execute("UPDATE app_user SET active_profile_id = (SELECT MIN(id) FROM profile WHERE user_id = %s)"
             " WHERE id = %s AND active_profile_id IS NULL", (user["id"], user["id"]))
     return me(user)
+
+
+# ── devices ─────────────────────────────────────────────────────────────
+
+
+@router.post("/me/devices", status_code=201, response_model=DeviceCreated, responses={401: {"model": ErrorResponse}})
+def create_device(body: DeviceIn, user: dict = Depends(current_user)) -> dict:
+    """Returns the API key ONCE. Store it on the sensor; we keep only a hash."""
+    key, key_hash, prefix = new_device_key()
+    region = _point_region(body.location) if body.location else None
+    name = body.name or "Perangkat %d" % (query_one(
+        "SELECT COUNT(*) AS n FROM device WHERE user_id = %s AND test_expires_at IS NULL", (user["id"],))["n"] + 1)
+    d = query_one(
+        """
+        INSERT INTO device (user_id, name, category, key_hash, key_prefix, geom, region_id)
+        VALUES (%s, %s, %s, %s, %s,
+                CASE WHEN %s::float8 IS NULL THEN NULL
+                     ELSE ST_SetSRID(ST_MakePoint(%s, %s), 4326) END, %s)
+        RETURNING id
+        """,
+        (user["id"], name, body.category, key_hash, prefix,
+         body.location and body.location.lon, body.location and body.location.lon,
+         body.location and body.location.lat, region))
+    try:
+        broker.add_device(d["id"], key)
+    except broker.BrokerError as exc:
+        # no half-made device: without broker credentials MQTT would never work
+        execute("DELETE FROM device WHERE id = %s", (d["id"],))
+        log.warning("buat kredensial MQTT gagal: %s", exc)
+        raise HTTPException(503, "broker MQTT sedang tidak tersedia; coba lagi") from None
+    dev = _own_device(user, d["id"])
+    return {"device": _public(dev), "api_key": key, "quickstart": quickstart.build(dev, key)}
+
+
+@router.get("/me/devices", response_model=list[DeviceOut], responses={401: {"model": ErrorResponse}})
+def list_devices(user: dict = Depends(current_user)) -> list[dict]:
+    return [_public(d) for d in query(
+        f"SELECT {_DEVICE_COLS} FROM device d LEFT JOIN region r ON r.id = d.region_id"
+        " WHERE d.user_id = %s AND d.test_expires_at IS NULL ORDER BY d.created_at", (user["id"],))]
+
+
+@router.patch("/me/devices/{device_id}", response_model=DeviceOut, responses={401: {"model": ErrorResponse}})
+def update_device(device_id: int, body: DeviceUpdate, user: dict = Depends(current_user)) -> dict:
+    _own_device(user, device_id)
+    if body.name or body.category:
+        execute("UPDATE device SET name = COALESCE(%s, name), category = COALESCE(%s, category)"
+                " WHERE id = %s", (body.name, body.category, device_id))
+    if body.location:
+        execute("UPDATE device SET geom = ST_SetSRID(ST_MakePoint(%s, %s), 4326), region_id = %s"
+                " WHERE id = %s", (body.location.lon, body.location.lat,
+                                   _point_region(body.location), device_id))
+    return _public(_own_device(user, device_id))
+
+
+@router.delete("/me/devices/{device_id}", status_code=204)
+def delete_device(device_id: int, user: dict = Depends(current_user)) -> None:
+    """Deletes the device and all its readings."""
+    _own_device(user, device_id)
+    try:
+        _remove_device(device_id)
+    except broker.BrokerError as exc:
+        log.warning("hapus kredensial MQTT gagal: %s", exc)
+        raise HTTPException(503, "broker MQTT sedang tidak tersedia; coba lagi") from None
+
+
+def _remove_device(device_id: int) -> None:
+    broker.remove_device(device_id)   # broker first: never leave a login for a deleted device
+    execute("DELETE FROM device WHERE id = %s", (device_id,))
+
+
+@router.post("/me/devices/{device_id}/key", response_model=KeyRotated, responses={401: {"model": ErrorResponse}})
+def rotate_key(device_id: int, user: dict = Depends(current_user)) -> dict:
+    """New key; the old one stops working immediately."""
+    dev = _own_device(user, device_id)
+    key, key_hash, prefix = new_device_key()
+    try:
+        broker.set_key(device_id, key)   # broker first: never leave MQTT on the old key
+    except broker.BrokerError as exc:
+        log.warning("ganti kredensial MQTT gagal: %s", exc)
+        raise HTTPException(503, "broker MQTT sedang tidak tersedia; coba lagi") from None
+    execute("UPDATE device SET key_hash = %s, key_prefix = %s WHERE id = %s",
+            (key_hash, prefix, device_id))
+    return {"api_key": key, "key_prefix": prefix, "quickstart": quickstart.build(dev, key)}
+
+
+@router.get("/me/devices/{device_id}/quickstart", response_model=Quickstart, responses={401: {"model": ErrorResponse}})
+def device_quickstart(device_id: int, user: dict = Depends(current_user)) -> dict:
+    """Examples with <API_KEY> in place of the key (we only keep its hash)."""
+    return quickstart.build(_own_device(user, device_id))
+
+
+@router.put("/me/devices/{device_id}/layout", response_model=list[WidgetSpec], responses={401: {"model": ErrorResponse}})
+def edit_layout(device_id: int, edits: list[WidgetEdit], user: dict = Depends(current_user)) -> list[dict]:
+    """User corrections to the AI layout. Kept when new fields are added later."""
+    d = _own_device(user, device_id)
+    layout = d["layout"] or []
+    by_field = {w["field"]: w for w in layout}
+    for e in edits:
+        if e.field not in by_field:
+            raise HTTPException(400, f"field '{e.field}' tidak ada di layout")
+        by_field[e.field].update(e.model_dump(exclude_none=True, exclude={"field"}), by="user")
+        if e.category:
+            execute("UPDATE device_field SET category = %s, category_by = 'user' WHERE device_id = %s AND key = %s",
+                    (e.category, device_id, e.field))
+    execute("UPDATE device SET layout = %s, layout_by = 'user' WHERE id = %s", (Jsonb(layout), device_id))
+    return _with_categories(device_id, layout)
+
+
+def _with_categories(device_id: int, layout: list[dict]) -> list[dict]:
+    """The widget's category comes from device_field (the one place ML reads);
+    its group is the data table ("nama") the field belongs to."""
+    cats = {r["key"]: r for r in query("SELECT key, category, category_by FROM device_field WHERE device_id = %s",
+                                       (device_id,))}
+    names = {st["slug"]: st["name"] for st in _streams(device_id)}
+    return [{**w, "category": cats.get(w["field"], {}).get("category", w.get("category", "lainnya")),
+             "category_by": cats.get(w["field"], {}).get("category_by"),
+             "group": names.get(w["field"].rpartition("/")[0], w.get("group"))} for w in layout]
+
+
+@router.post("/me/devices/{device_id}/share", response_model=DeviceOut, responses={401: {"model": ErrorResponse}})
+def share_device(device_id: int, body: ShareIn, user: dict = Depends(current_user)) -> dict:
+    d = _own_device(user, device_id)
+    if body.share and d["test_expires_at"]:
+        raise HTTPException(400, "alat uji tidak bisa dibagikan ke komunitas")
+    if body.share and d["lat"] is None:
+        raise HTTPException(400, "set lokasi perangkat dulu sebelum berbagi ke komunitas")
+    execute("UPDATE device SET visibility = %s, community_status = %s, community_note = NULL"
+            " WHERE id = %s", ("community" if body.share else "private",
+                               "pending" if body.share else "none", device_id))
+    return _public(_own_device(user, device_id))
+
+
+def _streams(device_id: int) -> list[dict]:
+    fields = {r["key"]: r for r in query(
+        "SELECT key, type, category, category_by, first_seen, last_seen FROM device_field WHERE device_id = %s",
+        (device_id,))}
+    labels = {w["field"]: w.get("label") for w in (query_one(
+        "SELECT layout FROM device WHERE id = %s", (device_id,))["layout"] or [])}
+    versions: dict[int, list[dict]] = {}
+    for v in query("SELECT v.id, v.stream_id, v.version, v.keys, v.added, v.reading_count, v.first_seen, v.last_seen"
+                   " FROM stream_version v JOIN device_stream s ON s.id = v.stream_id"
+                   " WHERE s.device_id = %s ORDER BY v.version", (device_id,)):
+        versions.setdefault(v.pop("stream_id"), []).append(v)
+    out = []
+    for st in query("SELECT * FROM device_stream WHERE device_id = %s ORDER BY id", (device_id,)):
+        # fields are registered per table: "<slug>/<key>"; the column is the bare key
+        fs = [{"key": k, "label": labels.get(f"{st['slug']}/{k}") or k, **{c: fields[f"{st['slug']}/{k}"][c] for c in
+               ("type", "category", "category_by", "first_seen", "last_seen")}}
+              for k in st["keys"] if f"{st['slug']}/{k}" in fields]
+        cat = st["category"] or majority([f["category"] for f in fs])
+        out.append({"id": st["id"], "slug": st["slug"], "aliases": st["aliases"],
+                    "versions": versions.get(st["id"], []), "name": st["name"] or "Tanpa Nama",   # the "default" table: readings sent without "nama"
+                    "name_by": st["name_by"] or "auto", "category": cat,
+                    "category_by": "user" if st["category"] else "fields",
+                    "confirmed": all(f["category_by"] != "rule" for f in fs),
+                    "fields": fs, "reading_count": st["reading_count"],
+                    "created_at": st["created_at"], "last_seen_at": st["last_seen_at"]})
+    return out

@@ -9,6 +9,9 @@ x-backend: &backend
     DATABASE_URL: postgresql://arkamap:${POSTGRES_PASSWORD:-arkamap}@db:5432/arkamap
     CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
     REQUIRE_API_KEY: ${REQUIRE_API_KEY:-0}
+    PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8000}
+    MQTT_HOST: mosquitto
+    MQTT_BRIDGE_PASSWORD: ${MQTT_BRIDGE_PASSWORD:-dev-bridge-password}
 
 services:
   db:
@@ -25,11 +28,22 @@ services:
       retries: 20
     restart: unless-stopped
 
+  # Device registration provisions broker credentials, so the API needs it running.
+  mosquitto:
+    image: eclipse-mosquitto:2.0.20
+    environment:
+      MQTT_BRIDGE_PASSWORD: ${MQTT_BRIDGE_PASSWORD:-dev-bridge-password}
+    ports: ["1883:1883"]
+    volumes: ["./mosquitto:/mosquitto/config:ro", "mosquitto_data:/mosquitto/data"]
+    command: ["sh", "/mosquitto/config/start.sh"]
+    restart: unless-stopped
+
   api:
     <<: *backend
     ports: ["127.0.0.1:8000:8000"]
     depends_on:
       db: { condition: service_healthy }
+      mosquitto: { condition: service_started }
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
       interval: 5s
@@ -37,5 +51,14 @@ services:
       retries: 30
     restart: unless-stopped
 
+  # One-shot: downloads public datasets into an empty database, then exits.
+  seed:
+    <<: *backend
+    command: ["python", "seed.py"]
+    depends_on:
+      api: { condition: service_healthy }
+    restart: "no"
+
 volumes:
   pgdata:
+  mosquitto_data:

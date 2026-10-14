@@ -79,7 +79,7 @@ Bentuknya selalu `{"detail": "pesan"}`. Error validasi (422) berisi `detail` ber
 | `POST /api/admin/refresh?with_regions=` | Admin | — | ringkasan proses |
 | `POST /api/admin/refresh-buildings` | Admin | — | ringkasan proses |
 
-Catatan: endpoint kunci aplikasi menolak akun selain admin (403). `/api/admin/refresh` dan `/api/admin/refresh-buildings` menjalankan proses pengambilan data, jadi keduanya hadir bersama proses itu di #29, juga khusus akun admin.
+Catatan: semua endpoint di bagian ini menolak akun selain admin (403) dan permintaan tanpa token (401). `/api/admin/refresh` dan `/api/admin/refresh-buildings` hanya menjadwalkan proses lalu langsung menjawab; hasilnya terlihat di `GET /api/sources`.
 
 ## Akun dan profil
 
@@ -111,7 +111,7 @@ Semua endpoint di bagian ini memakai akses **Aplikasi**.
 | `GET /api/metrics` | `aspect` | `MetricDef[]` |
 | `GET /api/sources` | — | `SourceInfo[]` (status terakhir, error terakhir) |
 | `GET /api/public/overview` | — | `PublicOverview` |
-| `GET /api/notifications` | — | `Notifications` |
+| `GET /api/notifications` | `region_id` | `Notifications`: gempa darurat, peringatan cuaca BMKG, bencana Orange/Red, wilayah kritis, sumber bermasalah, dan `fire_alerts`. `region_id` membatasi semuanya kecuali kesehatan sumber ke wilayah itu |
 | `GET /api/regions` | `q, level, parent_id, limit` | `RegionRef[]` |
 | `GET /api/regions/{id}` | — | `RegionSummary` · 404 |
 | `GET /api/map/{metric}` | `level, simplify` | `MapLayer` · 404 |
@@ -128,6 +128,8 @@ Semua endpoint di bagian ini memakai akses **Aplikasi**.
 `*` = wajib.
 
 Data diperbarui oleh penjadwal backend: refresh menyeluruh pukul 06:00 dan 18:00 WIB, BMKG (gempa dan peringatan) tiap 15 menit.
+
+`fire_alerts` berisi kemungkinan kebakaran per kab/kota dalam 48 jam: klaster titik panas FIRMS yang terdeteksi minimal 2 lintasan satelit, di luar sel panas menetap (industri, suar gas, gunung api) dan di luar radius ~1 km pembangkit termal. `confirmed: true` bila GDACS melaporkan kebakaran hutan dalam 0,5°. Kemungkinan kebakaran belum dicek lapangan; UI menampilkannya sebagai waspada, dan bahaya hanya bila `confirmed`.
 
 ## Analisis dan laporan
 
