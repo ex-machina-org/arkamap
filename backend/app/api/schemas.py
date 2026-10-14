@@ -547,3 +547,26 @@ class ObservationCollection(BaseModel):
     count: int
     limit: int = Field(description="count == limit berarti masih ada titik lain: persempit waktu, wilayah, atau bbox")
     features: list[dict[str, Any]]
+
+
+class BuildingProps(_Props):
+    kind: Literal["hunian", "niaga", "industri", "fasilitas", "lainnya"]
+    building: str
+    levels: int | None = None
+    name: str | None = None
+    amenity: str | None = None
+    area_m2: float | None = None
+
+
+class BuildingFeature(BaseModel):
+    type: Literal["Feature"] = "Feature"
+    id: int = Field(description="OSM way id")
+    properties: BuildingProps
+    geometry: Geometry
+
+
+class BuildingCollection(BaseModel):
+    type: Literal["FeatureCollection"] = "FeatureCollection"
+    count: int
+    by_kind: dict[str, int]
+    features: list[BuildingFeature]
