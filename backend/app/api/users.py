@@ -1,4 +1,4 @@
-"""Accounts, profiles, IoT devices and sensor data."""
+"""Accounts, profiles, IoT devices, sensor data and dashboards."""
 import logging
 import time
 from collections import defaultdict, deque
@@ -22,8 +22,9 @@ from ..iot import layout as iot_layout
 from ..iot import quickstart
 from ..iot.categories import Category, majority
 from ..iot import relevance
+from . import fieldview, routes
 from .schemas import (
-    AuthOut, DeviceAlert, DeviceCreated, DeviceEvent, DeviceOut, ErrorResponse,
+    AuthOut, Dashboard, DeviceAlert, DeviceCreated, DeviceEvent, DeviceOut, ErrorResponse,
     IngestOut, KeyRotated, MeOut, Quickstart, Readings, ReadingsDeleted, Stream, WidgetSpec,
 )
 
@@ -170,6 +171,54 @@ def _own_device(user: dict, device_id: int) -> dict:
 
 def _public(d: dict) -> dict:
     return {k: v for k, v in d.items() if k not in ("user_id", "layout_stale")}
+
+
+def _widgets(device: dict, hours: int, points: int = 200) -> list[dict]:
+    """Layout (re-planned if new fields arrived) + latest value, a series and
+    the region's own figure for comparison. All values from the database."""
+    layout = device["layout"] or []
+    if device["layout_stale"] or not layout:
+        # never wait for the model here: show rule widgets for the new fields
+        # now; the AI layout lands in the background (normally already
+        # started at ingest; this covers a restart that lost that thread)
+        iot_layout.plan_in_background(device["id"])
+        layout = iot_layout.provisional(device)
+    layout = _with_categories(device["id"], layout)
+    # the newest 5000, oldest first for the chart: ascending + LIMIT kept the oldest and dropped the latest
+    rows = query("SELECT * FROM (SELECT r.received_at, r.data, s.slug FROM sensor_reading r"
+                 " JOIN device_stream s ON s.id = r.stream_id"
+                 " WHERE r.device_id = %s AND r.received_at > now() - make_interval(hours => %s)"
+                 " ORDER BY r.received_at DESC LIMIT 5000) newest ORDER BY received_at", (device["id"], hours))
+    # last value of EACH field (a field missing from the newest message
+    # keeps its previous value); device_field.sample is updated on every send
+    last = {f["key"]: f for f in query("SELECT key, sample, last_seen FROM device_field"
+                                       " WHERE device_id = %s", (device["id"],))}
+    compare = {}
+    metrics = [w["compare_metric"] for w in layout if w.get("compare_metric")]
+    if metrics and device.get("region_id"):
+        compare = {r["metric"]: r for r in query(
+            "SELECT i.metric, i.value, i.period, i.is_modelled, i.source_id, m.unit, m.label"
+            " FROM indicator_latest i JOIN metric_def m USING (metric)"
+            " WHERE i.region_id = %s AND i.metric = ANY(%s)", (device["region_id"], metrics))}
+    step = max(1, len(rows) // points)
+    out = []
+    for w in layout:
+        if w.get("hidden"):
+            continue
+        f = w["field"]
+        item = {**w, "latest": last.get(f, {}).get("sample"),
+                "latest_at": last.get(f, {}).get("last_seen")}
+        if w.get("pair_field"):   # map: latitude here, longitude from its pair
+            item["pair_latest"] = last.get(w["pair_field"], {}).get("sample")
+        if w["widget"] in ("line", "bar", "gauge"):
+            slug, _, key = f.rpartition("/")   # "<nama>/<field>"
+            item["series"] = [{"t": r["received_at"], "v": r["data"][key]} for r in rows[::step]
+                              if r["slug"] == slug and isinstance(r["data"].get(key), (int, float))]
+        if w.get("compare_metric") in compare:
+            item["compare"] = {**compare[w["compare_metric"]], "region_id": device["region_id"],
+                               "region_name": device.get("region_name")}
+        out.append(item)
+    return out
 
 
 # ── auth ────────────────────────────────────────────────────────────────
@@ -685,6 +734,55 @@ def merge_stream(device_id: int, stream_id: int, body: StreamMerge, user: dict =
     _recount(device_id)
     iot.record_event(device_id, "digabung", f'Tabel "{src["slug"]}" digabung ke "{dst["slug"]}"')
     return _streams(device_id)
+
+
+# ── dashboard ───────────────────────────────────────────────────────────
+
+
+@router.get("/me/dashboard", response_model=Dashboard, responses={401: {"model": ErrorResponse}})
+def dashboard(hours: int = Query(24, ge=1, le=24 * 30), user: dict = Depends(current_user)) -> dict:
+    """Everything the user's home screen needs. Without sensors: our data,
+    picked from how the user described themselves. With sensors: their
+    widgets too, and the whole dashboard adapts to them: every metric the AI
+    chose as a comparison for a sensor field is added to the region cards and
+    the map layers (flagged `added_for_sensor`)."""
+    devices = query(f"SELECT {_DEVICE_COLS} FROM device d LEFT JOIN region r ON r.id = d.region_id"
+                    " WHERE d.user_id = %s AND d.test_expires_at IS NULL ORDER BY d.created_at", (user["id"],))
+    # widgets first: they may (re)plan the layout stored on the device
+    dev_out = [{"widgets": _widgets(d, hours), "device": _public(d)} for d in devices]
+    for_sensor: dict[str, str] = {}
+    for dv in dev_out:
+        for w in dv["widgets"]:
+            if w.get("compare_metric"):
+                for_sensor.setdefault(w["compare_metric"],
+                                      f"pembanding untuk sensor {dv['device']['name']}: {w['label']}")
+
+    prof = _active_profile(user["id"])
+    ours, view = None, None
+    if prof:
+        f = fields.get(prof["field"])
+        view = {"profile_id": prof["id"],
+                "field": {"id": f["id"], "label": f["label"], "description": f["description"]},
+                "fit": prof["fit"], "unsupported": prof["unsupported"], "message": prof["ai_message"],
+                **fieldview.build(f, prof["region_id"], prof["mode"])}
+        chosen = [m["metric"] for m in prof["metrics"]]
+        reasons = {m["metric"]: m["reason"] for m in prof["metrics"]}
+        extra = [m for m in for_sensor if m not in chosen]
+        reasons.update({m: for_sensor[m] for m in extra})
+        on_map = {l.get("metric") for l in view["layers"]}
+        view["layers"] = view["layers"] + [{"type": "choropleth", "metric": m, "added_for_sensor": True}
+                                           for m in extra if m not in on_map]
+        ours = {"role": prof["role"], "metrics_by": prof["metrics_by"], "region": None}
+        if prof["region_id"]:
+            r = routes.region_detail(prof["region_id"])
+            inds = {i.metric: i.model_dump() for i in r.indicators}
+            ours["region"] = {"id": r.id, "name": r.name, "level": r.level,
+                              "indicators": [{**inds[m], "reason": reasons[m], "added_for_sensor": m in extra}
+                                             for m in chosen + extra if m in inds],
+                              "missing": [m for m in chosen + extra if m not in inds]}
+        else:
+            ours["metrics"] = prof["metrics"] + [{"metric": m, "reason": for_sensor[m]} for m in extra]
+    return {"profile_needed": prof is None, "ours": ours, "view": view, "devices": dev_out}
 
 
 # ── ingest (HTTP) ───────────────────────────────────────────────────────

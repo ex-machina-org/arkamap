@@ -838,3 +838,167 @@ class DeviceEvent(BaseModel):
     at: datetime
     kind: Literal["diterima", "ulang", "tabel_baru", "versi_baru", "peringatan", "bahaya", "ditolak", "nama_diganti", "digabung", "dihapus"]
     message: str
+
+
+# ── dashboard ─────────────────────────────────────────────────────────
+class Compare(BaseModel):
+    metric: str
+    label: str
+    value: float
+    unit: str
+    period: date
+    is_modelled: bool
+    source_id: str
+    region_id: str
+    region_name: str | None = None
+
+
+class SeriesPoint(BaseModel):
+    t: datetime
+    v: float
+
+
+class Widget(WidgetSpec):
+    latest: Any = Field(None, description="nilai terakhir field ini (tipe bebas)")
+    latest_at: datetime | None = None
+    pair_latest: Any = Field(None, description="widget map: nilai terakhir field pasangan (longitude)")
+    series: list[SeriesPoint] | None = Field(None, description="untuk line/bar/gauge, maks ±200 titik")
+    compare: Compare | None = None
+
+
+class DeviceDashboard(BaseModel):
+    widgets: list[Widget]
+    device: DeviceOut
+
+
+class OurIndicator(IndicatorValue):
+    reason: str
+    added_for_sensor: bool = Field(False, description="ditambahkan karena sensor user mengukur hal yang sebanding")
+
+
+class OurRegion(BaseModel):
+    id: str
+    name: str
+    level: str
+    indicators: list[OurIndicator]
+    missing: list[str] = Field(description="metrik terpilih yang belum ada datanya di wilayah ini")
+
+
+class OurData(BaseModel):
+    role: str
+    metrics_by: str | None = None
+    region: OurRegion | None = None
+    metrics: list[MetricPick] | None = Field(None, description="bila profil belum punya wilayah")
+
+
+class Focus(BaseModel):
+    id: str
+    name: str
+    level: str
+    parent_id: str | None = None
+    bbox: list[float] = Field(description="[barat, selatan, timur, utara] untuk membuka peta")
+
+
+class EventPanel(BaseModel):
+    kind: Literal["quake", "hotspot", "disaster"]
+    days: int
+    count: int
+    max_value: float | None = Field(None, description="quake: magnitudo terbesar; hotspot: FRP tertinggi (MW)")
+    top: list[dict[str, Any]]
+
+
+class RankRow(BaseModel):
+    region_id: str
+    name: str
+    score: float
+    value: float
+    is_you: bool
+
+
+class RankPanel(BaseModel):
+    metric: str
+    sort: Literal["attention", "value_desc"]
+    scope: str = Field(description="provinsi user, atau Indonesia bila tanpa wilayah")
+    polarity: str
+    your_rank: int | None = None
+    of: int
+    results: list[RankRow]
+    score_meaning: str
+
+
+class AlertPanel(BaseModel):
+    weather_warnings: list[WarningProps] = Field([], description="peringatan dini cuaca BMKG di wilayah user")
+    region_alerts: list[RegionAlert]
+    disaster_alerts: list[DisasterAlert]
+    quake_alerts: list[QuakeAlert]
+
+
+class ImpactRegion(BaseModel):
+    id: str
+    name: str
+    population: int | None = None
+    distance_km: float | None = Field(None, description="gempa: jarak dari episenter")
+
+
+class ImpactQuake(BaseModel):
+    mag: float
+    observed_at: datetime
+    lat: float
+    lon: float
+    depth_km: float | None = None
+    place: str | None = None
+    urgency: str | None = None
+    tsunami: bool
+    felt: str | None = Field(None, description="laporan dirasakan BMKG (MMI per tempat), bila ada")
+    potensi: str | None = None
+    source_id: str
+    radius_km: int = Field(description="perkiraan radius terasa dari magnitudo")
+    regions: list[ImpactRegion] = Field(description="kabupaten/kota dalam radius, terdekat dulu (maks. 30)")
+    population: int = Field(description="jumlah penduduk kabupaten/kota tersebut")
+
+
+class ImpactWarning(WarningProps):
+    regions: list[ImpactRegion] = Field(description="kabupaten/kota yang tercakup peringatan")
+    population: int
+
+
+class ImpactPanel(BaseModel):
+    """Mode protected: apa yang terjadi, di mana, siapa terdampak."""
+    quakes: list[ImpactQuake]
+    warnings: list[ImpactWarning]
+    radius_note: str
+
+
+class HistoryMonth(BaseModel):
+    month: date
+    count: int
+
+
+class HistoryPanel(BaseModel):
+    """Mode plan: jumlah kejadian per bulan setahun terakhir."""
+    kind: Literal["quake", "hotspot", "disaster"]
+    days: int
+    months: list[HistoryMonth]
+
+
+class DashboardView(BaseModel):
+    profile_id: int
+    mode: ModeInfo
+    impact: ImpactPanel | None = Field(None, description="hanya mode protected")
+    history: list[HistoryPanel] | None = Field(None, description="hanya mode plan")
+    field: FieldBrief
+    fit: Literal["cocok", "sebagian", "tidak_cocok"] | None = None
+    unsupported: list[str]
+    message: str | None = None
+    focus: Focus | None = None
+    layers: list[Layer]
+    events: list[EventPanel]
+    ranking: RankPanel
+    alerts: AlertPanel
+
+
+class Dashboard(BaseModel):
+    profile_needed: bool = Field(description="true = arahkan user mengisi profil dulu")
+    ours: OurData | None
+    view: DashboardView | None = Field(None, description="tampilan sesuai bidang user: layer peta, kejadian, peringkat, peringatan")
+    devices: list[DeviceDashboard]
