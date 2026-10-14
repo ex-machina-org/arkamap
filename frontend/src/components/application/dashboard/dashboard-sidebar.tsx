@@ -68,6 +68,7 @@ function NavItem({
   label,
   badge,
   isSelected = false,
+  danger = false,
   collapsed = false,
   href = "#",
   onClick,
@@ -76,6 +77,7 @@ function NavItem({
   label: string;
   badge?: ReactNode;
   isSelected?: boolean;
+  danger?: boolean;
   collapsed?: boolean;
   href?: string;
   onClick?: () => void;
@@ -100,12 +102,14 @@ function NavItem({
         collapsed ? "w-9" : "w-full",
         isSelected
           ? "bg-linear-to-b from-accent-500 to-accent-600 text-white font-medium shadow-nav-selected"
-          : "text-text-secondary hover:text-text-primary hover:bg-background-secondary-hover",
+          : danger
+            ? "bg-notification-error-background font-medium text-text-error-primary hover:opacity-90"
+            : "text-text-secondary hover:text-text-primary hover:bg-background-secondary-hover",
       )}
     >
       <span className="flex min-w-0 items-center gap-2">
         <Icon
-          className={cx("size-5 shrink-0", isSelected ? "text-white" : "text-foreground-icon-secondary")}
+          className={cx("size-5 shrink-0", isSelected ? "text-white" : danger ? "text-foreground-icon-error" : "text-foreground-icon-secondary")}
           aria-hidden
         />
         <Collapsible collapsed={collapsed}>
@@ -136,6 +140,8 @@ export interface DashboardNavItem {
   icon: IconComponent;
   href?: string;
   badge?: string | number;
+  /** "danger" paints the row red while something needs attention there. */
+  tone?: "danger";
   section?: string;
   children?: DashboardNavChild[];
   onClick?: () => void;
@@ -362,10 +368,11 @@ function NavRows({
                       : undefined
                 }
                 isSelected={isSelected}
+                danger={item.tone === "danger"}
                 collapsed={collapsed}
                 badge={
                   item.badge !== undefined ? (
-                    <Badge color={isSelected ? "primary" : "neutral"}>{item.badge}</Badge>
+                    <Badge color={item.tone === "danger" ? "danger" : isSelected ? "primary" : "neutral"}>{item.badge}</Badge>
                   ) : undefined
                 }
               />
