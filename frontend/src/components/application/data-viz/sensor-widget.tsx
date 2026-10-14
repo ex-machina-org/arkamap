@@ -1,11 +1,13 @@
-import type { ComponentType } from "react";
+import { lazy, Suspense, type ComponentType } from "react";
 import { Badge } from "@/components/base/badges/badge";
 import type { DTO } from "@/lib/api/client";
 import { ChartCard, ValueTable } from "./chart-card";
 import { formatDateTime, formatNumber, formatValue, relativeTime } from "./format";
-import { LocationMap } from "./location-map";
 import { SeriesTable, TimeSeriesChart, type SeriesPoint } from "./time-series-chart";
 import { GaugeMeter, StatValue, StatusValue } from "./value-displays";
+
+// maplibre loads only for a device that sends coordinates
+const LocationMap = lazy(() => import("./location-map").then(module => ({ default: module.LocationMap })));
 
 type Widget = DTO<"Widget">;
 type Device = DTO<"DeviceOut">;
@@ -47,7 +49,7 @@ function Status({ widget }: { widget: Widget }) {
 function Location({ widget, device }: { widget: Widget; device: Device }) {
   const lat = latestNumber(widget);
   const lon = typeof widget.pair_latest === "number" ? widget.pair_latest : null;
-  return lat == null || lon == null ? <Stat widget={widget} series={[]} /> : <LocationMap lat={lat} lon={lon} label={device.name} />;
+  return lat == null || lon == null ? <Stat widget={widget} series={[]} /> : <Suspense fallback={<div aria-hidden className="h-40 rounded-lg bg-background-secondary-default" />}><LocationMap lat={lat} lon={lon} label={device.name} /></Suspense>;
 }
 
 function Table({ widget }: { widget: Widget }) {

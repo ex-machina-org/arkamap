@@ -309,19 +309,6 @@
   --color-status-dot-green-halo:    var(--color-green-100);
   --color-status-dot-yellow-halo:   var(--color-yellow-200);
   --color-status-dot-indigo-halo:   var(--color-indigo-100);
-  --color-status-solid-danger: var(--color-status-solid-danger);
-  --color-status-solid-warning: var(--color-status-solid-warning);
-  --color-status-solid-success: var(--color-status-solid-success);
-  --color-status-solid-neutral: var(--color-status-solid-neutral);
-  --color-status-solid-danger:      var(--color-rose-500);
-  --color-status-solid-warning:     var(--color-yellow-500);
-  --color-status-solid-success:     var(--color-green-500);
-  --color-status-solid-neutral:     var(--color-neutral-500);
-  /* Solid status marks: an alert row's dot and the segments of a breakdown bar. */
-  --color-status-solid-danger:      var(--color-rose-500);
-  --color-status-solid-warning:     var(--color-yellow-500);
-  --color-status-solid-success:     var(--color-green-500);
-  --color-status-solid-neutral:     var(--color-neutral-400);
 
   /* Date range selection: the connecting band and its start/end caps. */
   --color-date-range-background:      var(--color-accent-100);

@@ -31,6 +31,8 @@ import { cx } from "@/utils/cx";
  *   footer  tinted gradient icon tile beside the label (plus an optional
  *           info tooltip), a display-size value, and a white footer band
  *           carrying the comparison caption and a delta pill
+ *   breakdown  the footer card's tile and tint at a smaller size, its band
+ *              holding a split bar and the counts behind the value
  */
 
 type IconComponent = ComponentType<{
@@ -55,11 +57,20 @@ export type Stat = {
   caption?: string;
   /** Footer variant: shows an info glyph with this text on hover. */
   hint?: string;
-  /** Breakdown variant: how the value divides, drawn as a split bar with a count per part. */
+  /** Breakdown variant: the parts behind the value, drawn as a split bar and a list. */
   breakdown?: StatPart[];
 };
 
-export type StatPart = { label: string; value: number; tone: "danger" | "warning" | "success" | "neutral" };
+export type StatPart = { label: string; value: number; color: keyof typeof PART_COLORS };
+
+/** Fills for the breakdown bar and its list dots. */
+const PART_COLORS = {
+  rose: "bg-status-rose-text",
+  yellow: "bg-status-yellow-text",
+  lime: "bg-status-lime-text",
+  purple: "bg-status-purple-text",
+  neutral: "bg-foreground-icon-secondary",
+};
 
 const DEFAULT_STATS: Stat[] = [
   { icon: RiGroupLine, label: "Customers", value: "14,592", delta: "+5.3%", deltaColor: "lime" },
@@ -209,43 +220,6 @@ export function StatIconTile({ icon: Icon, tone = "blue", size = "md", className
   );
 }
 
-const PART_TONES: Record<StatPart["tone"], string> = {
-  danger: "bg-status-solid-danger",
-  warning: "bg-status-solid-warning",
-  success: "bg-status-solid-success",
-  neutral: "bg-status-solid-neutral",
-};
-
-/** A compact card: the value, a bar split by its parts, and each part's count underneath. */
-function BreakdownStatCard({ stat }: { stat: Stat }) {
-  const parts = stat.breakdown ?? [];
-  const total = parts.reduce((sum, part) => sum + part.value, 0);
-  return (
-    <section className="flex min-w-0 flex-col gap-3 rounded-2xl bg-background-secondary-default p-4">
-      <div className="flex items-center gap-2.5">
-        <StatIconTile icon={stat.icon} tone={stat.tone} size="sm" />
-        <p className="min-w-0 flex-1 truncate text-body-medium text-text-secondary">{stat.label}</p>
-        {stat.hint && <StatHint label={stat.label} hint={stat.hint} />}
-      </div>
-      <p className="text-display-4-medium whitespace-nowrap text-text-primary tabular-nums">{stat.value}</p>
-      <div className="flex h-2 w-full gap-0.5 overflow-hidden rounded-full bg-background-inner-default" role="img" aria-label={parts.map(part => `${part.label} ${part.value}`).join(", ")}>
-        {total > 0 && parts.filter(part => part.value > 0).map(part => (
-          <span key={part.label} className={cx("h-full min-w-1 first:rounded-l-full last:rounded-r-full", PART_TONES[part.tone])} style={{ flexGrow: part.value, flexBasis: 0 }} />
-        ))}
-      </div>
-      <ul className="flex flex-col gap-1">
-        {parts.map(part => (
-          <li key={part.label} className="flex items-center gap-2 text-body-2-regular text-text-secondary">
-            <span aria-hidden className={cx("size-2 shrink-0 rounded-full", PART_TONES[part.tone])} />
-            <span className="min-w-0 flex-1 truncate">{part.label}</span>
-            <span className="tabular-nums text-text-primary">{part.value}</span>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
 function FooterStatCard({ stat }: { stat: Stat }) {
   return (
     <section className="flex min-w-0 flex-col rounded-2xl bg-background-secondary-default p-2">
@@ -274,6 +248,44 @@ function FooterStatCard({ stat }: { stat: Stat }) {
   );
 }
 
+function BreakdownStatCard({ stat }: { stat: Stat }) {
+  const parts = stat.breakdown ?? [];
+  const sum = parts.reduce((total, part) => total + part.value, 0);
+  return (
+    <section className="flex min-w-0 flex-col rounded-2xl bg-background-secondary-default p-2">
+      <div className="flex w-full items-center gap-2.5 p-2">
+        <StatIconTile icon={stat.icon} tone={stat.tone} size="sm" />
+        <p className="min-w-0 flex-1 truncate text-body-medium text-text-secondary">{stat.label}</p>
+        {stat.hint && <StatHint label={stat.label} hint={stat.hint} />}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 px-2 pb-1">
+        <p className="text-title-1-medium whitespace-nowrap text-text-primary tabular-nums">{stat.value}</p>
+        <DeltaPill delta={stat.delta} deltaColor={stat.deltaColor} />
+      </div>
+      {stat.caption && <p className="truncate px-2 pb-3 text-body-regular text-text-secondary">{stat.caption}</p>}
+
+      <div className="flex flex-1 flex-col gap-2.5 rounded-2lg bg-background-inner-default p-2.5 shadow-card">
+        {/* Each part's share of the value; an empty track when there is nothing to split */}
+        <div className="flex h-1.5 w-full gap-0.5 overflow-hidden rounded-full bg-background-secondary-default" aria-hidden>
+          {sum > 0 && parts.filter(part => part.value > 0).map(part => (
+            <span key={part.label} className={PART_COLORS[part.color]} style={{ flexGrow: part.value }} />
+          ))}
+        </div>
+        <ul className="flex flex-col gap-1">
+          {parts.map(part => (
+            <li key={part.label} className="flex items-center gap-2 text-body-regular">
+              <span className={cx("size-2 shrink-0 rounded-full", PART_COLORS[part.color])} aria-hidden />
+              <span className="min-w-0 flex-1 truncate text-text-secondary">{part.label}</span>
+              <span className="text-body-medium text-text-primary tabular-nums">{part.value}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
 export function StatCards({
   variant = "plain",
   stats,
@@ -292,7 +304,7 @@ export function StatCards({
   columns?: 1 | 2 | 4;
   className?: string;
 } = {}) {
-  const items = stats ?? (variant === "footer" ? DEFAULT_FOOTER_STATS : DEFAULT_STATS);
+  const items = stats ?? (variant === "plain" ? DEFAULT_STATS : DEFAULT_FOOTER_STATS);
   return (
     <div
       className={cx(
@@ -301,10 +313,10 @@ export function StatCards({
         // row on phones where the plain cards still fit two up.
         columns === 1
           ? "grid-cols-1"
-          : variant === "footer" || variant === "breakdown"
+          : variant !== "plain"
             ? "grid-cols-1 sm:grid-cols-2"
             : "grid-cols-2",
-        columns === 4 && (variant === "footer" || variant === "breakdown" ? "xl:grid-cols-4" : "lg:grid-cols-4"),
+        columns === 4 && (variant !== "plain" ? "xl:grid-cols-4" : "lg:grid-cols-4"),
         className,
       )}
     >
