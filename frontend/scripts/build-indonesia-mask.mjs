@@ -1,7 +1,7 @@
 // Builds public/geo/indonesia-outside.json: the world minus Indonesia, used to dim the map outside the country.
 // Run once (or when the province layer changes); the browser then only fetches a small static file.
 //
-//   ARKAMAP_API_TARGET=https://api.winatra.app ARKAMAP_API_KEY=... node scripts/build-indonesia-mask.mjs
+//   ARKAMAP_API_TARGET=http://127.0.0.1:8000 node scripts/build-indonesia-mask.mjs
 //
 // Cutting 34 provinces out of one world polygon at runtime is slow and MapLibre triangulates it badly,
 // so the provinces are merged here, their gaps closed, and the result is split into small cells.
