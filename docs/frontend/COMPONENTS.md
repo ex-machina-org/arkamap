@@ -28,7 +28,7 @@ Do not mass-migrate existing shadcn callers simply to eliminate duplication. The
 
 ## Catalog contract
 
-Every new public component needs a registry entry with its real source path, usage guidance, and a rendered example including relevant states. Keep preview and copyable example connected to one module as new examples are created. `src/app/design-system/examples/login-modal.tsx` is the first shared preview/source example; set the registry entry's `example` path so page exports include it. Existing inline catalog snippets remain legacy examples; they are not guaranteed to include all props or dependencies.
+Every new public component needs a registry entry with its real source path, usage guidance, and a rendered example including relevant states. Keep preview and copyable example connected to one module as new examples are created. `src/app/design-system/examples/login-modal.tsx` is the first shared preview/source example; set the registry entry's `example` path so page exports include it. Existing inline catalog snippets remain older examples; they are not guaranteed to include all props or dependencies.
 
 The catalog's page export reads actual implementation source with Vite raw imports, so readers see the authoritative API rather than infer it from a snippet. Export text includes source paths and context pointers. Large modules are explicitly omitted from the export and remain available at the supplied path.
 

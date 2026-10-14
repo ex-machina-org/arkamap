@@ -53,5 +53,5 @@ for (const file of files(resolve("src"))) {
   visit(source);
 }
 for (const exception of exceptions) if (!usedExceptions.has(exception)) failures.push(`Remove stale exception: ${exception}`);
-console.log(failures.length ? failures.join("\n") : `Architecture boundaries passed (${usedExceptions.size} documented legacy exception).`);
+console.log(failures.length ? failures.join("\n") : `Architecture boundaries passed (${usedExceptions.size} documented exception).`);
 if (failures.length) process.exitCode = 1;
