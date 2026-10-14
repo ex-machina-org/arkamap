@@ -1,8 +1,8 @@
 """Response shapes. Kept explicit so the frontend can rely on them."""
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class SourceInfo(BaseModel):
@@ -127,3 +127,423 @@ class ClientOut(BaseModel):
 class ClientCreated(BaseModel):
     client: ClientOut
     api_key: str = Field(description="HANYA ditampilkan sekali; berikan ke tim frontend/mitra")
+
+
+class MetricDef(BaseModel):
+    metric: str
+    aspect: str
+    label: str
+    unit: str
+    description: str
+    polarity: str
+    scale_min: float
+    scale_max: float
+    source_id: str | None = None
+
+
+class IndicatorValue(BaseModel):
+    metric: str
+    label: str
+    unit: str
+    value: float
+    period: date
+    normalised: float = Field(description="0-100, arah sudah disamakan (tinggi = lebih buruk)")
+    confidence: int
+    is_modelled: bool
+    source_id: str
+
+
+class RegionSummary(BaseModel):
+    id: str
+    name: str
+    level: str
+    population: int | None = None
+    area_km2: float | None = None
+    indicators: list[IndicatorValue] = []
+    composite: float | None = None
+
+
+class ScoreWeights(BaseModel):
+    """Weights per metric. Any metric in metric_def may be used."""
+    weights: dict[str, float]
+
+
+class Geometry(BaseModel):
+    type: str = Field(description="GeoJSON geometry type, mis. Point, MultiPolygon")
+    coordinates: Any
+
+
+class _Props(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+
+class LevelInfo(BaseModel):
+    level: Literal["provinsi", "kabkota"]
+    regions: int
+    with_population: int
+
+
+class RegionRef(BaseModel):
+    id: str = Field(examples=["idn.riau"])
+    name: str
+    level: Literal["provinsi", "kabkota"]
+    parent_id: str | None = None
+    population: int | None = None
+
+
+class MapMetric(BaseModel):
+    metric: str
+    label: str
+    unit: str
+    aspect: str
+    description: str
+    polarity: Literal["high_bad", "high_good"]
+    scale_min: float
+    scale_max: float
+    normalised_meaning: str
+
+
+class MapProps(_Props):
+    region_id: str
+    name: str
+    parent_id: str | None = None
+    population: int | None = None
+    area_km2: float | None = None
+    value: float | None = Field(None, description="null = belum ada data untuk wilayah ini")
+    unit: str
+    period: date | None = None
+    confidence: int | None = Field(None, ge=1, le=5)
+    is_modelled: bool | None = Field(None, description="true = estimasi model, tandai MODEL di UI")
+    source_id: str | None = None
+    normalised: float | None = Field(None, description="0-100, 100 = paling perlu perhatian")
+
+
+class MapFeature(BaseModel):
+    type: Literal["Feature"] = "Feature"
+    id: str
+    properties: MapProps
+    geometry: Geometry
+
+
+class MapLayer(BaseModel):
+    type: Literal["FeatureCollection"] = "FeatureCollection"
+    metric: MapMetric
+    features: list[MapFeature]
+
+
+class HotspotProps(_Props):
+    frp: float = Field(description="Fire Radiative Power, MW")
+    observed_at: datetime
+    confidence: str | None = Field(None, description="VIIRS: l/n/h; MODIS: 0-100")
+    daynight: str | None = None
+
+
+class QuakeProps(_Props):
+    mag: float
+    observed_at: datetime
+    depth_km: float | None = None
+    place: str | None = None
+    tsunami: bool = False
+    urgency: Literal["informasi", "pantau", "siaga_tsunami", "darurat"] | None = None
+    urgency_confidence: float | None = None
+    felt: str | None = Field(None, description="BMKG: kota yang merasakan + skala MMI, mis. 'III-IV Calang'")
+    potensi: str | None = Field(None, description="BMKG: pernyataan potensi tsunami")
+    source_id: str | None = Field(None, description="bmkg_quake | usgs_quake | emsc_quake")
+
+
+class DisasterProps(_Props):
+    type: Literal["volcano", "earthquake", "flood", "wildfire", "cyclone", "drought",
+                  "landslide", "other"]
+    name: str | None = None
+    source_id: Literal["gdacs", "nasa_eonet"]
+    observed_at: datetime = Field(description="awal kejadian")
+    value: float | None = Field(None, description="GDACS: 1 Green, 2 Orange, 3 Red; EONET: magnitudo (lihat magnitude_unit)")
+    alertlevel: Literal["Green", "Orange", "Red"] | None = None
+    magnitude_unit: str | None = None
+    until: str | None = None
+    current: bool | None = None
+    url: str | None = None
+
+
+class PointGeometry(BaseModel):
+    type: Literal["Point"] = "Point"
+    coordinates: list[float] = Field(description="[lon, lat]")
+
+
+class HotspotFeature(BaseModel):
+    type: Literal["Feature"] = "Feature"
+    properties: HotspotProps
+    geometry: PointGeometry
+
+
+class QuakeFeature(BaseModel):
+    type: Literal["Feature"] = "Feature"
+    properties: QuakeProps
+    geometry: PointGeometry
+
+
+class DisasterFeature(BaseModel):
+    type: Literal["Feature"] = "Feature"
+    properties: DisasterProps
+    geometry: PointGeometry
+
+
+class HotspotCollection(BaseModel):
+    type: Literal["FeatureCollection"] = "FeatureCollection"
+    count: int
+    features: list[HotspotFeature]
+
+
+class QuakeCollection(BaseModel):
+    type: Literal["FeatureCollection"] = "FeatureCollection"
+    count: int
+    features: list[QuakeFeature]
+
+
+class DisasterCollection(BaseModel):
+    type: Literal["FeatureCollection"] = "FeatureCollection"
+    count: int
+    features: list[DisasterFeature]
+
+
+class WindGrid(BaseModel):
+    nx: int
+    ny: int
+    west: float
+    east: float
+    south: float
+    north: float
+    observed_at: datetime
+    direction: list[float] = Field(description="derajat, baris demi baris dari sudut barat daya")
+    speed: list[float] = Field(description="km/jam, urutan sama dengan direction")
+    temperature: list[float | None]
+    surface: list[float | None]
+
+
+class ScorePart(BaseModel):
+    value: float
+    normalised: float
+    weight: float
+
+
+class ScoreResult(BaseModel):
+    region_id: str
+    name: str
+    score: float = Field(description="0-100, 100 = paling perlu perhatian")
+    coverage: float = Field(description="bagian bobot yang punya data, 0-1")
+    modelled_share: float = Field(description="bagian bobot dari angka model, 0-1")
+    min_confidence: int
+    parts: dict[str, ScorePart]
+
+
+class ScoreResponse(BaseModel):
+    weights: dict[str, float]
+    polarity: dict[str, str]
+    score_meaning: str
+    count: int
+    results: list[ScoreResult]
+
+
+class QuakeAlert(BaseModel):
+    lon: float
+    lat: float
+    mag: float
+    observed_at: datetime
+    place: str | None = None
+    urgency: str | None = None
+    urgency_confidence: float | None = None
+
+
+class RegionAlert(BaseModel):
+    region_id: str
+    name: str
+    metric: str
+    label: str
+    value: float
+    normalised: float
+
+
+class DisasterAlert(BaseModel):
+    lon: float
+    lat: float
+    observed_at: datetime
+    type: str | None = None
+    name: str | None = None
+    alertlevel: str | None = None
+    url: str | None = None
+
+
+class SourceAlert(BaseModel):
+    id: str
+    title: str
+    last_error: str | None = None
+    last_ok_at: datetime | None = None
+
+
+class WarningProps(BaseModel):
+    id: str
+    event: str | None = Field(None, description="mis. 'Hujan Lebat dan Petir'")
+    headline: str | None = None
+    description: str | None = None
+    area: str | None = None
+    severity: str | None = Field(None, description="CAP: Minor | Moderate | Severe | Extreme")
+    urgency: str | None = None
+    certainty: str | None = None
+    effective: datetime | None = None
+    expires: datetime | None = None
+    url: str | None = Field(None, description="pesan CAP asli di BMKG")
+
+
+class WarningFeature(BaseModel):
+    type: Literal["Feature"] = "Feature"
+    properties: WarningProps
+    geometry: Geometry
+
+
+class WarningCollection(BaseModel):
+    type: Literal["FeatureCollection"] = "FeatureCollection"
+    count: int
+    features: list[WarningFeature]
+
+
+class FireAlert(BaseModel):
+    """Possible fires in one kabkota: hotspots outside known static heat
+    (industry, flares, volcanoes) seen on at least two satellite passes."""
+    region_id: str
+    name: str
+    province: str | None = None
+    clusters: int = Field(description="sel ~1 km yang terdeteksi panas berulang")
+    detections: int = Field(description="jumlah deteksi satelit di sel-sel itu")
+    satellites: list[str] = Field(description="satelit yang mendeteksi, mis. 'VIIRS NOAA-20'")
+    frp_max: float = Field(description="Fire Radiative Power tertinggi (MW)")
+    first_seen: datetime
+    last_seen: datetime
+    lon: float = Field(description="titik terkuat")
+    lat: float
+    confirmed: bool = Field(description="true = GDACS melaporkan kebakaran hutan dalam radius 0,5°")
+
+
+class Notifications(BaseModel):
+    weather_warnings: list[WarningProps] = Field(description="peringatan dini cuaca BMKG yang masih berlaku")
+    quake_alerts: list[QuakeAlert]
+    region_alerts: list[RegionAlert]
+    disaster_alerts: list[DisasterAlert]
+    fire_alerts: list[FireAlert] = Field([], description="kemungkinan kebakaran per kab/kota, 48 jam terakhir")
+    source_alerts: list[SourceAlert]
+    count: int
+
+
+class FieldBrief(BaseModel):
+    id: str
+    label: str
+    description: str
+
+
+class OverviewCounts(BaseModel):
+    hotspots_24h: int
+    hotspots_7d: int
+    quakes_7d_m45: int
+    disasters_30d: int
+    community_devices: int
+
+
+class RiskTop(BaseModel):
+    region_id: str
+    name: str
+    score: float
+
+
+class StaleSource(BaseModel):
+    id: str
+    title: str
+    last_ok_at: datetime | None = None
+
+
+class PublicOverview(BaseModel):
+    generated_at: datetime
+    counts: OverviewCounts
+    fire_risk_top: list[RiskTop]
+    disaster_alerts: list[DisasterAlert]
+    quake_alerts: list[QuakeAlert]
+    stale_sources: list[StaleSource]
+    fields: list[FieldBrief]
+
+
+class MarineDay(BaseModel):
+    date: str
+    wave_height_max: float | None = Field(None, description="m")
+    wave_period_max: float | None = Field(None, description="detik")
+    wave_direction: float | None = Field(None, description="derajat, arah datang gelombang")
+    wind_wave_height_max: float | None = Field(None, description="m")
+
+
+class MarineForecast(BaseModel):
+    lat: float = Field(description="sel laut yang dipakai (bisa bergeser dari titik yang diminta)")
+    lon: float
+    sea_surface_temp: float | None = Field(None, description="°C, rata-rata 24 jam ke depan")
+    days: list[MarineDay]
+
+
+class SolarHour(BaseModel):
+    time: str = Field(description="waktu lokal WIB")
+    kw: float
+
+
+class SolarDay(BaseModel):
+    date: str
+    kwh: float
+
+
+class SolarForecast(BaseModel):
+    kwp: float
+    tilt: float
+    azimuth: float
+    performance_ratio: float = Field(description="faktor rugi-rugi sistem yang diasumsikan")
+    daily: list[SolarDay]
+    hourly: list[SolarHour]
+
+
+class IndicatorInfo(BaseModel):
+    metric: str
+    label: str = Field(description="nama tampilan; sama dengan `metric` untuk metrik internal")
+    unit: str
+    aspect: str | None = None
+    polarity: str | None = None
+    description: str | None = None
+    source_id: str | None = None
+    internal: bool = Field(description="tersimpan tetapi bukan layer peta (tanpa baris metric_def)")
+    provinsi: int = Field(description="jumlah provinsi yang punya datanya")
+    kabkota: int = Field(description="jumlah kab/kota yang punya datanya")
+    modelled: bool = Field(description="ada nilai estimasi model di data terbaru")
+    periods: int = Field(description="jumlah periode tersimpan (riwayat: /indicators/history)")
+    first_period: date | None = None
+    last_period: date | None = None
+
+
+class ObservationLayer(BaseModel):
+    metric: str = Field(examples=["power_plant"])
+    sources: list[str]
+    count: int
+    first: datetime
+    last: datetime
+    endpoint: str
+
+
+class DatasetLink(BaseModel):
+    id: str
+    label: str
+    endpoint: str
+
+
+class Catalog(BaseModel):
+    indicators: list[IndicatorInfo]
+    observations: list[ObservationLayer]
+    datasets: list[DatasetLink] = Field(description="dataset lain dan endpoint yang menyajikannya")
+
+
+class ObservationCollection(BaseModel):
+    type: Literal["FeatureCollection"] = "FeatureCollection"
+    metric: str
+    count: int
+    limit: int = Field(description="count == limit berarti masih ada titik lain: persempit waktu, wilayah, atau bbox")
+    features: list[dict[str, Any]]
