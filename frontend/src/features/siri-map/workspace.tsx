@@ -102,7 +102,7 @@ export function SiriMapWorkspace() {
 
   // The summary is what the screen leads with, so the panel starts open from tablet width up; phones keep the map visible.
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => !isFirstVisit && window.matchMedia("(min-width: 768px)").matches);
-  const [isCopilotActive, setIsCopilotActive] = useState(false);
+  const [isAssistantActive, setIsAssistantActive] = useState(false);
   const [askRequest, setAskRequest] = useState<{ id: number; text: string }>();
   const reduceMotion = useReducedMotion();
   const [previewIncident, setPreviewIncident] = useState<SpatialIncident | null>(null);
@@ -223,19 +223,19 @@ export function SiriMapWorkspace() {
     ? selectedRegion.anchor ?? (regionCenter?.regionId === selectedRegion.entry.regionId ? regionCenter.center : null)
     : null;
 
-  function openCopilot() {
-    setIsCopilotActive(true);
+  function openAssistant() {
+    setIsAssistantActive(true);
   }
 
   function handleAsk(question: string) {
     setAskRequest((prev) => ({ id: (prev?.id ?? 0) + 1, text: question }));
-    openCopilot();
+    openAssistant();
   }
 
-  function closeCopilot() {
+  function closeAssistant() {
     // A fresh panel would otherwise send the last map question again.
     setAskRequest(undefined);
-    setIsCopilotActive(false);
+    setIsAssistantActive(false);
   }
 
   function toggleSidebar() {
@@ -276,8 +276,8 @@ export function SiriMapWorkspace() {
         counts={hazardCounts}
         isSidebarOpen={isSidebarOpen}
         onToggleSidebar={toggleSidebar}
-        isCopilotActive={isCopilotActive}
-        onToggleCopilot={() => (isCopilotActive ? closeCopilot() : openCopilot())}
+        isAssistantActive={isAssistantActive}
+        onToggleAssistant={() => (isAssistantActive ? closeAssistant() : openAssistant())}
       />
 
       <div className="relative flex min-h-0 min-w-0 flex-1 gap-3">
@@ -472,7 +472,7 @@ export function SiriMapWorkspace() {
 
         {/* Kodama floats centred above the dock that opened it, Siri-style, so the map and panel keep their width. */}
         <AnimatePresence>
-          {isCopilotActive && (
+          {isAssistantActive && (
             <motion.div
               key="kodama"
               initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 24, scale: 0.96 }}
@@ -485,7 +485,7 @@ export function SiriMapWorkspace() {
                 variant="floating"
                 suggestions={kodamaSuggestions}
                 placeholder={`Tanya tentang ${scopeName}`}
-                onClose={closeCopilot}
+                onClose={closeAssistant}
                 request={askRequest}
                 onEvents={value => { try { setEvents(geoJSON(value)); } catch { toast.error("Visualisasi kejadian tidak valid."); } }}
               />

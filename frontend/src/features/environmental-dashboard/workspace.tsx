@@ -225,10 +225,10 @@ export default function EnvironmentalDashboardWorkspace({ devicePage, deviceId, 
   const [reportType, setReportType] = useState("all-hazards");
   const [dispatchUnit, setDispatchUnit] = useState("manggala-agni");
 
-  // Copilot State
-  const [copilotQuery, setCopilotQuery] = useState("");
-  const [copilotResponse, setCopilotResponse] = useState<string | null>(null);
-  const [copilotLoading, setCopilotLoading] = useState(false);
+  // Assistant State
+  const [assistantQuery, setAssistantQuery] = useState("");
+  const [assistantResponse, setAssistantResponse] = useState<string | null>(null);
+  const [assistantLoading, setAssistantLoading] = useState(false);
 
   useEffect(() => {
     if (activeNav === "responder") setSelectedMode("responder");
@@ -302,31 +302,31 @@ export default function EnvironmentalDashboardWorkspace({ devicePage, deviceId, 
     });
   }
 
-  function handleAskCopilot(promptText?: string) {
-    const query = promptText || copilotQuery;
+  function handleAskAssistant(promptText?: string) {
+    const query = promptText || assistantQuery;
     if (!query.trim()) return;
-    setCopilotLoading(true);
-    setCopilotResponse(null);
+    setAssistantLoading(true);
+    setAssistantResponse(null);
 
     setTimeout(() => {
-      setCopilotLoading(false);
+      setAssistantLoading(false);
       if (query.toLowerCase().includes("kritis") || query.toLowerCase().includes("hotspot")) {
-        setCopilotResponse(
+        setAssistantResponse(
           "Prioritas Utama: Siak (Skor 9.6) & Karawang (Skor 9.3). Keduanya mengancam fasilitas puskesmas dan sekolah radius <3 km. Rekomendasi: ground deployment Manggala Agni dan perahu evakuasi BPBD."
         );
         setSelectedIncidentId("inc-01");
       } else if (query.toLowerCase().includes("karawang") || query.toLowerCase().includes("banjir")) {
-        setCopilotResponse(
+        setAssistantResponse(
           "Jembatan Telukjambe terendam TMA 185 cm. Rute dialihkan via Lingkar Barat (+14 menit, aman genangan)."
         );
         setSelectedIncidentId("inc-02");
       } else if (query.toLowerCase().includes("marunda") || query.toLowerCase().includes("polusi")) {
-        setCopilotResponse(
+        setAssistantResponse(
           "Pola emisi nocturnal Marunda (23:00-04:00) PM2.5 >170 µg/m³. Rekomendasi: Sidak DLH ke 3 peleburan logam KBN."
         );
         setSelectedIncidentId("inc-04");
       } else {
-        setCopilotResponse(
+        setAssistantResponse(
           `Hasil analisis: 18 titik bahaya terverifikasi, 142.850 jiwa dalam radius pemantauan darurat.`
         );
       }
@@ -355,8 +355,8 @@ export default function EnvironmentalDashboardWorkspace({ devicePage, deviceId, 
         size="small"
         leadingIcon={KodamaMark}
         onClick={() => {
-          setActiveRightTab("copilot");
-          handleAskCopilot("Wilayah paling kritis ditangani sekarang");
+          setActiveRightTab("assistant");
+          handleAskAssistant("Wilayah paling kritis ditangani sekarang");
         }}
       >
         Tanya Kodama
@@ -701,7 +701,7 @@ export default function EnvironmentalDashboardWorkspace({ devicePage, deviceId, 
                     <Tab id="evidence" icon={RiShieldCheckLine} count="Aktif">
                       Bukti Spasial
                     </Tab>
-                    <Tab id="copilot" icon={RiChatAiLine} count="AI">
+                    <Tab id="assistant" icon={RiChatAiLine} count="AI">
                       Kodama
                     </Tab>
                     <Tab id="telemetry" icon={RiBroadcastLine} count="140">
@@ -827,8 +827,8 @@ export default function EnvironmentalDashboardWorkspace({ devicePage, deviceId, 
                   <AuditCard title="Aktivitas Terverifikasi" entries={INITIAL_AUDIT_LOGS.slice(0, 3)} />
                 </TabPanel>
 
-                {/* Panel 2: Jev AI Copilot & Agent Reasoning Log */}
-                <TabPanel id="copilot" className="space-y-3 pt-1">
+                {/* Panel 2: Jev AI Assistant & Agent Reasoning Log */}
+                <TabPanel id="assistant" className="space-y-3 pt-1">
                   <div className="rounded-xl border border-border-button-default bg-background-primary-default p-3 shadow-2xs">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-1.5">
@@ -842,9 +842,9 @@ export default function EnvironmentalDashboardWorkspace({ devicePage, deviceId, 
                       <input
                         type="text"
                         placeholder="Kueri analitik spasial..."
-                        value={copilotQuery}
-                        onChange={(e) => setCopilotQuery(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && handleAskCopilot()}
+                        value={assistantQuery}
+                        onChange={(e) => setAssistantQuery(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleAskAssistant()}
                         className="h-8.5 w-full rounded-lg border border-border-button-default bg-background-primary-default pl-2.5 pr-12 text-xs outline-none focus:border-accent-500"
                       />
                       <div className="absolute right-1 top-1 flex items-center gap-1">
@@ -852,8 +852,8 @@ export default function EnvironmentalDashboardWorkspace({ devicePage, deviceId, 
                         <button
                           type="button"
                           aria-label="Kirim kueri"
-                          onClick={() => handleAskCopilot()}
-                          disabled={copilotLoading}
+                          onClick={() => handleAskAssistant()}
+                          disabled={assistantLoading}
                           className="grid size-6.5 place-items-center rounded bg-button-primary text-white"
                         >
                           <RiSendPlane2Fill className="size-3" />
@@ -863,17 +863,17 @@ export default function EnvironmentalDashboardWorkspace({ devicePage, deviceId, 
 
                     {/* Quick Suggestion Chips */}
                     <div className="mt-2 flex flex-wrap gap-1">
-                      <button type="button" onClick={() => handleAskCopilot("Wilayah paling kritis")}>
+                      <button type="button" onClick={() => handleAskAssistant("Wilayah paling kritis")}>
                         <Chip variant="caption" color="neutral" className="cursor-pointer hover:bg-background-tertiary-hover">
                           "Wilayah paling kritis"
                         </Chip>
                       </button>
-                      <button type="button" onClick={() => handleAskCopilot("Rute evakuasi Karawang")}>
+                      <button type="button" onClick={() => handleAskAssistant("Rute evakuasi Karawang")}>
                         <Chip variant="caption" color="neutral" className="cursor-pointer hover:bg-background-tertiary-hover">
                           "Rute Karawang"
                         </Chip>
                       </button>
-                      <button type="button" onClick={() => handleAskCopilot("Sidak Marunda PM2.5")}>
+                      <button type="button" onClick={() => handleAskAssistant("Sidak Marunda PM2.5")}>
                         <Chip variant="caption" color="neutral" className="cursor-pointer hover:bg-background-tertiary-hover">
                           "Sidak Marunda"
                         </Chip>
@@ -881,7 +881,7 @@ export default function EnvironmentalDashboardWorkspace({ devicePage, deviceId, 
                     </div>
 
                     {/* Agent Thinking Indicator */}
-                    {copilotLoading && (
+                    {assistantLoading && (
                       <div className="mt-3 rounded-lg border border-accent-200/60 bg-accent-50/40 p-2.5 dark:border-accent-900/40 dark:bg-accent-950/20">
                         <AgentThinking
                           variant="stars"
@@ -892,13 +892,13 @@ export default function EnvironmentalDashboardWorkspace({ devicePage, deviceId, 
                       </div>
                     )}
 
-                    {/* Copilot Response Card */}
-                    {copilotResponse && !copilotLoading && (
+                    {/* Assistant Response Card */}
+                    {assistantResponse && !assistantLoading && (
                       <div className="mt-3 rounded-lg border border-accent-200 bg-accent-50/60 p-2.5 text-xs text-text-primary dark:border-accent-900/60 dark:bg-accent-950/20">
                         <p className="font-semibold text-accent-700 dark:text-accent-300 text-[10px] uppercase tracking-wider">
                           Insight Rekomendasi Kodama:
                         </p>
-                        <p className="mt-1 text-[11px] leading-snug">{copilotResponse}</p>
+                        <p className="mt-1 text-[11px] leading-snug">{assistantResponse}</p>
                       </div>
                     )}
 

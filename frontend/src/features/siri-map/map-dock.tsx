@@ -79,8 +79,8 @@ interface MapDockProps {
   counts: Record<HazardType, number> | null;
   isSidebarOpen: boolean;
   onToggleSidebar: () => void;
-  isCopilotActive: boolean;
-  onToggleCopilot: () => void;
+  isAssistantActive: boolean;
+  onToggleAssistant: () => void;
 }
 
 export function MapDock({
@@ -89,8 +89,8 @@ export function MapDock({
   counts,
   isSidebarOpen,
   onToggleSidebar,
-  isCopilotActive,
-  onToggleCopilot,
+  isAssistantActive,
+  onToggleAssistant,
 }: MapDockProps) {
   const total = counts ? HAZARD_ORDER.reduce((sum, type) => sum + counts[type], 0) : null;
   const PanelIcon = isSidebarOpen ? RiSidebarFoldLine : RiSidebarUnfoldLine;
@@ -100,13 +100,13 @@ export function MapDock({
       <div className="flex shrink-0 items-center gap-1 md:flex-1">
         <button
           type="button"
-          aria-pressed={isCopilotActive}
+          aria-pressed={isAssistantActive}
           aria-label="Tanya Kodama"
-          onClick={onToggleCopilot}
+          onClick={onToggleAssistant}
           className={cx(
             "button-press-motion flex h-10 shrink-0 items-center gap-2 rounded-full pr-1.5 pl-1.5 lg:pr-3.5",
             FOCUS,
-            isCopilotActive
+            isAssistantActive
               ? "bg-linear-to-b from-accent-500 to-accent-600 text-text-white shadow-nav-selected"
               : "bg-background-secondary-default text-text-primary shadow-sidebar hover:bg-background-secondary-hover",
           )}
