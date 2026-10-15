@@ -5,10 +5,9 @@ import { formatDecimal } from "../format";
 import { DashboardCard, LegendTiles } from "./dashboard-card";
 
 /** Combined 0-100 attention score as a ring gauge, with how much of it rests on modelled data. */
-export function ScoreGauge({ result }: { result: DTO<"ScoreResult"> }) {
+export function ScoreGauge({ result, title = "Skor perhatian gabungan" }: { result: DTO<"ScoreResult">; title?: string }) {
   return <DashboardCard
-    title="Skor perhatian gabungan"
-    className="h-[344px]"
+    title={title}
     action={<StatHint label="Skor perhatian gabungan" hint="Bobot sama untuk risiko kebakaran, bahaya gempa, dan tekanan air. Skor relatif antarwilayah, bukan probabilitas bencana." />}
     footer={<LegendTiles items={[
       { key: "coverage", label: "Cakupan data", value: `${Math.round(result.coverage * 100)}%` },

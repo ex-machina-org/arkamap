@@ -15,7 +15,7 @@ export function InsightTabs({ view, tabs }: { view: DashboardView; tabs: ListTab
     events: view.events.reduce((sum, event) => sum + event.top.length, 0),
     alerts: alertCount(view.alerts),
   };
-  return <section aria-label="Sorotan wilayah" className={`${cardClass} h-full max-h-[344px] gap-3`}>
+  return <section aria-label="Sorotan wilayah" className={`${cardClass} h-full gap-3`}>
     <Tabs key={`${view.profile_id}:${tabs.join()}`} defaultSelectedKey={tabs[0]} className="min-h-0 flex-1">
       <TabList aria-label="Sorotan wilayah">{tabs.map(id => <Tab key={id} id={id} count={counts[id]}>{LABELS[id]}</Tab>)}</TabList>
       {tabs.map(id => <TabPanel key={id} id={id} className="min-h-0 flex-1 overflow-y-auto outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring">

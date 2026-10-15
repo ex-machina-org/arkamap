@@ -11,7 +11,7 @@ import { useSourceName } from "../use-source-catalog";
 type Row = DTO<"OurIndicator"> & { id: string };
 
 /** BoardUI DataTable of the metrics the AI picked for the profile's region; reasons live in the info hint. */
-export function IndicatorTable({ region }: { region: DTO<"OurRegion"> }) {
+export function IndicatorTable({ region, title }: { region: DTO<"OurRegion">; title?: string }) {
   const sourceName = useSourceName();
   const rows = useMemo<Row[]>(() => region.indicators.map(indicator => ({ ...indicator, id: indicator.metric })), [region.indicators]);
   const columns = useMemo<ColumnDef<Row>[]>(() => [
@@ -53,7 +53,7 @@ export function IndicatorTable({ region }: { region: DTO<"OurRegion"> }) {
     pageSize={8}
     toolbar={<>
       <div className="flex min-w-0 items-center gap-2 px-1">
-        <p className="text-body-medium text-text-primary">Indikator pilihan untuk {region.name}</p>
+        <p className="text-body-medium text-text-primary">{title ?? `Indikator pilihan untuk ${region.name}`}</p>
         <StatHint label="Indikator pilihan" hint="Dipilih AI dari profil Anda. Arahkan ke ikon info untuk alasan tiap indikator. Tingkat perhatian 0-100, 100 paling perlu perhatian." />
       </div>
       {!!region.missing.length && <Chip variant="subtle" color="neutral" title={region.missing.map(prettifyId).join(", ")}>{region.missing.length} data belum tersedia</Chip>}
