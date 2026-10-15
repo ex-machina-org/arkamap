@@ -171,6 +171,8 @@ const SYNC_PIPELINE_STEPS: SyncStep[] = [
 
 export default function EnvironmentalDashboardWorkspace({ devicePage, deviceId, page, preview = false }: { devicePage?: "list" | "new" | "detail" | "test"; deviceId?: number; page?: "sources" | "alerts"; preview?: boolean } = {}) {
   const [activeNav, setActiveNav] = useState(page ?? (devicePage ? "sensors" : "overview"));
+  // The live dashboard puts its arrange controls in the page header, next to the greeting.
+  const [dashboardActions, setDashboardActions] = useState<HTMLDivElement | null>(null);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const { devices: accountDevices } = useDevices();
   const deviceCount = accountDevices.length;
@@ -425,7 +427,7 @@ export default function EnvironmentalDashboardWorkspace({ devicePage, deviceId, 
               Tambah Alat
             </Button>
           </div>
-        ) : preview ? headerActions : undefined}</>}
+        ) : preview ? headerActions : activeNav === "alerts" || activeNav === "sources" ? undefined : <div ref={setDashboardActions} className="flex items-center gap-2" />}</>}
         notifications={preview ? NOTIFICATIONS : dangerAlerts.map(item => ({ id: item.key, title: `Bahaya: ${item.title}`, detail: item.detail, unread: !seenAlerts.has(item.key) }))}
         onNotificationsOpen={preview ? undefined : () => markSeen(dangerAlerts.map(item => item.key))}
         commands={preview ? [
@@ -455,7 +457,7 @@ export default function EnvironmentalDashboardWorkspace({ devicePage, deviceId, 
           },
         ] : [{ id: "cmd-map", label: "Buka pantauan dan laporan wilayah", group: "Navigasi", onSelect: () => goTo("/map") }]}
       >
-        {devicePage === "new" ? <Suspense fallback={null}><DeviceForm /></Suspense> : devicePage === "test" ? <Suspense fallback={null}><DeviceTestLab /></Suspense> : devicePage === "detail" && deviceId !== undefined ? <Suspense fallback={null}><DeviceDetail id={deviceId} /></Suspense> : activeNav === "sensors" ? <DeviceRegistry /> : activeNav === "sources" ? <DataSources /> : activeNav === "alerts" ? <AlertsMonitor deviceAlerts={deviceAlerts} regional={regionalAlerts} region={alertRegion} prefs={alertPrefs} /> : !preview ? <ApiDashboard /> : (
+        {devicePage === "new" ? <Suspense fallback={null}><DeviceForm /></Suspense> : devicePage === "test" ? <Suspense fallback={null}><DeviceTestLab /></Suspense> : devicePage === "detail" && deviceId !== undefined ? <Suspense fallback={null}><DeviceDetail id={deviceId} /></Suspense> : activeNav === "sensors" ? <DeviceRegistry /> : activeNav === "sources" ? <DataSources /> : activeNav === "alerts" ? <AlertsMonitor deviceAlerts={deviceAlerts} regional={regionalAlerts} region={alertRegion} prefs={alertPrefs} /> : !preview ? <ApiDashboard actionSlot={dashboardActions} /> : (
         <div className="flex flex-col gap-3">
           {/* 2. Sleek Filter Bar with SegmentedControl & Kbd */}
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border-button-default bg-background-primary-default p-2 shadow-2xs">
