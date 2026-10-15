@@ -4,13 +4,15 @@ import { Button } from "@/components/base/buttons/button";
 import { Select, SelectItem } from "@/components/base/select/select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { EVENT_KINDS } from "../event-kinds";
-import { useRegionSummary } from "../use-region-data";
+import { usePanelCatalog, useRegionSummary } from "../use-region-data";
 import { instance, type IotStat, type WidgetInstance, type WidgetType } from "../widget-layout";
 import { defaultTitle, type WidgetContext } from "./widget-renderer";
 
 type Entry = { item: WidgetInstance; description: string; reason?: string };
 
 const IOT_STATS: IotStat[] = ["devices", "active", "reporting", "rejected"];
+const THEMES: Record<string, string> = { udara: "Kualitas Udara", kebakaran: "Kebakaran", cuaca: "Panas dan Cuaca", air: "Air", laut: "Laut",
+  gempa: "Gempa", energi: "Energi", kota: "Kota", ringkasan: "Ringkasan Profil" };
 
 /** Every fixed widget this profile could show, with why it cannot when its data is missing. */
 function fixedEntries(ctx: WidgetContext): { title: string; entries: Entry[] }[] {
@@ -80,6 +82,12 @@ export function WidgetGallery({ open, onOpenChange, ctx, items, onAdd }: {
   const regionMetrics = (summary?.indicators ?? []).map(indicator => ({ id: indicator.metric, label: indicator.label })).sort((a, b) => a.label.localeCompare(b.label));
   const allMetrics = ctx.view.focus ? regionMetrics : [];
   const noRegion = ctx.view.focus ? undefined : "Butuh wilayah profil; profil ini memantau seluruh Indonesia.";
+  const catalog = usePanelCatalog();
+  const have = new Set(regionMetrics.map(metric => metric.id));
+  // Same rule as the backend's panels.with_data: a panel shows when the region has any metric it reads.
+  const panelReason = (panel: { metrics: string[] }) => noRegion ?? (summary === undefined ? "Memuat data wilayah..."
+    : (panel.metrics.length ? panel.metrics.some(metric => have.has(metric)) : have.size) ? undefined : "Belum ada data ini untuk wilayah profil.");
+  const themes = [...new Set((catalog ?? []).map(panel => panel.theme))];
 
   return <Sheet open={open} onOpenChange={onOpenChange}>
     <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-md">
@@ -94,12 +102,25 @@ export function WidgetGallery({ open, onOpenChange, ctx, items, onAdd }: {
             <MetricRow title="KPI Indikator" description="Nilai satu indikator wilayah Anda, dengan satuan dan tingkat perhatiannya."
               reason={noRegion ?? (summary === undefined ? "Memuat daftar indikator..." : !regionMetrics.length ? "Belum ada indikator untuk wilayah ini." : undefined)}
               options={regionMetrics} exists={metric => has(instance("kpi-indicator", { metric }).id)} onAdd={metric => onAdd(instance("kpi-indicator", { metric }))} />
+            <MetricRow title="Tren 7 Hari" description="Grafik garis satu indikator wilayah Anda selama 7 hari terakhir: naik, turun, atau stabil."
+              reason={noRegion ?? (summary === undefined ? "Memuat daftar indikator..." : !regionMetrics.length ? "Belum ada indikator untuk wilayah ini." : undefined)}
+              options={regionMetrics} exists={metric => has(instance("trend", { metric }).id)} onAdd={metric => onAdd(instance("trend", { metric }))} />
             <MetricRow title="Peringkat Metrik Lain" description="Wilayah tetangga pada metrik pilihan Anda; wilayah Anda selalu tampil."
               reason={noRegion ?? (summary === undefined ? "Memuat daftar metrik..." : undefined)}
               options={allMetrics} exists={metric => has(instance("ranking", { metric }).id) || (metric === ctx.view.ranking.metric && has("ranking"))}
               onAdd={metric => onAdd(metric === ctx.view.ranking.metric ? instance("ranking") : instance("ranking", { metric }))} />
           </ul>
         </section>
+        {themes.map(theme => <section key={theme} className="flex flex-col gap-2">
+          <h3 className="text-heading-sm text-text-primary">{THEMES[theme] ?? theme}</h3>
+          <ul className="flex flex-col gap-2">{catalog!.filter(panel => panel.theme === theme).map(panel => {
+            const item = instance("panel", { panel: panel.id }), added = has(item.id), reason = panelReason(panel);
+            return <Row key={panel.id} title={panel.title} description={panel.description} reason={reason}
+              action={<Button size="small" variant="secondary" leadingIcon={added ? RiCheckLine : RiAddLine} disabled={added || !!reason} onClick={() => onAdd(item)}>
+                {added ? "Sudah Ada" : "Tambah"}
+              </Button>} />;
+          })}</ul>
+        </section>)}
         {fixedEntries(ctx).map(group => <section key={group.title} className="flex flex-col gap-2">
           <h3 className="text-heading-sm text-text-primary">{group.title}</h3>
           {group.entries.length ? <ul className="flex flex-col gap-2">{group.entries.map(({ item, description, reason }) => {

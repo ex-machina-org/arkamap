@@ -38,6 +38,24 @@ function useLoad<T>(key: string | null, run: () => Promise<T>) {
 export const useRegionSummary = (regionId: string | null) =>
   useLoad(regionId && `region:${regionId}`, () => api(`/regions/${encodeURIComponent(regionId!)}`, "RegionSummary"));
 
+/** Days a trend chart looks back, today included. */
+export const TREND_DAYS = 7;
+export type WeekPoint = DTO<"HistoryPoint">;
+
+/** One region's values over the last TREND_DAYS days per metric, oldest first; a metric without data is absent. */
+export function useRegionWeek(regionId: string | null, metrics: string[]) {
+  const since = new Date(Date.now() - (TREND_DAYS - 1) * 86_400_000).toISOString().slice(0, 10);
+  const query = `region_id=${encodeURIComponent(regionId ?? "")}&metrics=${encodeURIComponent(metrics.join(","))}&since=${since}`;
+  return useLoad(regionId && metrics.length ? `week:${query}` : null, () => api(`/indicators/history?${query}`, "IndicatorHistory")
+    .then(history => Object.fromEntries(history.series.map(series => [series.metric, series.points])) as Record<string, WeekPoint[]>));
+}
+
+/** Official limits per metric (baku mutu, WHO, ISPU, US AQI); null when the backend has none to give. */
+export const useStandards = () => useLoad("standards", () => api("/standards", "AirStandards").then(out => out.metrics));
+
+/** Every dashboard panel the backend knows, with the metrics each one reads. */
+export const usePanelCatalog = () => useLoad("panels", () => api("/panels", "PanelCatalog").then(out => out.panels));
+
 const loadRegions = () => once("regions", () => Promise.all([
   apiList("/regions?level=provinsi&limit=100", "RegionRef"),
   apiList("/regions?level=kabkota&limit=600", "RegionRef"),
