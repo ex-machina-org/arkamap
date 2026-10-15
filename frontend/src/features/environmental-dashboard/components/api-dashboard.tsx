@@ -71,7 +71,7 @@ export function ApiDashboard() {
   if (panels.includes("ranking") && view.ranking.results.length) cards.push({ key: "ranking", node: <RankingCard ranking={view.ranking} metricLabel={metricLabel} focusName={view.focus?.name} /> });
   if (history[0]) cards.push({ key: `history-${history[0].kind}`, node: <HistoryCard series={history[0]} /> });
   if (view.focus) cards.push({ key: "map", node: <Suspense fallback={<div aria-hidden className="h-[344px] rounded-2xl bg-background-secondary-default" />}>
-    <RegionMapPanel focus={view.focus} events={view.events} />
+    <RegionMapPanel focus={view.focus} layers={view.layers} />
   </Suspense> });
   if (panels.includes("impact") && view.impact) cards.push({ key: "impact", node: <ImpactCard impact={view.impact} /> });
   if (listTabs.length) cards.push({ key: "insight", node: <InsightTabs view={view} tabs={listTabs} /> });
