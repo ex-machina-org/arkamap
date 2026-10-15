@@ -58,9 +58,9 @@ function WarningItem({ warning }: { warning: DTO<"ImpactWarning"> }) {
 }
 
 /** Recorded quakes and weather warnings with the people inside their reach (mode `protected`). */
-export function ImpactCard({ impact }: { impact: DTO<"ImpactPanel"> }) {
+export function ImpactCard({ impact, title = "Dampak tercatat" }: { impact: DTO<"ImpactPanel">; title?: string }) {
   const count = impact.quakes.length + impact.warnings.length;
-  return <DashboardCard title="Dampak tercatat" value={count} className="max-h-[344px]"
+  return <DashboardCard title={title} value={count}
     action={<StatHint label="Dampak tercatat" hint={impact.radius_note} />}>
     <div className="min-h-0 flex-1 overflow-y-auto">
       {count ? <div className="flex flex-col gap-2">

@@ -1,51 +1,71 @@
-import { lazy, Suspense, type ReactNode } from "react";
-import { RiBroadcastLine, RiCheckboxCircleLine, RiPulseLine, RiErrorWarningLine } from "@remixicon/react";
+import { useState } from "react";
+import { createPortal } from "react-dom";
+import { RiAddLine, RiCheckLine, RiLayoutGridLine, RiRefreshLine } from "@remixicon/react";
 import { ArkamapLockup } from "@/components/foundations/brand/arkamap-brand";
-import { StatCards, type Stat } from "@/components/application/dashboard/stat-cards";
 import { Button } from "@/components/base/buttons/button";
 import { useApi } from "@/hooks/use-api";
-import { cx } from "@/utils/cx";
 import type { DTO } from "@/lib/api/client";
-import { alertCount } from "../insights";
-import { prettifyId } from "../labels";
+import { useMetricCatalog } from "../use-metric-catalog";
+import { useWidgetLayout } from "../use-widget-layout";
+import { defaultWidgets } from "../widget-layout";
 import { CurationAnnouncement } from "./curation-announcement";
 import { PanelUnavailable } from "./dashboard-card";
 import { DashboardSkeleton } from "./dashboard-skeleton";
-import { SensorWidgetGrid } from "@/components/application/data-viz/sensor-widget";
-import { EventKpiRow } from "./event-kpi-row";
-import { HistoryCard } from "./history-card";
-import { ImpactCard } from "./impact-card";
-import { IndicatorTable } from "./indicator-table";
-import { InsightTabs, type ListTab } from "./insight-tabs";
-import { RankingCard } from "./ranking-card";
-import { ScoreCard } from "./score-card";
-
-// maplibre comes with the map, after the cards around it have shown
-const RegionMapPanel = lazy(() => import("./region-map-panel").then(module => ({ default: module.RegionMapPanel })));
+import { WidgetGallery } from "./widget-gallery";
+import { WidgetGrid } from "./widget-grid";
+import { defaultTitle, renderWidget, type WidgetContext } from "./widget-renderer";
+import { WidgetSettings } from "./widget-settings";
 
 const openProfile = () => window.dispatchEvent(new Event("arkamap-profile-open"));
 
-type DeviceDashboard = DTO<"DeviceDashboard">;
-const DAY_MS = 24 * 60 * 60 * 1000;
+/**
+ * The whole dashboard as one grid of widgets: KPI tiles, device numbers, region cards and
+ * every sensor field. "Atur Tampilan" arranges them; widgets can be added from the gallery
+ * and configured or removed from their settings.
+ */
+function CustomisableDashboard({ data, view, refresh, actionSlot }: { data: DTO<"Dashboard">; view: DTO<"DashboardView">; refresh: () => void; actionSlot?: HTMLElement | null }) {
+  const catalog = useMetricCatalog();
+  const devices = data.devices ?? [];
+  const region = data.ours?.region;
+  const ctx: WidgetContext = { view, region, devices, metric: catalog.get };
+  const dashboard = useWidgetLayout(view.profile_id, defaultWidgets(view, devices, !!region?.indicators.length));
+  const [editing, setEditing] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [settingsId, setSettingsId] = useState<string>();
+  const settingsItem = dashboard.items.find(item => item.id === settingsId);
+  const widgets = dashboard.items.map(item => ({ id: item.id, type: item.type, title: item.title ?? defaultTitle(item, ctx), node: renderWidget(item, ctx) }));
 
-/** Essential numbers for the account's own IoT devices; every value falls back to 0. */
-function iotStats(devices: DeviceDashboard[]): Stat[] {
-  const now = Date.now();
-  const active = devices.filter(({ device }) => device.last_seen_at && now - Date.parse(device.last_seen_at) < DAY_MS).length;
-  const fields = devices.flatMap(({ widgets }) => widgets.filter(widget => !widget.hidden));
-  const reporting = fields.filter(widget => widget.latest != null).length;
-  const rejected = devices.reduce((sum, { device }) => sum + (device.rejected_count ?? 0), 0);
-  return [
-    { icon: RiBroadcastLine, label: "Perangkat IoT", value: String(devices.length), delta: "Terdaftar", deltaColor: "neutral" },
-    { icon: RiCheckboxCircleLine, label: "Aktif 24 jam", value: String(active), delta: `${devices.length - active} tidak aktif`, deltaColor: active ? "lime" : "neutral" },
-    { icon: RiPulseLine, label: "Sensor mengirim", value: String(reporting), delta: `dari ${fields.length} field`, deltaColor: "neutral" },
-    { icon: RiErrorWarningLine, label: "Data ditolak", value: String(rejected), delta: rejected ? "Periksa payload" : "Aman", deltaColor: rejected ? "rose" : "neutral" },
-  ];
+  const controls = <div className="flex flex-wrap items-center justify-end gap-2">
+    {editing && dashboard.customised && <Button size="small" variant="ghost" leadingIcon={RiRefreshLine} onClick={dashboard.reset}>Kembalikan Bawaan</Button>}
+    {editing && <Button size="small" variant="secondary" leadingIcon={RiAddLine} onClick={() => setGalleryOpen(true)}>Tambah Widget</Button>}
+    {editing ? <Button size="small" leadingIcon={RiCheckLine} onClick={() => setEditing(false)}>Selesai</Button>
+      : <Button size="small" variant="secondary" leadingIcon={RiLayoutGridLine} onClick={() => setEditing(true)}>Atur Tampilan</Button>}
+  </div>;
+
+  return <section aria-label="Dashboard" className="flex min-w-0 flex-col gap-3">
+    {/* In the page header beside the greeting when the shell offers a slot; above the grid otherwise. */}
+    {actionSlot ? createPortal(controls, actionSlot) : controls}
+    {editing && <p className="rounded-xl bg-background-supporting-default px-3 py-2 text-body-2-regular text-text-secondary" aria-live="polite">
+      Seret judul widget untuk memindahkan, tarik sudut kanan bawah untuk mengubah ukuran, atau buka pengaturan widget untuk mengubah dan menghapusnya. Tersimpan di browser ini untuk profil aktif.
+    </p>}
+    {widgets.length ? <WidgetGrid widgets={widgets} layout={dashboard.layout} editing={editing}
+      onLayoutChange={dashboard.setLayout} onMove={dashboard.move} onSettings={setSettingsId} />
+      : <PanelUnavailable title="Dashboard kosong" description="Tambahkan widget lewat Atur Tampilan, atau kembalikan tata letak bawaan."
+        action={<Button variant="secondary" leadingIcon={RiAddLine} onClick={() => { setEditing(true); setGalleryOpen(true); }}>Tambah Widget</Button>} />}
+    <WidgetGallery open={galleryOpen} onOpenChange={setGalleryOpen} ctx={ctx} items={dashboard.items} onAdd={dashboard.add} />
+    <WidgetSettings item={settingsItem} width={dashboard.layout.find(place => place.i === settingsId)?.w ?? 6} ctx={ctx}
+      onSave={(next, width) => dashboard.update(settingsId!, next, width)} onRemove={dashboard.remove}
+      onClose={() => setSettingsId(undefined)} onDevicesChanged={refresh} />
+  </section>;
 }
 
-export function ApiDashboard() {
-  const { data, loading, error, refresh } = useApi("/me/dashboard?hours=24", "Dashboard");
-  if (loading) return <DashboardSkeleton />;
+export function ApiDashboard({ actionSlot }: { actionSlot?: HTMLElement | null } = {}) {
+  const { data: fresh, loading, error, refresh } = useApi("/me/dashboard?hours=24", "Dashboard");
+  // A reload (after a sensor setting changes) keeps the last data on screen, so the grid and edit mode stay put.
+  const [last, setLast] = useState(fresh);
+  if (fresh && fresh !== last) setLast(fresh);
+  const data = fresh ?? (loading ? last : undefined);
+  if (loading && !data) return <DashboardSkeleton />;
   if (error) return <div className="flex flex-col items-center justify-center gap-4 rounded-2xl bg-background-secondary-default px-4 py-10 text-center">
     <ArkamapLockup />
     <p role="alert" className="text-body-regular text-text-secondary">{error}</p>
@@ -59,34 +79,8 @@ export function ApiDashboard() {
   const view = data.view;
   if (!view) return <PanelUnavailable title="Dashboard belum siap" description="Profil aktif belum menghasilkan tampilan. Coba muat ulang." action={<Button variant="secondary" onClick={refresh}>Muat ulang</Button>} />;
 
-  const region = data.ours?.region;
-  // Panels outside `view.mode.panels` are not part of this profile's curated view.
-  const panels = view.mode.panels;
-  const listTabs = panels.filter((id): id is ListTab => id === "events" || id === "alerts");
-  const metricLabel = region?.indicators.find(indicator => indicator.metric === view.ranking.metric)?.label ?? prettifyId(view.ranking.metric);
-  const history = panels.includes("history") ? (view.history ?? []).filter(series => series.months.length) : [];
-
-  // Fixed-height (344px) BoardUI cards in priority order, paired into rows like the BoardUI Home composition.
-  const cards: { key: string; node: ReactNode }[] = [];
-  if (panels.includes("ranking") && view.ranking.results.length) cards.push({ key: "ranking", node: <RankingCard ranking={view.ranking} metricLabel={metricLabel} focusName={view.focus?.name} /> });
-  if (history[0]) cards.push({ key: `history-${history[0].kind}`, node: <HistoryCard series={history[0]} /> });
-  if (view.focus) cards.push({ key: "map", node: <Suspense fallback={<div aria-hidden className="h-[344px] rounded-2xl bg-background-secondary-default" />}>
-    <RegionMapPanel focus={view.focus} events={view.events} />
-  </Suspense> });
-  if (panels.includes("impact") && view.impact) cards.push({ key: "impact", node: <ImpactCard impact={view.impact} /> });
-  if (listTabs.length) cards.push({ key: "insight", node: <InsightTabs view={view} tabs={listTabs} /> });
-  history.slice(1).forEach(series => cards.push({ key: `history-${series.kind}`, node: <HistoryCard series={series} /> }));
-  if (view.mode.id === "responden" && view.focus) cards.push({ key: "score", node: <ScoreCard regionId={view.focus.id} /> });
-  const rows = Array.from({ length: Math.ceil(cards.length / 2) }, (_, index) => cards.slice(index * 2, index * 2 + 2));
-
   return <div className="flex min-w-0 flex-col gap-4">
-    <StatCards stats={iotStats(data.devices ?? [])} />
-    <EventKpiRow view={view} alerts={alertCount(view.alerts)} deviceCount={data.devices?.length ?? 0} />
-    {rows.map((row, index) => <div key={row.map(card => card.key).join()} className={cx("grid min-w-0 gap-4", row.length === 2 && (index === 0 ? "xl:grid-cols-[minmax(0,532fr)_minmax(0,673fr)]" : "xl:grid-cols-2"))}>
-      {row.map(card => <div key={card.key} className="min-w-0">{card.node}</div>)}
-    </div>)}
-    {!!region?.indicators.length && <IndicatorTable region={region} />}
-    <SensorWidgetGrid devices={data.devices ?? []} />
+    <CustomisableDashboard data={data} view={view} refresh={refresh} actionSlot={actionSlot} />
     {(view.message || view.unsupported.length > 0) && <CurationAnnouncement view={view} />}
   </div>;
 }

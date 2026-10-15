@@ -24,20 +24,24 @@ export function ChartTooltip({ active, label, payload, unit, labelFormat }: {
  * One measure over time. `line` for continuous readings, `bar` for counts per reading.
  * A `reference` draws a labelled dashed line, e.g. the regional value to compare against.
  */
-export function TimeSeriesChart({ points, unit, label, variant = "line", color = SERIES[0], reference, height = 176 }: {
+export function TimeSeriesChart({ points, unit, label, variant = "line", color = SERIES[0], reference, height = 176, formatTime }: {
   points: SeriesPoint[]; unit?: string | null; label: string; variant?: "line" | "bar"; color?: string;
-  reference?: { value: number; label: string }; height?: number;
+  reference?: { value: number; label: string };
+  /** Pixels, or a CSS length such as "100%" inside a parent with a definite height. */
+  height?: number | string;
+  /** Axis and tooltip label for each point, e.g. month names for monthly counts. Defaults to the span-based tick and full date-time. */
+  formatTime?: (t: number) => string;
 }) {
   const data = points.map(point => ({ t: new Date(point.t).getTime(), v: point.v })).filter(point => Number.isFinite(point.t)).sort((a, b) => a.t - b.t);
   const span = data.length > 1 ? data[data.length - 1].t - data[0].t : 0;
-  const tick = timeTick(span);
+  const tick = formatTime ?? timeTick(span);
   const common = { data, margin: { top: 8, right: 8, bottom: 0, left: 0 } };
   const children = [
     <CartesianGrid key="grid" vertical={false} stroke="var(--color-border-button-default)" strokeDasharray="2 4" />,
     <XAxis key="x" dataKey="t" type="number" scale="time" domain={["dataMin", "dataMax"]} tickFormatter={tick} minTickGap={32} {...axis} />,
     <YAxis key="y" width={44} domain={variant === "bar" ? [0, "auto"] : ["auto", "auto"]} tickFormatter={value => formatCompact(Number(value))} {...axis} />,
     <Tooltip key="tip" cursor={variant === "line" ? { stroke: "var(--color-text-tertiary)", strokeWidth: 1 } : { fill: "var(--color-background-secondary-default)" }}
-      content={props => <ChartTooltip {...props} unit={unit} labelFormat={value => formatDateTime(value)} />} />,
+      content={props => <ChartTooltip {...props} unit={unit} labelFormat={value => formatTime ? formatTime(Number(value)) : formatDateTime(value)} />} />,
     reference && <ReferenceLine key="ref" y={reference.value} ifOverflow="extendDomain" stroke="var(--color-text-tertiary)" strokeDasharray="4 4"
       label={{ value: reference.label, position: "insideTopRight", fill: "var(--color-text-secondary)", fontSize: 11 }} />,
   ];

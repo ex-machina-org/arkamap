@@ -1,0 +1,33 @@
+/* react-grid-layout ships a red placeholder and a black resize corner; map them to theme roles. */
+.widget-grid .react-grid-item.react-grid-placeholder {
+  background: var(--color-accent-500);
+  border-radius: 1rem;
+  opacity: 0.15;
+}
+
+.widget-grid .react-grid-item > .react-resizable-handle {
+  z-index: 11;
+  opacity: 1;
+}
+
+.widget-grid .react-grid-item > .react-resizable-handle::after {
+  right: 6px;
+  bottom: 6px;
+  width: 8px;
+  height: 8px;
+  border-color: var(--color-text-tertiary);
+}
+
+/* While arranging, every widget shows its edge so empty space and neighbours read clearly. */
+.widget-editing {
+  border-radius: 1rem;
+  outline: 1px dashed var(--color-border-button-active);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .widget-grid,
+  .widget-grid .react-grid-item {
+    transition: none;
+  }
+}
