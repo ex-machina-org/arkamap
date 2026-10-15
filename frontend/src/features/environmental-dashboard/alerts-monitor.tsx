@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { cx } from "@/utils/cx";
 import { dangerItems, fireLevel, mapHref, REGION_LEVEL, TONE, type RowStatus } from "./alert-level";
 import { alertEntries, type AlertEntry } from "./components/alert-entries";
-import { AlertRow, LevelMark } from "./components/alert-row";
+import { AlertRow } from "./components/alert-row";
 import { AlertEntries } from "./components/alert-list";
 import { DashboardCard, insetClass, PanelUnavailable } from "./components/dashboard-card";
 import { CodeSnippet } from "./components/device-quickstart";
@@ -82,23 +82,6 @@ function AlertTutorial({ connected }: { connected: boolean }) {
       </p>}
     </div>
   </details>;
-}
-
-const LEGEND: { color: RowStatus["color"]; label: string; note: string }[] = [
-  { color: "rose", label: "Bahaya", note: "memicu notifikasi" },
-  { color: "yellow", label: "Waspada", note: "cukup dipantau" },
-  { color: "lime", label: "Aman", note: "laporan alat" },
-];
-
-/** What the row dots mean, and that a row opens its location. */
-function LevelLegend() {
-  return <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-caption-1 text-text-secondary">
-    {LEGEND.map(item => <span key={item.label} className="flex items-center gap-1.5">
-      <LevelMark color={item.color} />
-      <span className="text-caption-1-medium text-text-primary">{item.label}</span>{item.note}
-    </span>)}
-    <span className="ml-auto max-sm:hidden">Klik peringatan untuk membuka lokasinya di peta</span>
-  </p>;
 }
 
 /** One thin bar per source or device, like a status page's uptime strip; the counts beside it carry the meaning.
@@ -370,7 +353,6 @@ export function AlertsMonitor({ deviceAlerts, regional, region, prefs }: {
               The card's tiles turn slightly translucent so it still shows through the rows in light mode. */}
           <img src="/brand/mascot-ranger.webp" alt="" aria-hidden width={420} height={480} loading="lazy"
             className="pointer-events-none absolute -right-8 -bottom-10 -z-10 w-56 opacity-30 select-none sm:w-80 dark:opacity-10" />
-          <LevelLegend />
           {!region && <p className="text-body-2-regular text-text-secondary">Belum ada wilayah di profil; peringatan mencakup seluruh Indonesia.</p>}
           {notifications.error && <p role="alert" className="text-body-regular text-text-error-primary">{notifications.error}</p>}
           {deviceAlerts.error && enabled.has("device") && <p role="alert" className="text-body-regular text-text-error-primary">{deviceAlerts.error}</p>}
