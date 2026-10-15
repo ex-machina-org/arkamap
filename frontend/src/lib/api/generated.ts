@@ -1,6 +1,8 @@
 // Generated from docs/backend/openapi.json. Run npm run api:generate.
 export interface components {
   schemas: {
+    "AirStandard": { "batas"?: number | null; "batas_nama"?: string | null; "kategori"?: Array<components["schemas"]["StandardBand"]> | null; "pedoman"?: number | null; "pedoman_nama"?: string | null; "skala"?: string | null; };
+    "AirStandards": { "metrics": Record<string, components["schemas"]["AirStandard"]>; };
     "AlertPanel": { "disaster_alerts": Array<components["schemas"]["DisasterAlert"]>; "quake_alerts": Array<components["schemas"]["QuakeAlert"]>; "region_alerts": Array<components["schemas"]["RegionAlert"]>; "weather_warnings"?: Array<components["schemas"]["WarningProps"]>; };
     "AuthOut": { "token": string; "user": components["schemas"]["UserOut"]; };
     "BuildingCollection": { "by_kind": Record<string, number>; "count": number; "features": Array<components["schemas"]["BuildingFeature"]>; "type"?: "FeatureCollection"; };
@@ -18,7 +20,7 @@ export interface components {
     "CommunityDevice": { "category"?: string | null; "id": number; "last_seen_at"?: string | null; "lat"?: number | null; "latest": Record<string, unknown>; "latest_at"?: string | null; "layout"?: Array<components["schemas"]["WidgetSpec"]> | null; "lon"?: number | null; "name": string; "region_id"?: string | null; "region_name"?: string | null; };
     "Compare": { "is_modelled": boolean; "label": string; "metric": string; "period": string; "region_id": string; "region_name"?: string | null; "source_id": string; "unit": string; "value": number; };
     "Dashboard": { "devices": Array<components["schemas"]["DeviceDashboard"]>; "ours": components["schemas"]["OurData"] | null; "profile_needed": boolean; "view"?: components["schemas"]["DashboardView"] | null; };
-    "DashboardView": { "alerts": components["schemas"]["AlertPanel"]; "events": Array<components["schemas"]["EventPanel"]>; "field": components["schemas"]["FieldBrief"]; "fit"?: "cocok" | "sebagian" | "tidak_cocok" | null; "focus"?: components["schemas"]["Focus"] | null; "history"?: Array<components["schemas"]["HistoryPanel"]> | null; "impact"?: components["schemas"]["ImpactPanel"] | null; "layers": Array<components["schemas"]["Layer"]>; "message"?: string | null; "mode": components["schemas"]["ModeInfo"]; "profile_id": number; "ranking": components["schemas"]["RankPanel"]; "unsupported": Array<string>; };
+    "DashboardView": { "alerts": components["schemas"]["AlertPanel"]; "events": Array<components["schemas"]["EventPanel"]>; "field": components["schemas"]["FieldBrief"]; "fit"?: "cocok" | "sebagian" | "tidak_cocok" | null; "focus"?: components["schemas"]["Focus"] | null; "history"?: Array<components["schemas"]["HistoryPanel"]> | null; "impact"?: components["schemas"]["ImpactPanel"] | null; "layers": Array<components["schemas"]["Layer"]>; "message"?: string | null; "mode": components["schemas"]["ModeInfo"]; "panels"?: Array<components["schemas"]["PanelPick"]>; "profile_id": number; "ranking": components["schemas"]["RankPanel"]; "unsupported": Array<string>; };
     "DatasetLink": { "endpoint": string; "id": string; "label": string; };
     "DeviceAlert": { "category"?: "kebakaran" | "cuaca" | "gempa" | "bencana" | "panas" | null; "changed_at": string; "device_id": number; "device_name": string; "message"?: string | null; "nama": string; "region_name"?: string | null; "status": "aman" | "bahaya"; "updated_at": string; };
     "DeviceCreated": { "api_key": string; "device": components["schemas"]["DeviceOut"]; "quickstart": components["schemas"]["Quickstart"]; };
@@ -88,12 +90,15 @@ export interface components {
     "OurIndicator": { "added_for_sensor"?: boolean; "confidence": number; "is_modelled": boolean; "label": string; "metric": string; "normalised": number; "period": string; "reason": string; "source_id": string; "unit": string; "value": number; };
     "OurRegion": { "id": string; "indicators": Array<components["schemas"]["OurIndicator"]>; "level": string; "missing": Array<string>; "name": string; };
     "OverviewCounts": { "community_devices": number; "disasters_30d": number; "hotspots_24h": number; "hotspots_7d": number; "quakes_7d_m45": number; };
+    "PanelCatalog": { "panels": Array<components["schemas"]["PanelDef"]>; };
+    "PanelDef": { "description": string; "id": string; "metrics": Array<string>; "theme": string; "title": string; };
+    "PanelPick": { "id": string; "reason": string; };
     "PasswordChange": { "new_password": string; "old_password": string; };
     "PasswordReset": { "temporary_password": string; "user_id": number; };
     "PoiRef": { "coords": Array<number>; "name": string; "type": "hospital"; };
     "PointGeometry": { "coordinates": Array<number>; "type"?: "Point"; };
     "ProfileIn": { "goals"?: string | null; "mode"?: "protected" | "responden" | "plan" | null; "region_id"?: string | null; "role": string; };
-    "ProfileOut": { "active": boolean; "ai_message"?: string | null; "created_at": string; "field"?: string | null; "field_label"?: string | null; "fit"?: "cocok" | "sebagian" | "tidak_cocok" | null; "goals"?: string | null; "id": number; "metrics": Array<components["schemas"]["MetricPick"]>; "metrics_by"?: "ai" | "rule" | null; "mode": "protected" | "responden" | "plan"; "mode_by": "user" | "ai" | "rule"; "mode_label": string; "mode_title": string; "region_id"?: string | null; "region_name"?: string | null; "role": string; "unsupported"?: Array<string>; "updated_at": string; };
+    "ProfileOut": { "active": boolean; "ai_message"?: string | null; "created_at": string; "field"?: string | null; "field_label"?: string | null; "fit"?: "cocok" | "sebagian" | "tidak_cocok" | null; "goals"?: string | null; "id": number; "metrics": Array<components["schemas"]["MetricPick"]>; "metrics_by"?: "ai" | "rule" | null; "mode": "protected" | "responden" | "plan"; "mode_by": "user" | "ai" | "rule"; "mode_label": string; "mode_title": string; "panels"?: Array<components["schemas"]["PanelPick"]>; "region_id"?: string | null; "region_name"?: string | null; "role": string; "unsupported"?: Array<string>; "updated_at": string; };
     "PublicOverview": { "counts": components["schemas"]["OverviewCounts"]; "disaster_alerts": Array<components["schemas"]["DisasterAlert"]>; "fields": Array<components["schemas"]["FieldBrief"]>; "fire_risk_top": Array<components["schemas"]["RiskTop"]>; "generated_at": string; "quake_alerts": Array<components["schemas"]["QuakeAlert"]>; "stale_sources": Array<components["schemas"]["StaleSource"]>; };
     "QuakeAlert": { "lat": number; "lon": number; "mag": number; "observed_at": string; "place"?: string | null; "urgency"?: string | null; "urgency_confidence"?: number | null; };
     "QuakeCollection": { "count": number; "features": Array<components["schemas"]["QuakeFeature"]>; "type"?: "FeatureCollection"; };
@@ -130,6 +135,7 @@ export interface components {
     "SourceFreshness": { "cadence": string; "id": string; "is_modelled": boolean; "last_ok_at"?: string | null; "stale": boolean; "title": string; };
     "SourceInfo": { "aspect": string; "cadence": string; "id": string; "is_modelled": boolean; "last_error"?: string | null; "last_ok_at"?: string | null; "last_run_at"?: string | null; "license": string; "notes"?: string | null; "publisher": string; "title": string; "url": string; };
     "StaleSource": { "id": string; "last_ok_at"?: string | null; "title": string; };
+    "StandardBand": { "nama": string; "sampai": number | null; "tingkat": number; };
     "Stream": { "aliases"?: Array<string>; "category": "cuaca" | "kualitas_udara" | "air" | "tanah" | "energi" | "laut" | "kebencanaan" | "kesehatan" | "lokasi" | "perangkat" | "lainnya"; "category_by": "fields" | "user"; "confirmed": boolean; "created_at": string; "fields": Array<components["schemas"]["StreamField"]>; "id": number; "last_seen_at": string; "name": string; "name_by": "auto" | "payload" | "user"; "reading_count": number; "slug": string; "versions": Array<components["schemas"]["StreamVersion"]>; };
     "StreamEdit": { "category"?: "cuaca" | "kualitas_udara" | "air" | "tanah" | "energi" | "laut" | "kebencanaan" | "kesehatan" | "lokasi" | "perangkat" | "lainnya" | null; "name"?: string | null; };
     "StreamField": { "category": "cuaca" | "kualitas_udara" | "air" | "tanah" | "energi" | "laut" | "kebencanaan" | "kesehatan" | "lokasi" | "perangkat" | "lainnya"; "category_by": "rule" | "ai" | "user"; "first_seen": string; "key": string; "label": string; "last_seen": string; "type": string; };
