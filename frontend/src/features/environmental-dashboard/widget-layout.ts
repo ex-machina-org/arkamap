@@ -52,6 +52,23 @@ const PANEL_SIZES: Record<string, WidgetSize> = {
 export const sizeOf = (item: Pick<WidgetInstance, "type" | "config">): WidgetSize =>
   (item.type === "panel" && item.config.panel && PANEL_SIZES[item.config.panel]) || WIDGET_SIZES[item.type];
 
+// Widgets whose content scrolls or fills any size (lists, tables, the map): they may be made small.
+const FLEXIBLE = new Set<WidgetType>(["ranking", "insight", "indicators", "sensor", "map"]);
+const FLEXIBLE_PANELS = new Set(["aq_ranking"]);
+export type SizeLimits = { minW: number; minH: number; maxH?: number };
+
+/**
+ * How far a widget may be resized. A flexible one keeps its type's minimum and no maximum.
+ * Every other widget draws a fixed picture (gauge, chart, tiles) that would be cut off when
+ * smaller: it stays at least as tall as designed (and up to 4 rows taller, past which it is
+ * only empty space), and at least its designed width up to 6 columns.
+ */
+export function limitsOf(item: Pick<WidgetInstance, "type" | "config">): SizeLimits {
+  const size = sizeOf(item);
+  if (FLEXIBLE.has(item.type) || (item.type === "panel" && FLEXIBLE_PANELS.has(item.config.panel ?? ""))) return { minW: size.minW, minH: size.minH };
+  return { minW: Math.max(size.minW, Math.min(size.w, 6)), minH: size.h, maxH: size.h + 4 };
+}
+
 /** Width choices offered in a widget's settings, in grid columns. */
 export const WIDTH_PRESETS = [{ w: 3, label: "1/4" }, { w: 4, label: "1/3" }, { w: 6, label: "1/2" }, { w: 8, label: "2/3" }, { w: 12, label: "Penuh" }] as const;
 

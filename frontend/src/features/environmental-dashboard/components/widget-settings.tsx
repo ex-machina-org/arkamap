@@ -9,7 +9,7 @@ import { apiList, jsonBody, type DTO } from "@/lib/api/client";
 import { WIDGET_LABEL } from "../device-detail/readings";
 import { EVENT_KINDS } from "../event-kinds";
 import { useRegionSummary } from "../use-region-data";
-import { WIDGET_SIZES, WIDTH_PRESETS, widgetId, type WidgetConfig, type WidgetInstance } from "../widget-layout";
+import { limitsOf, WIDTH_PRESETS, widgetId, type WidgetConfig, type WidgetInstance } from "../widget-layout";
 import { defaultTitle, type WidgetContext } from "./widget-renderer";
 
 type ChartKind = DTO<"WidgetSpec">["widget"];
@@ -36,7 +36,7 @@ function SettingsForm({ item, width, ctx, onSave, onRemove, onClose, onDevicesCh
   const [error, setError] = useState<string>();
   const summary = useRegionSummary(item.type === "kpi-indicator" || item.type === "ranking" || item.type === "trend" ? ctx.view.focus?.id ?? null : null);
   const regionMetrics = (summary?.indicators ?? []).map(indicator => ({ id: indicator.metric, label: indicator.label })).sort((a, b) => a.label.localeCompare(b.label));
-  const minW = WIDGET_SIZES[item.type].minW;
+  const minW = limitsOf(item).minW;
   const kinds = item.type === "history" ? (ctx.view.history ?? []).map(series => series.kind) : ctx.view.events.map(event => event.kind);
   const fallbackTitle = defaultTitle({ type: item.type, config }, ctx);
 
