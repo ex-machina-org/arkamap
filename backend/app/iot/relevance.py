@@ -42,12 +42,14 @@ OTHER_DATA = [
 
 class Pick(BaseModel):
     metric: str
-    reason: str = Field(description="satu kalimat singkat kenapa relevan bagi pengguna ini")
+    reason: str = Field(description="satu kalimat singkat bahasa sehari-hari kenapa relevan bagi pengguna ini, untuk orang awam")
 
 
 class PanelPick(BaseModel):
     id: str
-    reason: str = Field(description="satu kalimat singkat kenapa panel ini berguna bagi pengguna ini")
+    reason: str = Field(description=(
+        "satu kalimat singkat bahasa sehari-hari kenapa panel ini berguna bagi pengguna ini; untuk orang awam, "
+        "tanpa singkatan atau istilah teknis yang tidak dijelaskan"))
 
 
 class Reading(BaseModel):
