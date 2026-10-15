@@ -367,9 +367,8 @@ export function SiriMapWorkspace() {
             nationalMask={nationalMask}
             status={{
               loading: spatial.loading,
-              count: incidents.length,
               degraded: spatial.errors.length > 0,
-              note: spatial.hotspotsTruncated ? `Peta menampilkan ${HOTSPOT_LIMIT.toLocaleString("id-ID")} titik panas terbaru. Jumlah lengkap ada di ringkasan.` : undefined,
+              note: spatial.hotspotsTruncated ? `Hanya ${HOTSPOT_LIMIT.toLocaleString("id-ID")} titik terbaru yang tampil.` : undefined,
             }}
             onRegionCenter={(center) => {
               if (selectedRegion) setRegionCenter({ regionId: selectedRegion.entry.regionId, center });
