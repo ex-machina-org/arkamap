@@ -6,15 +6,18 @@ import { PanelUnavailable } from "./dashboard-card";
 
 type Alerts = DTO<"AlertPanel">;
 
-function Group({ label, children }: { label: string; children: ReactNode }) {
+function Group({ label, count, children }: { label: string; count?: number; children: ReactNode }) {
   return <section aria-label={label} className="flex flex-col gap-2">
-    <h4 className="text-body-medium text-text-secondary">{label}</h4>
+    <h4 className="flex items-center gap-2 text-body-medium text-text-secondary">
+      {label}
+      {count != null && <span className="rounded-full bg-background-inner-default px-1.5 text-caption-1-medium text-text-secondary tabular-nums shadow-card">{count}</span>}
+    </h4>
     <ul className="flex flex-col gap-1.5">{children}</ul>
   </section>;
 }
 
-/** Consecutive entries of the same group render under one heading. */
-export function AlertEntries({ entries }: { entries: AlertEntry[] }) {
+/** Consecutive entries of the same group render under one heading; `totals` counts each group across all pages. */
+export function AlertEntries({ entries, totals }: { entries: AlertEntry[]; totals?: Map<string, number> }) {
   const groups: { label: string; entries: AlertEntry[] }[] = [];
   for (const entry of entries) {
     const last = groups.at(-1);
@@ -22,7 +25,7 @@ export function AlertEntries({ entries }: { entries: AlertEntry[] }) {
     else groups.push({ label: entry.group, entries: [entry] });
   }
   return <div className="flex flex-col gap-4">
-    {groups.map((group, index) => <Group key={`${group.label}:${index}`} label={group.label}>{group.entries.map(entry => <Fragment key={entry.key}>{entry.node}</Fragment>)}</Group>)}
+    {groups.map((group, index) => <Group key={`${group.label}:${index}`} label={group.label} count={totals?.get(group.label)}>{group.entries.map(entry => <Fragment key={entry.key}>{entry.node}</Fragment>)}</Group>)}
   </div>;
 }
 

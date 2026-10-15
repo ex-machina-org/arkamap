@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { RiAlarmWarningLine, RiBroadcastLine, RiFireLine, RiPulseLine, RiRefreshLine, RiSearchLine, RiSettings3Line } from "@remixicon/react";
+import { useMemo, useState, type ReactNode } from "react";
+import { RiAlarmWarningLine, RiArrowDownSLine, RiArrowRightSLine, RiBroadcastLine, RiFireLine, RiPulseLine, RiRefreshLine, RiSearchLine, RiSettings3Line } from "@remixicon/react";
+import type { DTO } from "@/lib/api/client";
 import { StatCards, type Stat } from "@/components/application/dashboard/stat-cards";
 import { Button } from "@/components/base/buttons/button";
 import { Checkbox } from "@/components/base/checkbox/checkbox";
@@ -10,22 +11,26 @@ import { Pagination } from "@/components/base/pagination/pagination";
 import { Switch } from "@/components/base/switch/switch";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
 import { Select, SelectItem } from "@/components/base/select/select";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cx } from "@/utils/cx";
-import { dangerItems, fireLevel, REGION_LEVEL } from "./alert-level";
+import { dangerItems, fireLevel, mapHref, REGION_LEVEL, TONE, type RowStatus } from "./alert-level";
 import { alertEntries, type AlertEntry } from "./components/alert-entries";
-import { AlertRow } from "./components/alert-row";
+import { AlertRow, LevelMark } from "./components/alert-row";
 import { AlertEntries } from "./components/alert-list";
 import { DashboardCard, insetClass, PanelUnavailable } from "./components/dashboard-card";
 import { CodeSnippet } from "./components/device-quickstart";
 import { useDevices } from "./device-api";
 import { formatDecimal, formatRelative } from "./format";
 import { alertRegions, uniqueWarnings } from "./insights";
+import { useSources } from "./use-source-catalog";
 import { ALERT_CATEGORIES, DEVICE_ALERT_CATEGORIES, deviceAlertCategory, metricUnit, regionCategory, useNotifications, type AlertCategory, type DeviceAlert, type useAlertPrefs } from "./use-alerts";
 
 type Filter = "all" | AlertCategory;
 
 const PAGE_SIZE = 10;
+/** Offline devices listed in the status card; the rest wait in the Perangkat menu. */
+const MAX_OFFLINE_ROWS = 3;
 
 /** "dasar" has no kategori (general Alat IoT); "kategori" files the bahaya report under, and notifies as, Kebakaran. */
 const ALERT_EXAMPLES = {
@@ -46,11 +51,22 @@ const categoryLabel = (id: AlertCategory) => ALERT_CATEGORIES.find(category => c
 const matches = (search: string, ...values: (string | null | undefined)[]) =>
   !search || values.some(value => value?.toLocaleLowerCase("id-ID").includes(search));
 
-/** How a device reports aman/bahaya and, optionally, which category its alert belongs to. Open until the first alert arrives. */
-function AlertTutorial({ open }: { open: boolean }) {
+/** How a device reports aman/bahaya and, optionally, which category its alert belongs to.
+ *  Closed so it never pushes the alerts down; the summary reads as a call to action instead. */
+function AlertTutorial({ connected }: { connected: boolean }) {
   const [example, setExample] = useState<ExampleId>("dasar");
-  return <details open={open || undefined} className={cx(insetClass, "flex flex-col gap-2 p-3")}>
-    <summary className="cursor-pointer text-body-medium text-text-primary">Hubungkan alat ke peringatan</summary>
+  return <details className={cx(insetClass, "group flex flex-col gap-2 p-3")}>
+    <summary className="flex cursor-pointer list-none items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring [&::-webkit-details-marker]:hidden">
+      <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-full bg-background-secondary-default text-foreground-icon-secondary"><RiBroadcastLine className="size-4" /></span>
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="text-body-medium text-text-primary">Hubungkan alat ke peringatan</span>
+        <span className="text-caption-1 text-text-secondary">{connected ? "Contoh kiriman dan cara memberi kategori" : "Belum ada alat yang melapor. Lihat cara mengirim status aman/bahaya"}</span>
+      </span>
+      <span className="flex shrink-0 items-center gap-0.5 text-caption-1-medium text-text-secondary group-hover:text-text-primary">
+        <span className="group-open:hidden">Lihat panduan</span><span className="hidden group-open:inline">Tutup</span>
+        <RiArrowDownSLine aria-hidden className="size-4 transition-transform group-open:rotate-180 motion-reduce:transition-none" />
+      </span>
+    </summary>
     <div className="mt-2 flex flex-col gap-3">
       <p className="text-body-2-regular text-text-secondary">
         Tambahkan field {code("\"alert\"")} berisi {code("\"aman\"")} atau {code("\"bahaya\"")} pada kiriman alat. Kartu alat muncul otomatis di sini; hanya status bahaya yang mengirim notifikasi.
@@ -66,6 +82,108 @@ function AlertTutorial({ open }: { open: boolean }) {
       </p>}
     </div>
   </details>;
+}
+
+const LEGEND: { color: RowStatus["color"]; label: string; note: string }[] = [
+  { color: "rose", label: "Bahaya", note: "memicu notifikasi" },
+  { color: "yellow", label: "Waspada", note: "cukup dipantau" },
+  { color: "lime", label: "Aman", note: "laporan alat" },
+];
+
+/** What the row dots mean, and that a row opens its location. */
+function LevelLegend() {
+  return <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-caption-1 text-text-secondary">
+    {LEGEND.map(item => <span key={item.label} className="flex items-center gap-1.5">
+      <LevelMark color={item.color} />
+      <span className="text-caption-1-medium text-text-primary">{item.label}</span>{item.note}
+    </span>)}
+    <span className="ml-auto max-sm:hidden">Klik peringatan untuk membuka lokasinya di peta</span>
+  </p>;
+}
+
+/** One thin bar per source or device, like a status page's uptime strip; the counts beside it carry the meaning.
+ *  Tooltips open instantly (a native title waits ~1 s, too long for anyone to find it). */
+function StatusStrip({ items }: { items: { key: string; color: RowStatus["color"]; title: string }[] }) {
+  return <div className="flex flex-col gap-1">
+    <ul aria-hidden className="flex flex-wrap">
+      {items.map(item => <Tooltip key={item.key}>
+        <TooltipTrigger delay={0} closeDelay={0} render={<li className="group/bar cursor-help px-px py-0.5" />}>
+          <span className={cx("block h-5 w-1.5 rounded-full transition-transform group-hover/bar:scale-y-125 motion-reduce:transition-none", TONE[item.color].dot)} />
+        </TooltipTrigger>
+        <TooltipContent>{item.title}</TooltipContent>
+      </Tooltip>)}
+    </ul>
+    <span className="text-caption-1 text-text-tertiary pointer-coarse:hidden">Arahkan kursor ke batang untuk detail</span>
+  </div>;
+}
+
+function StatusSection({ label, summary, href, linkLabel, strip, children }: {
+  label: string; summary: string; href: string; linkLabel: string;
+  strip?: ReactNode; children: ReactNode;
+}) {
+  return <section aria-label={label} className="flex flex-col gap-2">
+    <div className="flex items-baseline justify-between gap-2">
+      <h4 className="text-body-medium text-text-primary">{label}</h4>
+      <span className="text-caption-1 text-text-secondary tabular-nums">{summary}</span>
+    </div>
+    {strip}
+    <ul className="flex flex-col gap-1.5">{children}</ul>
+    <a href={href} className="self-start text-caption-1 text-text-secondary underline-offset-2 hover:text-text-primary hover:underline">{linkLabel}</a>
+  </section>;
+}
+
+/**
+ * "Pemantauan status data": whether the feeds behind the alerts are still delivering.
+ * A failed source or an offline device means its alerts can be missing or late,
+ * so the card lists only what needs a look.
+ */
+function DataStatus({ sources, failing, checking, devices, offline }: {
+  sources?: DTO<"SourceInfo">[];
+  failing: DTO<"SourceAlert">[];
+  checking: boolean;
+  devices: ReturnType<typeof useDevices>;
+  offline: ReturnType<typeof useDevices>["devices"];
+}) {
+  const failed = new Set(failing.map(source => source.id));
+  const online = devices.devices.length - offline.length;
+  // ponytail: no usage stats per device, so "top" = ones that have reported before (just dropped) ahead of never-connected ones.
+  const shownOffline = [...offline].sort((a, b) => Number(a.lastSeen === "Belum ada data") - Number(b.lastSeen === "Belum ada data")).slice(0, MAX_OFFLINE_ROWS);
+
+  return <DashboardCard title="Pemantauan status data" description="Apakah sumber data dan alat Anda masih mengirim data terbaru. Bila terputus, peringatan dari sumber itu bisa terlambat atau tidak muncul.">
+
+    <StatusSection label="Sumber data resmi" href="/sources" linkLabel="Lihat semua sumber"
+      summary={sources?.length ? `${sources.length - failed.size} dari ${sources.length} aktif` : failing.length ? `${failing.length} gagal` : ""}
+      strip={sources?.length ? <StatusStrip items={sources.map(source => ({
+        key: source.id,
+        color: failed.has(source.id) ? "rose" : source.last_ok_at ? "lime" : "neutral",
+        title: `${source.title} · ${failed.has(source.id) ? "gagal" : source.last_ok_at ? `diperbarui ${formatRelative(source.last_ok_at)}` : "belum pernah berjalan"}`,
+      }))} /> : undefined}>
+      {checking ? <li className="text-body-2-regular text-text-secondary">Memeriksa sumber...</li>
+        : failing.length ? failing.map(source => (
+          <AlertRow key={source.id} kind="source" status={{ color: "rose", label: "Gagal diperbarui" }} title={source.title}
+            detail={source.last_error} tags={[`Data terakhir ${formatRelative(source.last_ok_at) ?? "belum pernah masuk"}`]} />
+        )) : <li className="text-body-2-regular text-text-secondary">BMKG, NASA FIRMS, GDACS, dan sumber lain diperbarui sesuai jadwalnya.</li>}
+    </StatusSection>
+
+    <StatusSection label="Alat IoT Anda" href="/devices" linkLabel="Kelola alat"
+      summary={devices.devices.length ? `${online} dari ${devices.devices.length} online` : ""}
+      strip={devices.devices.length ? <StatusStrip items={devices.devices.map(device => ({
+        key: device.id, color: device.status === "offline" ? "yellow" : "lime", title: `${device.name} · ${device.status === "offline" ? "offline" : "online"}`,
+      }))} /> : undefined}>
+      {devices.loading ? <li className="text-body-2-regular text-text-secondary">Memeriksa alat...</li>
+        : devices.error ? <li role="alert" className="text-body-2-regular text-text-error-primary">{devices.error}</li>
+        : !devices.devices.length ? <li className="text-body-2-regular text-text-secondary">Belum ada alat terdaftar. Alat yang terhubung ikut memasok peringatan.</li>
+        : offline.length ? <>
+          {shownOffline.map(device => (
+            <AlertRow key={device.id} kind="device" href={`/devices/${device.backendId}`} linkLabel="Lihat alat" status={{ color: "yellow", label: "Offline" }}
+              title={device.name} tags={[device.lastSeen === "Belum ada data" ? "Belum pernah mengirim data" : `Terakhir terlihat ${device.lastSeen}`]} />
+          ))}
+          {offline.length > shownOffline.length && <li><a href="/devices" className="flex items-center justify-center gap-0.5 rounded-lg py-1.5 text-caption-1-medium text-text-secondary hover:bg-background-secondary-hover hover:text-text-primary">
+            +{offline.length - shownOffline.length} alat offline lainnya di menu Perangkat<RiArrowRightSLine aria-hidden className="size-4" />
+          </a></li>}
+        </> : <li className="text-body-2-regular text-text-secondary">Semua alat mengirim data dalam 15 menit terakhir.</li>}
+    </StatusSection>
+  </DashboardCard>;
 }
 
 /**
@@ -127,9 +245,9 @@ export function AlertsMonitor({ deviceAlerts, regional, region, prefs }: {
   const regionRows = (id: "fireRisk" | "heat", note?: string): AlertEntry[] => !show(id) ? [] : split[id]
     .filter(item => matches(search, item.name, item.label))
     .map(item => ({ group: categoryLabel(id), key: `${id}:${item.region_id}:${item.metric}`, level: REGION_LEVEL, node: (
-      <AlertRow level={REGION_LEVEL} tags={[`Skor ${formatDecimal(item.normalised)}/100`]}
+      <AlertRow kind={id} level={REGION_LEVEL} tags={[`Skor ${formatDecimal(item.normalised)}/100`]}
         title={item.name} detail={note ? `${item.label} · ${note}` : item.label}
-        meta={`${formatDecimal(item.value)} ${metricUnit(item.metric)}`.trim()} />
+        meta={`${formatDecimal(item.value)} ${metricUnit(item.metric)}`.trim()} href={mapHref({ region: item.region_id })} />
     ) }));
   const hazards = {
     weather_warnings: show("weather") ? split.weather.filter(item => matches(search, item.headline, item.event, item.area)) : [],
@@ -141,7 +259,7 @@ export function AlertsMonitor({ deviceAlerts, regional, region, prefs }: {
   const deviceRows = (id: AlertCategory): AlertEntry[] => !show(id) ? [] : deviceAlerts.alerts
     .filter(alert => deviceAlertCategory(alert) === id && matches(search, alert.device_name, alert.nama, alert.message, alert.region_name))
     .map(alert => ({ group: categoryLabel(id), key: `iot:${alert.device_id}:${alert.nama}`, level: alert.status === "bahaya" ? "bahaya" as const : undefined, node: (
-      <AlertRow href={`/devices/${alert.device_id}`} level={alert.status === "bahaya" ? "bahaya" : undefined}
+      <AlertRow kind="device" href={`/devices/${alert.device_id}`} linkLabel="Lihat alat" level={alert.status === "bahaya" ? "bahaya" : undefined}
         status={alert.status === "aman" ? { color: "lime", label: "Aman" } : undefined} tags={[id !== "device" && "Alat IoT"]}
         title={`${alert.device_name} · ${alert.nama}`}
         detail={alert.message ?? alert.region_name}
@@ -153,11 +271,11 @@ export function AlertsMonitor({ deviceAlerts, regional, region, prefs }: {
     ...deviceRows("fire"),
     ...(show("fire") ? split.fire.filter(item => matches(search, item.name, item.province)) : []).map(item => ({
       group: "Kebakaran", key: `fire:${item.region_id}`, level: fireLevel(item.confirmed), node: (
-        <AlertRow level={fireLevel(item.confirmed)}
+        <AlertRow kind="fire" level={fireLevel(item.confirmed)}
           tags={[item.confirmed ? "Dikonfirmasi GDACS" : "Deteksi satelit"]}
           title={item.province ? `${item.name}, ${item.province}` : item.name}
           detail={`${item.clusters} lokasi panas berulang · ${formatDecimal(item.frp_max)} MW · ${item.satellites.join(", ")}`}
-          meta={formatRelative(item.last_seen)} />
+          meta={formatRelative(item.last_seen)} href={mapHref(item)} />
       ) })),
     ...deviceRows("weather"),
     ...alertEntries({ ...none, weather_warnings: hazards.weather_warnings }),
@@ -175,7 +293,10 @@ export function AlertsMonitor({ deviceAlerts, regional, region, prefs }: {
   // A narrower filter can leave the old page past the end; clamp instead of resetting state in an effect.
   const currentPage = Math.min(page, pageCount);
   const pageEntries = entries.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const groupTotals = new Map<string, number>();
+  for (const entry of entries) groupTotals.set(entry.group, (groupTotals.get(entry.group) ?? 0) + 1);
 
+  const sources = useSources();
   const offline = devices.devices.filter(device => device.status === "offline");
   const failingSources = data?.source_alerts ?? [];
   const issues = failingSources.length + offline.length;
@@ -220,6 +341,7 @@ export function AlertsMonitor({ deviceAlerts, regional, region, prefs }: {
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <DashboardCard
+          className="relative isolate overflow-hidden [&_.shadow-card]:bg-background-inner-default/70 [&_.shadow-card]:backdrop-blur-[2px]"
           title="Peringatan aktif"
           description={notifications.updatedAt ? `${region && scope === "region" ? `Wilayah ${scopeName}` : "Seluruh Indonesia"} · diperbarui ${formatRelative(notifications.updatedAt)}` : "Memuat peringatan..."}
           action={<div className="flex gap-2">
@@ -244,6 +366,11 @@ export function AlertsMonitor({ deviceAlerts, regional, region, prefs }: {
               fieldClassName="rounded-full bg-background-supporting-default" className="min-w-48 flex-1" />
             <Switch size="sm" isSelected={onlyDanger} onChange={on => { setOnlyDanger(on); setPage(1); }}>Hanya bahaya</Switch>
           </div>
+          {/* The ranger mascot behind the list, purely decorative (isolate keeps -z-10 above the card's own background).
+              The card's tiles turn slightly translucent so it still shows through the rows in light mode. */}
+          <img src="/brand/mascot-ranger.webp" alt="" aria-hidden width={420} height={480} loading="lazy"
+            className="pointer-events-none absolute -right-8 -bottom-10 -z-10 w-56 opacity-30 select-none sm:w-80 dark:opacity-10" />
+          <LevelLegend />
           {!region && <p className="text-body-2-regular text-text-secondary">Belum ada wilayah di profil; peringatan mencakup seluruh Indonesia.</p>}
           {notifications.error && <p role="alert" className="text-body-regular text-text-error-primary">{notifications.error}</p>}
           {deviceAlerts.error && enabled.has("device") && <p role="alert" className="text-body-regular text-text-error-primary">{deviceAlerts.error}</p>}
@@ -256,7 +383,7 @@ export function AlertsMonitor({ deviceAlerts, regional, region, prefs }: {
             <div className="flex flex-col gap-4">
               {!!entries.length && <>
                 <div className="max-h-[32rem] overflow-y-auto pr-1 [scrollbar-width:thin]">
-                  <AlertEntries entries={pageEntries} />
+                  <AlertEntries entries={pageEntries} totals={groupTotals} />
                 </div>
                 {pageCount > 1 && <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-body-2-regular text-text-secondary tabular-nums">{(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, entries.length)} dari {entries.length} peringatan</p>
@@ -266,46 +393,12 @@ export function AlertsMonitor({ deviceAlerts, regional, region, prefs }: {
               {!visibleCount && <PanelUnavailable
                 title={total ? "Tidak ada peringatan yang cocok" : "Tidak ada peringatan aktif"}
                 description={total ? "Coba kategori atau kata kunci lain." : "Belum ada peringatan dari kategori yang Anda pantau saat ini."} />}
-              {show("device") && !deviceAlerts.loading && <AlertTutorial open={!deviceAlerts.alerts.length} />}
+              {show("device") && !deviceAlerts.loading && <AlertTutorial connected={!!deviceAlerts.alerts.length} />}
             </div>
           )}
         </DashboardCard>
 
-        <DashboardCard title="Status pemantauan" description="Kesehatan sumber data dan perangkat yang memasok peringatan.">
-          <section aria-label="Sumber data" className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <h4 className="text-body-medium text-text-secondary">Sumber data</h4>
-              <a href="/sources" className="text-caption-1 text-text-secondary underline-offset-2 hover:text-text-primary hover:underline">Lihat semua</a>
-            </div>
-            <ul className="flex flex-col gap-1.5">
-              {!data ? <li className="text-body-2-regular text-text-secondary">{notifications.loading ? "Memeriksa sumber..." : "Status sumber tidak tersedia."}</li>
-                : failingSources.length ? failingSources.map(source => (
-                  <AlertRow key={source.id} status={{ color: "rose", label: "Gagal" }} title={source.title}
-                    detail={source.last_error} tags={[`Terakhir berhasil ${formatRelative(source.last_ok_at) ?? "belum pernah"}`]} />
-                )) : <AlertRow status={{ color: "lime", label: "Normal" }} title="Semua sumber berjalan normal" />}
-            </ul>
-          </section>
-
-          <section aria-label="Perangkat IoT" className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <h4 className="text-body-medium text-text-secondary">Perangkat IoT</h4>
-              <a href="/devices" className="text-caption-1 text-text-secondary underline-offset-2 hover:text-text-primary hover:underline">Kelola</a>
-            </div>
-            <ul className="flex flex-col gap-1.5">
-              {devices.loading ? <li className="text-body-2-regular text-text-secondary">Memeriksa perangkat...</li>
-                : devices.error ? <li role="alert" className="text-body-2-regular text-text-error-primary">{devices.error}</li>
-                : !devices.devices.length ? <li className="text-body-2-regular text-text-secondary">Belum ada perangkat terdaftar.</li>
-                : <>
-                  <AlertRow status={offline.length ? { color: "yellow", label: `${offline.length} offline` } : { color: "lime", label: "Semua online" }}
-                    title={`${devices.devices.length - offline.length} dari ${devices.devices.length} perangkat online`} />
-                  {offline.map(device => (
-                    <AlertRow key={device.id} href={`/devices/${device.backendId}`} status={{ color: "yellow", label: "Offline" }}
-                      title={device.name} tags={[device.lastSeen === "Belum ada data" ? "Belum pernah mengirim data" : `Terakhir terlihat ${device.lastSeen}`]} />
-                  ))}
-                </>}
-            </ul>
-          </section>
-        </DashboardCard>
+        <DataStatus sources={sources} failing={failingSources} checking={!data && notifications.loading} devices={devices} offline={offline} />
       </div>
     </div>
   );

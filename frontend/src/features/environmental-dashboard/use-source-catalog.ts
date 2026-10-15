@@ -10,6 +10,17 @@ const load = () => catalog ??= apiList("/sources", "SourceInfo")
   .then(items => new Map(items.map(item => [item.id, item])))
   .catch(() => { catalog = undefined; return new Map<string, Source>(); });
 
+/** Every registered source with its last run, for the status card; empty until loaded or on failure. */
+export function useSources() {
+  const [sources, setSources] = useState<Source[]>();
+  useEffect(() => {
+    let active = true;
+    void load().then(value => { if (active) setSources([...value.values()]); });
+    return () => { active = false; };
+  }, []);
+  return sources;
+}
+
 /** Resolves source ids (`firms_viirs`) to publisher names from the backend registry. */
 export function useSourceName() {
   const [sources, setSources] = useState<Map<string, Source>>();

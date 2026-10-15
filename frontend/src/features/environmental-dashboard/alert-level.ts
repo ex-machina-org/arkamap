@@ -76,3 +76,17 @@ export function dangerItems(data: Notifications | undefined, devices: DeviceAler
   }
   return items;
 }
+
+/** Row colours: `dot` for strips, `tile` for an alert row's icon tile.
+ *  Same palette steps as StatusDot. */
+export const TONE = {
+  rose: { dot: "bg-red-500", tile: "bg-red-500/12 text-red-600 dark:text-red-400" },
+  yellow: { dot: "bg-amber-400", tile: "bg-amber-400/18 text-amber-700 dark:text-amber-300" },
+  lime: { dot: "bg-green-500", tile: "bg-green-500/12 text-green-700 dark:text-green-400" },
+  neutral: { dot: "bg-neutral-300 dark:bg-neutral-600", tile: "bg-background-secondary-default text-foreground-icon-secondary" },
+} as const;
+export type RowStatus = { color: keyof typeof TONE; label: string };
+
+/** Opens the map on an alert's point or region; the map reads these on load. */
+export const mapHref = (target: { lat: number; lon: number } | { region: string }) =>
+  "region" in target ? `/map?region=${encodeURIComponent(target.region)}` : `/map?lat=${target.lat}&lon=${target.lon}`;
