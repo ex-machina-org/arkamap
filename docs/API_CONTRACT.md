@@ -20,7 +20,7 @@ Sumber kebenaran mesin adalah [`docs/backend/openapi.json`](backend/openapi.json
 
 ## Konvensi
 
-- **Base URL**: semua path diawali `/api`. Saat pengembangan: `http://localhost:8000/api`. Browser dan alat IoT hanya berbicara dengan domain frontend (`https://arkamap.winatra.app`): proxy di sisi server (Vite saat dev, reverse proxy VPS frontend saat produksi) meneruskan `/api/*`, termasuk `/api/ingest` dan WebSocket `/api/mqtt`, ke backend. Alamat backend tidak dipublikasikan; panduan alat di frontend menampilkan domain frontend (`viaFrontend()` di `device-api.ts`).
+- **Base URL**: semua path diawali `/api`. Saat pengembangan: `http://localhost:8000/api`. Browser dan alat IoT hanya berbicara dengan domain frontend (`https://arkamap.winatra.app`): proxy di sisi server (Vite saat dev; saat produksi Caddy di VPS yang sama dengan backend, lihat `frontend/Caddyfile`) meneruskan `/api/*`, termasuk `/api/ingest` dan WebSocket `/api/mqtt`, ke backend. Alamat backend tidak dipublikasikan; panduan alat di frontend menampilkan domain frontend (`viaFrontend()` di `device-api.ts`).
 - **Format**: JSON. Waktu memakai ISO 8601 UTC, periode memakai `YYYY-MM-DD`, koordinat memakai GeoJSON `[lon, lat]` EPSG:4326.
 - **Nilai kosong**: `null` berarti belum ada data, bukan nol. UI menampilkannya sebagai belum ada data.
 - **Kejujuran data**: `is_modelled: true` ditampilkan dengan label **MODEL**. Setiap nilai indikator membawa `confidence` (1–5), `source_id`, dan `period`. Gempa adalah kejadian tercatat, bukan prediksi.

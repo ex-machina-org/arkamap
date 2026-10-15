@@ -1,28 +1,46 @@
-# Frontend VPS: the only address browsers and IoT devices ever use. It serves the
-# built app and forwards every /api/* call (HTTP ingest, MQTT WebSocket, chat stream)
-# to the backend server-to-server, so the backend's address is never published.
+# Site block for arkamap.winatra.app, added to the existing ~/caddy/etc/Caddyfile on the
+# backend VPS (same Cloudflare -> NSG -> ufw -> Caddy mTLS chain as api.winatra.app).
+# It is the only address browsers and IoT devices ever use: it serves the built app and
+# forwards /api/* to the backend on 127.0.0.1, so the backend's address is never published.
 #
-#   npm run build  ->  copy dist/ to /srv/arkamap
-#   .env: ARKAMAP_API_KEY=<app key>   BACKEND_ORIGIN=https://<backend host>
+#   npm run build  ->  rsync dist/ to /srv/arkamap (mounted read-only into the Caddy container)
+#   Caddy env: ARKAMAP_API_KEY=<app key from `python -m app.clients create "frontend web"`>
+#   backend .env: PUBLIC_URL and CORS_ORIGINS = https://arkamap.winatra.app
 #
-# Caddy obtains the TLS certificate itself once DNS points at this VPS.
+# The Cloudflare Origin certificate must cover arkamap.winatra.app (e.g. *.winatra.app).
 
 arkamap.winatra.app {
+	tls /etc/caddy/certs/origin.pem /etc/caddy/certs/origin.key {
+		client_auth {
+			mode require_and_verify
+			trust_pool file /etc/caddy/certs/cf-origin-pull-ca.pem
+		}
+	}
 	encode zstd gzip
 
-	# Browser calls carry no key: add the app key. Devices send their own key to
-	# /api/ingest and /api/mqtt, which must reach the backend untouched.
-	@no_key {
-		path /api/*
-		not header X-API-Key *
+	# Admin endpoints (full re-ingest) stay unreachable from outside.
+	handle /api/admin/* {
+		respond 404
 	}
-	request_header @no_key X-API-Key {$ARKAMAP_API_KEY}
+
+	# Devices log in to the broker with their own key (username dev<id>).
+	@mqtt {
+		path /api/mqtt
+		method GET
+	}
+	handle @mqtt {
+		reverse_proxy 127.0.0.1:9001 {
+			stream_close_delay 5m
+		}
+	}
 
 	handle /api/* {
-		# WebSocket upgrades (/api/mqtt) pass through reverse_proxy as is.
-		reverse_proxy {$BACKEND_ORIGIN} {
-			header_up Host {upstream_hostport}
-			header_up X-Real-IP {remote_host}
+		# Browser calls carry no key: add the app key. Devices send their own key to
+		# /api/ingest, which must reach the backend untouched.
+		@no_key not header X-API-Key *
+		request_header @no_key X-API-Key {$ARKAMAP_API_KEY}
+		reverse_proxy 127.0.0.1:3000 {
+			header_up X-Real-IP {http.request.header.CF-Connecting-IP}
 			# The backend gives devices this domain (not its own) in the quickstart.
 			header_up X-Arkamap-Origin https://arkamap.winatra.app
 			# The chat answer streams (SSE): send each chunk as it arrives.
