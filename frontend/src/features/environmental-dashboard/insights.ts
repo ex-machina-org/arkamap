@@ -1,5 +1,5 @@
 import type { DTO } from "@/lib/api/client";
-import { formatDecimal, isCurrentMonth } from "./format";
+import { isCurrentMonth } from "./format";
 import type { PanelId } from "./types";
 
 type Alerts = DTO<"AlertPanel">;
@@ -32,15 +32,20 @@ export const alertRegions = (alerts: Alerts) => alerts.region_alerts.filter(item
 
 export const alertCount = (alerts: Alerts) => alerts.quake_alerts.length + alerts.disaster_alerts.length + alertRegions(alerts).length + uniqueWarnings(alerts).length;
 
-/** Month-over-month change, only when the latest month is complete so the two counts are comparable. */
-export function monthDelta(months: DTO<"HistoryMonth">[]): { label: string; color: "lime" | "rose" | "neutral" } {
-  const last = months.at(-1);
-  const previous = months.at(-2);
-  if (!last || !previous) return { label: "Tercatat", color: "neutral" };
-  if (isCurrentMonth(last.month)) return { label: "Bulan berjalan", color: "neutral" };
-  if (previous.count === 0) return { label: "Tercatat", color: "neutral" };
-  const change = Math.round(((last.count - previous.count) / previous.count) * 1000) / 10;
-  if (change === 0) return { label: "0%", color: "neutral" };
-  // More recorded hazards is worse, so a rise reads red and a drop green.
-  return { label: `${change > 0 ? "+" : "-"}${formatDecimal(Math.abs(change))}%`, color: change > 0 ? "rose" : "lime" };
+/** `partial`: the window starts inside this month, or it is the running month, so its count is not a full month. */
+export type MonthCount = { month: string; count: number; partial: boolean };
+
+/**
+ * Every month the window touches, oldest first, ending with the current month. The API only
+ * returns months that had events, so missing months are filled in as zero here.
+ */
+export function monthSeries(months: DTO<"HistoryMonth">[], days: number, now = new Date()): MonthCount[] {
+  const counts = new Map(months.map(month => [month.month.slice(0, 7), month.count]));
+  const since = new Date(now.getTime() - days * 86_400_000);
+  const length = (now.getUTCFullYear() - since.getUTCFullYear()) * 12 + now.getUTCMonth() - since.getUTCMonth() + 1;
+  const startsMidMonth = since.getUTCDate() > 1 || since.getUTCHours() > 0;
+  return Array.from({ length }, (_, index) => {
+    const month = new Date(Date.UTC(since.getUTCFullYear(), since.getUTCMonth() + index, 1)).toISOString().slice(0, 10);
+    return { month, count: counts.get(month.slice(0, 7)) ?? 0, partial: (index === 0 && startsMidMonth) || isCurrentMonth(month, now) };
+  });
 }
