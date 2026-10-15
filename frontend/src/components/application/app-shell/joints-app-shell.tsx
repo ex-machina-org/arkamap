@@ -86,7 +86,7 @@ export function JointsAppShell({
   onAskAssistant,
   children, identity, onAccountAction, profiles,
 }: {
-  identity?: { name: string; role: string };
+  identity?: { name: string; role: string; avatarSrc?: string };
   onAccountAction?: (label: string) => void;
   profiles?: ProfileOption[];
   navigation: AppShellNavItem[];

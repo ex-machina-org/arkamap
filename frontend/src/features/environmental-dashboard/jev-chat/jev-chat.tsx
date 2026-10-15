@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { goTo } from "@/lib/navigate";
+import { profileArtwork } from "@/lib/profile-artwork";
 import { toast } from "sonner";
 import { AgentChat } from "@/components/application/agent-chat/agent-chat";
 import { DashboardSidebar, type DashboardNavItem } from "@/components/application/dashboard/dashboard-sidebar";
@@ -94,7 +95,11 @@ export function JevChat() {
       onClose={onClose}
       items={items}
       selected="superintelligence"
-      identity={{ name: session.me?.user.name ?? "Pengunjung", role: session.me?.profile?.role ?? "Map publik" }}
+      identity={{
+        name: session.me?.user.name ?? "Pengunjung",
+        role: session.me?.profile?.role ?? "Map publik",
+        avatarSrc: session.me?.profile ? profileArtwork(session.me.profile.mode) : undefined,
+      }}
       onAccountAction={label => {
         if (label === "Keluar" && session.me) void session.logout().catch(cause => toast.error(cause.message));
         else window.dispatchEvent(new Event("arkamap-profile-open"));

@@ -5,6 +5,7 @@ import { DashboardTeamMenu } from "@/components/application/dashboard/dashboard-
 import { ArkamapSettingsModal, type ArkamapSettingsPage } from "@/components/application/settings/arkamap-settings";
 import { LoginModal } from "./login-modal";
 import { authenticate } from "@/lib/api/auth";
+import { profileArtwork } from "@/lib/profile-artwork";
 import { useSession } from "@/hooks/use-session";
 import { useProfileSwitcher } from "@/hooks/use-profile-switcher";
 
@@ -19,7 +20,11 @@ export function AccountMenu() {
       ? <DashboardTeamMenu
         collapsed
         placement="bottom end"
-        identity={{ name: me.user.name, role: me.profile?.role ?? "Belum ada profil" }}
+        identity={{
+          name: me.user.name,
+          role: me.profile?.role ?? "Belum ada profil",
+          avatarSrc: me.profile ? profileArtwork(me.profile.mode) : undefined,
+        }}
         profiles={profileSwitcher.options}
         onSettings={page => setSettings(page ?? "account")}
         onAction={label => {
