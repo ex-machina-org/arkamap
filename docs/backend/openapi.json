@@ -1,6 +1,100 @@
 {
   "components": {
     "schemas": {
+      "AirStandard": {
+        "properties": {
+          "batas": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "baku mutu nasional",
+            "title": "Batas"
+          },
+          "batas_nama": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batas Nama"
+          },
+          "kategori": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/StandardBand"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kategori"
+          },
+          "pedoman": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "pedoman WHO 2021",
+            "title": "Pedoman"
+          },
+          "pedoman_nama": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pedoman Nama"
+          },
+          "skala": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skala"
+          }
+        },
+        "title": "AirStandard",
+        "type": "object"
+      },
+      "AirStandards": {
+        "properties": {
+          "metrics": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/AirStandard"
+            },
+            "description": "per metrik; metrik tanpa batas resmi tidak ada",
+            "title": "Metrics",
+            "type": "object"
+          }
+        },
+        "required": [
+          "metrics"
+        ],
+        "title": "AirStandards",
+        "type": "object"
+      },
       "AlertPanel": {
         "properties": {
           "disaster_alerts": {
@@ -891,6 +985,15 @@
           },
           "mode": {
             "$ref": "#/components/schemas/ModeInfo"
+          },
+          "panels": {
+            "default": [],
+            "description": "panel dashboard yang dipasang, urut dari terpenting: pilihan AI yang datanya ada di wilayah profil",
+            "items": {
+              "$ref": "#/components/schemas/PanelPick"
+            },
+            "title": "Panels",
+            "type": "array"
           },
           "profile_id": {
             "title": "Profile Id",
@@ -4546,6 +4649,78 @@
         "title": "OverviewCounts",
         "type": "object"
       },
+      "PanelCatalog": {
+        "properties": {
+          "panels": {
+            "items": {
+              "$ref": "#/components/schemas/PanelDef"
+            },
+            "title": "Panels",
+            "type": "array"
+          }
+        },
+        "required": [
+          "panels"
+        ],
+        "title": "PanelCatalog",
+        "type": "object"
+      },
+      "PanelDef": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "metrics": {
+            "description": "metrik yang dibaca; panel tampil bila wilayah punya salah satunya",
+            "items": {
+              "type": "string"
+            },
+            "title": "Metrics",
+            "type": "array"
+          },
+          "theme": {
+            "title": "Theme",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "theme",
+          "title",
+          "metrics",
+          "description"
+        ],
+        "title": "PanelDef",
+        "type": "object"
+      },
+      "PanelPick": {
+        "properties": {
+          "id": {
+            "description": "id panel dari katalog (app/panels.py), digambar frontend",
+            "title": "Id",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "reason"
+        ],
+        "title": "PanelPick",
+        "type": "object"
+      },
       "PasswordChange": {
         "properties": {
           "new_password": {
@@ -4823,6 +4998,15 @@
           "mode_title": {
             "title": "Mode Title",
             "type": "string"
+          },
+          "panels": {
+            "default": [],
+            "description": "panel dashboard pilihan AI, urut dari terpenting",
+            "items": {
+              "$ref": "#/components/schemas/PanelPick"
+            },
+            "title": "Panels",
+            "type": "array"
           },
           "region_id": {
             "anyOf": [
@@ -6459,6 +6643,38 @@
           "title"
         ],
         "title": "StaleSource",
+        "type": "object"
+      },
+      "StandardBand": {
+        "properties": {
+          "nama": {
+            "title": "Nama",
+            "type": "string"
+          },
+          "sampai": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "batas atas kategori; null = kategori terakhir tanpa batas atas",
+            "title": "Sampai"
+          },
+          "tingkat": {
+            "description": "0 baik, 1 sedang, 2 sensitif, 3 tidak sehat, 4 sangat tidak sehat, 5 berbahaya",
+            "title": "Tingkat",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "sampai",
+          "nama",
+          "tingkat"
+        ],
+        "title": "StandardBand",
         "type": "object"
       },
       "Stream": {
@@ -11895,6 +12111,33 @@
         ]
       }
     },
+    "/api/panels": {
+      "get": {
+        "description": "Every dashboard panel (card or chart) region data can fill; the AI picks from these.",
+        "operationId": "panel_catalog_api_panels_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PanelCatalog"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Panel Catalog",
+        "tags": [
+          "data"
+        ]
+      }
+    },
     "/api/public/overview": {
       "get": {
         "description": "National snapshot for the public landing page.",
@@ -12521,6 +12764,33 @@
           }
         ],
         "summary": "Sources",
+        "tags": [
+          "data"
+        ]
+      }
+    },
+    "/api/standards": {
+      "get": {
+        "description": "Official limits per metric (PP 22/2021, WHO 2021, ISPU, US AQI): what \"normal\" is for\na value, so a card can say where today sits. Metrics without a limit are absent.",
+        "operationId": "air_standards_api_standards_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AirStandards"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "Air Standards",
         "tags": [
           "data"
         ]

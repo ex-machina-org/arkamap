@@ -7,6 +7,7 @@ with the product: a step written here is a step the UI must have.
 """
 import re
 
+from .. import panels
 from . import catalog
 
 # topic -> (title, when (for the router), keywords (fallback routing), text)
@@ -114,7 +115,8 @@ TOPICS: dict[str, tuple[str, str, tuple[str, ...], str]] = {
         "Dashboard dan profil pantauan",
         "Cara memakai dashboard, profil pantauan (Kenalan), mode Protected/Responden/Plan, peta, berbagi alat ke komunitas.",
         ("dashboard", "profil", "kenalan", "mode", "protected", "responden", "plan", "peta", "map",
-         "komunitas", "berbagi", "share", "wilayah pantauan"),
+         "komunitas", "berbagi", "share", "wilayah pantauan", "widget", "panel", "grafik", "chart",
+         "atur tampilan", "tambah widget"),
         "Dashboard akun menyesuaikan diri dengan profil pantauan. Buat profil lewat Tambah Profil di pilihan "
         "profil: tulis peran dan masalah yang ingin diatasi, pilih wilayahnya, lalu pilih mode sendiri "
         "atau biarkan AI memilih:\n"
@@ -124,8 +126,14 @@ TOPICS: dict[str, tuple[str, str, tuple[str, ...], str]] = {
         "perhatian lebih dulu.\n"
         "- Plan (perencanaan): prakiraan hujan 30 hari, pola musiman, kerawanan jangka panjang, dan "
         "riwayat kejadian setahun terakhir.\n"
-        "Bagian atas dashboard selalu menampilkan ringkasan alat IoT-mu; di bawahnya kartu kejadian, "
-        "peringkat wilayah, peta, dan grafik sensor per tabel data. Map publik bisa dipakai tanpa akun.\n"
+        "Bagian atas dashboard berisi kartu ringkasan (mode, kejadian, peringatan; angka alat IoT bila "
+        "punya alat). Di bawahnya panel yang dipilih AI dari penjelasan profil, lalu peta, sorotan, tabel "
+        "indikator, dan grafik sensor per tabel data. Isi panel selalu wilayah profil; bentuknya tetap.\n"
+        "Panel yang bisa dipasang (Atur Tampilan > Tambah Widget, dikelompokkan per tema; panel tanpa data "
+        "untuk wilayah profil tidak bisa ditambah):\n"
+        + "\n".join(f"- {p['title']}: {p['description']}" for p in panels.catalogue()) + "\n"
+        "Atur Tampilan juga bisa memindah, mengubah ukuran, mengganti judul, dan menghapus widget; "
+        "Kembalikan Bawaan memulihkan susunan AI. Map publik bisa dipakai tanpa akun.\n"
         "Alat yang sudah punya lokasi bisa diajukan ke komunitas dari tab Pengaturan alat; setelah "
         "disetujui admin, alat dan bacaan terbarunya tampil publik di peta.",
     ),

@@ -10,9 +10,9 @@ import type { DashboardView, EventKind } from "./types";
 export type WidgetType =
   | "kpi-mode" | "kpi-event" | "kpi-alerts" | "kpi-iot" | "kpi-indicator"
   | "ranking" | "map" | "impact" | "insight" | "score" | "indicators" | "history"
-  | "sensor";
+  | "trend" | "panel" | "sensor";
 export type IotStat = "devices" | "active" | "reporting" | "rejected";
-export type WidgetConfig = { kind?: EventKind; stat?: IotStat; metric?: string; deviceId?: number; field?: string };
+export type WidgetConfig = { kind?: EventKind; stat?: IotStat; metric?: string; deviceId?: number; field?: string; panel?: string };
 /** `title` is the user's own name for the widget; without it each widget names itself. */
 export type WidgetInstance = { id: string; type: WidgetType; config: WidgetConfig; title?: string };
 export type Placement = { i: string; x: number; y: number; w: number; h: number };
@@ -28,7 +28,9 @@ export const WIDGET_SIZES: Record<WidgetType, WidgetSize> = {
   "kpi-mode": KPI, "kpi-event": KPI, "kpi-alerts": KPI, "kpi-indicator": KPI,
   "kpi-iot": { w: 3, h: 3, minW: 2, minH: 3 },
   ranking: CARD, map: CARD, impact: CARD, insight: CARD, score: CARD, history: CARD,
-  indicators: { w: 12, h: 11, minW: 6, minH: 7 },
+  trend: { w: 6, h: 7, minW: 4, minH: 6 }, panel: { w: 6, h: 8, minW: 4, minH: 6 },
+  // One table page (8 rows) without a scrollbar; fewer rows leave room inside the card, not a hole below it.
+  indicators: { w: 12, h: 9, minW: 6, minH: 6 },
   sensor: { w: 4, h: 7, minW: 3, minH: 5 },
 };
 /** Width choices offered in a widget's settings, in grid columns. */
@@ -36,7 +38,7 @@ export const WIDTH_PRESETS = [{ w: 3, label: "1/4" }, { w: 4, label: "1/3" }, { 
 
 /** Stable id from type and configuration, so the same widget is never added twice. */
 export function widgetId(type: WidgetType, config: WidgetConfig = {}) {
-  const parts = [config.kind, config.stat, config.metric, config.deviceId, config.field].filter(part => part != null);
+  const parts = [config.kind, config.stat, config.metric, config.deviceId, config.field, config.panel].filter(part => part != null);
   return parts.length ? `${type}:${parts.join(":")}` : type;
 }
 export const instance = (type: WidgetType, config: WidgetConfig = {}): WidgetInstance => ({ id: widgetId(type, config), type, config });
@@ -44,16 +46,15 @@ export const instance = (type: WidgetType, config: WidgetConfig = {}): WidgetIns
 const IOT_STATS: IotStat[] = ["devices", "active", "reporting", "rejected"];
 
 /**
- * What a profile starts with: the KPI band, device numbers when there are devices, the
- * cards the mode asks for in the backend's panel order, then every visible sensor field.
- *
- * The card choice is the single place to swap for an AI choice later (a backend
- * `view.widgets` list picked by Gemini with structured output). Anything it returns must
- * still pass the data checks here, so a widget never renders empty because it was asked for.
+ * What a profile starts with. The fixed frame (KPI band, map, highlights, indicator table)
+ * is always there; between the KPIs and the frame come the panels the AI picked for the
+ * profile (`view.panels`: gauges, 7-day lines, bars from app/panels.py), most important
+ * first, already narrowed to the ones the region has data for. Then every sensor field.
  */
-export function defaultWidgets(view: DashboardView, devices: DTO<"DeviceDashboard">[], hasIndicators: boolean): WidgetInstance[] {
+export function defaultWidgets(view: DashboardView, devices: DTO<"DeviceDashboard">[], region: DTO<"OurRegion"> | null | undefined): WidgetInstance[] {
   const out: WidgetInstance[] = [instance("kpi-mode"), ...view.events.map(event => instance("kpi-event", { kind: event.kind })), instance("kpi-alerts")];
   if (devices.length) out.push(...IOT_STATS.map(stat => instance("kpi-iot", { stat })));
+  out.push(...(view.panels ?? []).map(panel => instance("panel", { panel: panel.id })));
   const cards: WidgetInstance[] = [];
   const add = (item: WidgetInstance) => { if (!cards.some(card => card.id === item.id)) cards.push(item); };
   for (const panel of view.mode.panels) {
@@ -64,7 +65,7 @@ export function defaultWidgets(view: DashboardView, devices: DTO<"DeviceDashboar
   }
   if (view.focus) cards.splice(Math.min(1, cards.length), 0, instance("map"));
   if (view.mode.id === "responden" && view.focus) add(instance("score"));
-  if (hasIndicators) add(instance("indicators"));
+  if (region?.indicators.length) add(instance("indicators"));
   out.push(...cards);
   for (const { device, widgets } of devices) for (const widget of widgets) if (!widget.hidden) out.push(instance("sensor", { deviceId: device.id, field: widget.field }));
   return out;

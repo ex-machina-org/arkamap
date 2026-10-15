@@ -34,7 +34,7 @@ function SettingsForm({ item, width, ctx, onSave, onRemove, onClose, onDevicesCh
   const [chart, setChart] = useState<ChartKind | undefined>(sensor?.widget);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
-  const summary = useRegionSummary(item.type === "kpi-indicator" || item.type === "ranking" ? ctx.view.focus?.id ?? null : null);
+  const summary = useRegionSummary(item.type === "kpi-indicator" || item.type === "ranking" || item.type === "trend" ? ctx.view.focus?.id ?? null : null);
   const regionMetrics = (summary?.indicators ?? []).map(indicator => ({ id: indicator.metric, label: indicator.label })).sort((a, b) => a.label.localeCompare(b.label));
   const minW = WIDGET_SIZES[item.type].minW;
   const kinds = item.type === "history" ? (ctx.view.history ?? []).map(series => series.kind) : ctx.view.events.map(event => event.kind);
@@ -83,7 +83,7 @@ function SettingsForm({ item, width, ctx, onSave, onRemove, onClose, onDevicesCh
           {kinds.map(kind => <SelectItem key={kind} id={kind}>{EVENT_KINDS[kind].label}</SelectItem>)}
         </Select>
       </Field>}
-      {(item.type === "kpi-indicator" || item.type === "ranking") && <Field label="Metrik">
+      {(item.type === "kpi-indicator" || item.type === "ranking" || item.type === "trend") && <Field label="Metrik">
         {regionMetrics.length ? <Select aria-label="Metrik" selectedKey={config.metric ?? ctx.view.ranking.metric} onSelectionChange={value => setConfig({ ...config, metric: String(value) })}>
           {regionMetrics.map(metric => <SelectItem key={metric.id} id={metric.id}>{metric.label}</SelectItem>)}
         </Select> : <p className="text-caption-1 text-text-secondary">{summary === undefined && ctx.view.focus ? "Memuat daftar metrik..." : "Butuh wilayah profil dengan data indikator."}</p>}

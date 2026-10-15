@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 from ..auth import (admin_user, current_user, hash_password, make_token, new_device_key, temp_password,
                     verify_password)
 from ..config import ADMIN_EMAILS, IDN_BBOX
-from .. import fields, modes
+from .. import fields, panels, modes
 from ..db import conn, execute, query, query_one
 from ..iot import broker
 from ..iot import ingest as iot
@@ -279,7 +279,7 @@ def change_password(body: PasswordChange, request: Request, user: dict = Depends
 
 MAX_PROFILES = 3
 _PROFILE_COLS = """p.id, p.mode, p.mode_by, p.role, p.goals, p.region_id, r.name AS region_name, p.metrics,
-    p.metrics_by, p.field, p.fit, p.unsupported, p.ai_message, p.created_at, p.updated_at"""
+    p.metrics_by, p.panels, p.field, p.fit, p.unsupported, p.ai_message, p.created_at, p.updated_at"""
 
 
 def _profiles(user_id: int) -> list[dict]:
@@ -312,7 +312,7 @@ def _read(body: ProfileIn) -> dict:
 
 def _values(body: ProfileIn, r: dict) -> tuple:
     return (r["mode"], r["mode_by"], body.role, body.goals, body.region_id, Jsonb(r["metrics"]), r["by"],
-            r["field"], r["fit"], Jsonb(r["unsupported"]), r["message"])
+            Jsonb(r["panels"]), r["field"], r["fit"], Jsonb(r["unsupported"]), r["message"])
 
 
 def _create_profile(user_id: int, body: ProfileIn) -> int:
@@ -323,8 +323,8 @@ def _create_profile(user_id: int, body: ProfileIn) -> int:
                 >= MAX_PROFILES:
             raise HTTPException(409, f"maksimal {MAX_PROFILES} profil; hapus satu dulu")
         pid = cur.execute(
-            "INSERT INTO profile (user_id, mode, mode_by, role, goals, region_id, metrics, metrics_by,"
-            " field, fit, unsupported, ai_message) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+            "INSERT INTO profile (user_id, mode, mode_by, role, goals, region_id, metrics, metrics_by, panels,"
+            " field, fit, unsupported, ai_message) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
             " RETURNING id", (user_id, *_values(body, r))).fetchone()["id"]
         cur.execute("UPDATE app_user SET active_profile_id = %s WHERE id = %s", (pid, user_id))
     return pid
@@ -333,7 +333,7 @@ def _create_profile(user_id: int, body: ProfileIn) -> int:
 def _update_profile(pid: int, body: ProfileIn) -> None:
     r = _read(body)
     execute("UPDATE profile SET mode = %s, mode_by = %s, role = %s, goals = %s, region_id = %s, metrics = %s,"
-            " metrics_by = %s, field = %s, fit = %s, unsupported = %s, ai_message = %s, updated_at = now()"
+            " metrics_by = %s, panels = %s, field = %s, fit = %s, unsupported = %s, ai_message = %s, updated_at = now()"
             " WHERE id = %s", (*_values(body, r), pid))
 
 
@@ -792,6 +792,10 @@ def dashboard(hours: int = Query(24, ge=1, le=24 * 30), user: dict = Depends(cur
                               "indicators": [{**inds[m], "reason": reasons[m], "added_for_sensor": m in extra}
                                              for m in chosen + extra if m in inds],
                               "missing": [m for m in chosen + extra if m not in inds]}
+            # Panels read one region, so only a profile with a region gets them.
+            picked = prof["panels"] or panels.rule_picks(chosen, f"{prof['role']}. {prof['goals'] or ''}")   # saved before panels
+            shown = set(panels.with_data([p["id"] for p in picked], set(inds)))
+            view["panels"] = [p for p in picked if p["id"] in shown]
         else:
             ours["metrics"] = prof["metrics"] + [{"metric": m, "reason": for_sensor[m]} for m in extra]
     return {"profile_needed": prof is None, "ours": ours, "view": view, "devices": dev_out}

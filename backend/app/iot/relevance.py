@@ -7,7 +7,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from .. import fields, modes
+from .. import fields, modes, panels
 from ..config import GEMINI_API_KEY, LLM_MODEL
 from ..db import query
 
@@ -45,6 +45,11 @@ class Pick(BaseModel):
     reason: str = Field(description="satu kalimat singkat kenapa relevan bagi pengguna ini")
 
 
+class PanelPick(BaseModel):
+    id: str
+    reason: str = Field(description="satu kalimat singkat kenapa panel ini berguna bagi pengguna ini")
+
+
 class Reading(BaseModel):
     mode: Literal["protected", "responden", "plan"] = Field(description=(
         "protected = turun ke lapangan saat kejadian; responden = mencegah sebelum terjadi; "
@@ -54,6 +59,9 @@ class Reading(BaseModel):
         "cocok = kebutuhan pengguna tertutup data kami; sebagian = sebagian saja; "
         "tidak_cocok = data kami hampir tidak menjawab kebutuhannya"))
     metrics: list[Pick] = Field(description="0-8 metrik yang benar-benar relevan, urut dari terpenting")
+    panels: list[PanelPick] = Field(description=(
+        "3-8 panel dashboard (card/chart) dari katalog, urut dari terpenting; pilih variasi bentuk "
+        "(gauge, garis 7 hari, batang) yang menjawab kebutuhannya, termasuk penyebab yang berkaitan"))
     unsupported: list[str] = Field(description=(
         "hal yang pengguna minta atau butuhkan tetapi TIDAK ada di data kami, "
         "mis. 'jumlah kendaraan', 'kualitas air sungai'; kosong bila semua tersedia"))
@@ -69,6 +77,7 @@ def rule_reading(text: str, mode: str | None = None, known: set[str] | None = No
     mode_id = mode or modes.rule_mode(text)
     picked = modes.order_metrics(mode_id, f["metrics"], known if known is not None else set(f["metrics"]))
     return {
+        "panels": panels.rule_picks(picked, text),
         "field": f["id"], "fit": None, "unsupported": [], "by": "rule",
         "mode": mode_id, "mode_by": "user" if mode else "rule",
         "metrics": [{"metric": m, "reason": f"bagian dari tampilan {f['label']} (mode {modes.get(mode_id)['label']})"}
@@ -114,12 +123,18 @@ def read_profile(role: str, goals: str | None, mode: str | None = None) -> dict:
                 + "\n\nMetrik per wilayah yang tersedia (untuk daftar metrics, hanya id ini):\n"
                 + "\n".join(f"- {m['metric']} [{m['aspect']}]: {m['label']}. {m['description'][:110]}"
                             for m in catalog)
+                + "\n\nKatalog panel dashboard (untuk daftar panels, hanya id ini; isinya otomatis "
+                "wilayah pengguna):\n"
+                + "\n".join(f"- {p['id']} [{p['theme']}]: {p['title']}. {p['description']}" for p in panels.catalogue())
                 + "\n\nData lain yang juga tersedia (bukan metrik, tapi JANGAN disebut tidak tersedia):\n"
                 + "\n".join(f"- {d}" for d in OTHER_DATA))
             f = fields.get(res.field)
             return {"field": f["id"], "fit": res.fit, "by": "ai",
                     "mode": mode or res.mode, "mode_by": "user" if mode else "ai",
                     "metrics": [p.model_dump() for p in res.metrics if p.metric in known][:8],
+                    # known ids only, each once, keeping the model's order and first reason
+                    "panels": [{"id": i, "reason": next(p.reason for p in res.panels if p.id == i)}
+                               for i in panels.valid([p.id for p in res.panels])],
                     "unsupported": [u for u in res.unsupported if u.strip()][:10],
                     "message": res.message}
         except Exception as exc:  # noqa: BLE001

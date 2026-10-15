@@ -12,8 +12,9 @@ import { ImpactCard } from "./impact-card";
 import { IndicatorTable } from "./indicator-table";
 import { InsightTabs, type ListTab } from "./insight-tabs";
 import { alertsStat, eventStat, iotStat, IOT_STAT_LABELS, modeStat } from "../kpi-stats";
-import { IndicatorKpiWidget, LazyRegionMap, MetricRankingWidget } from "./configurable-widgets";
+import { IndicatorKpiWidget, LazyRegionMap, MetricRankingWidget, MetricTrendWidget } from "./configurable-widgets";
 import { KpiTile } from "./kpi-tiles";
+import { PanelWidget } from "./panel-catalog";
 import { RankingCard } from "./ranking-card";
 import { ScoreCard } from "./score-card";
 
@@ -23,6 +24,7 @@ export type WidgetContext = {
   region: DTO<"OurRegion"> | null | undefined;
   devices: DTO<"DeviceDashboard">[];
   metric: (id: string) => DTO<"MetricDef"> | undefined;
+  panel: (id: string) => DTO<"PanelDef"> | undefined;
 };
 
 const findSensor = (devices: WidgetContext["devices"], deviceId?: number, field?: string) => {
@@ -42,6 +44,8 @@ export function defaultTitle(item: Pick<WidgetInstance, "type" | "config">, ctx:
     case "kpi-iot": return stat ? IOT_STAT_LABELS[stat] : "Perangkat IoT";
     case "kpi-indicator": return metricLabel(metric) || "Indikator";
     case "ranking": return `Peringkat ${metricLabel(metric ?? ctx.view.ranking.metric)}`;
+    case "trend": return `${metricLabel(metric) || "Indikator"}, 7 Hari`;
+    case "panel": return (item.config.panel && ctx.panel(item.config.panel)?.title) || prettifyId(item.config.panel ?? "panel");
     case "map": return "Peta Wilayah";
     case "impact": return "Dampak Tercatat";
     case "insight": return "Sorotan Wilayah";
@@ -76,6 +80,8 @@ export function renderWidget(item: WidgetInstance, ctx: WidgetContext): ReactNod
       : view.ranking.results.length ? <RankingCard ranking={view.ranking} metricLabel={ctx.metric(view.ranking.metric)?.label ?? prettifyId(view.ranking.metric)}
         unit={ctx.metric(view.ranking.metric)?.unit ?? region?.indicators.find(item => item.metric === view.ranking.metric)?.unit} focusName={view.focus?.name} title={title} />
       : unavailable(name, "Belum ada wilayah dengan data untuk peringkat ini.");
+    case "panel": return <PanelWidget id={item.config.panel} ctx={ctx} title={name} />;
+    case "trend": return <MetricTrendWidget metric={metric} ctx={ctx} title={title} />;
     case "map": return view.focus ? <LazyRegionMap focus={view.focus} layers={view.layers} title={title} /> : unavailable(name, "Peta wilayah butuh wilayah profil; profil ini memantau seluruh Indonesia.");
     case "impact": return view.impact ? <ImpactCard impact={view.impact} title={title} /> : unavailable(name, "Dampak tercatat hanya dihitung untuk mode Tanggap darurat.");
     case "insight": {
@@ -83,7 +89,7 @@ export function renderWidget(item: WidgetInstance, ctx: WidgetContext): ReactNod
       return <InsightTabs view={view} tabs={tabs.length ? tabs : ["alerts", "events"]} />;
     }
     case "score": return view.focus ? <ScoreCard regionId={view.focus.id} title={title} /> : unavailable(name, "Skor gabungan butuh wilayah profil.");
-    case "indicators": return region?.indicators.length ? <div className="h-full overflow-auto rounded-2xl"><IndicatorTable region={region} title={title} /></div>
+    case "indicators": return region?.indicators.length ? <div className="h-full overflow-auto rounded-2xl [&>section]:min-h-full"><IndicatorTable region={region} title={title} /></div>
       : unavailable(name, "Profil ini belum punya indikator wilayah.");
     case "history": {
       const series = view.history?.find(entry => entry.kind === kind);
