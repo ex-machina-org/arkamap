@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ComponentType } from "react";
+import { useState, type ComponentType, type ReactNode } from "react";
 import {
   RiArrowDownCircleFill,
   RiArrowUpCircleFill,
@@ -59,6 +59,8 @@ export type Stat = {
   hint?: string;
   /** Breakdown variant: the parts behind the value, drawn as a split bar and a list. */
   breakdown?: StatPart[];
+  /** Footer variant: decoration drawn behind the card's content (absolutely positioned by the caller). */
+  background?: ReactNode;
 };
 
 export type StatPart = { label: string; value: number; color: keyof typeof PART_COLORS };
@@ -223,7 +225,8 @@ export function StatIconTile({ icon: Icon, tone = "blue", size = "md", className
 
 function FooterStatCard({ stat }: { stat: Stat }) {
   return (
-    <section className="flex min-w-0 flex-col rounded-2xl bg-background-secondary-default p-2">
+    <section className="relative isolate flex min-w-0 flex-col overflow-hidden rounded-2xl bg-background-secondary-default p-2">
+      {stat.background}
       {/* Icon tile + optional info glyph, both hanging from the same top inset */}
       <div className="flex w-full items-start justify-between gap-2.5 p-2">
         <StatIconTile icon={stat.icon} tone={stat.tone} />
