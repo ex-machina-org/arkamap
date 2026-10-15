@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { RiCloseLine, RiFileList3Line } from "@remixicon/react";
+import { RiCloseLine, RiFileList3Line, RiGroupLine, RiLightbulbLine } from "@remixicon/react";
+import { scoreWord } from "./data-scale";
+import { PriorityFigures, ScoreBar } from "./data-views";
 import { Button } from "@/components/base/buttons/button";
 import { Chip } from "@/components/base/badges/chip";
 import { formatValue, type RankEntry, type Situation } from "./situation";
@@ -92,7 +94,7 @@ export function RegionCard({
                 href={photo.pageUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="absolute right-2 bottom-2 rounded-md bg-black/45 px-1.5 py-0.5 text-[10px] leading-4 text-white/90 backdrop-blur-sm hover:text-white"
+                className="absolute right-2 bottom-2 rounded-md bg-black/45 px-1.5 py-0.5 text-caption-2-regular text-white/90 backdrop-blur-sm hover:text-white"
               >
                 Foto: Wikipedia
               </a>
@@ -111,34 +113,60 @@ export function RegionCard({
       )}
 
       {priority ? (
-        <div className="rounded-2lg bg-background-inner-default p-3 shadow-card">
-          <Chip variant="bold" color={priority.level === "siaga" ? "rose" : "yellow"}>{priority.level === "siaga" ? "Siaga" : "Waspada"}</Chip>
-          <ul className="mt-2 list-disc space-y-0.5 pl-4 text-body-2-regular text-text-secondary">
-            {priority.reasons.map((reason) => <li key={reason}>{reason}</li>)}
-          </ul>
-          {priority.advice.map((line) => <p key={line} className="mt-2 text-body-2-regular text-text-primary">{line}</p>)}
+        <div className="flex flex-col gap-2.5 rounded-2lg bg-background-inner-default p-3 shadow-card">
+          <span className="flex items-center justify-between gap-2">
+            <Chip variant="bold" color={priority.level === "siaga" ? "rose" : "yellow"}>{priority.level === "siaga" ? "Siaga" : "Waspada"}</Chip>
+            {priority.population != null && (
+              <span className="flex items-center gap-1 text-caption-1-medium tabular-nums text-text-secondary">
+                <RiGroupLine className="size-3.5" aria-hidden="true" />
+                {integer.format(priority.population)} jiwa
+              </span>
+            )}
+          </span>
+          <PriorityFigures signals={priority.signals} context={priority.context} />
+          <p className="sr-only">{priority.reasons.join(". ")}</p>
         </div>
       ) : (
         <div className="rounded-2lg bg-background-inner-default p-3 shadow-card">
           <p className="text-body-2-regular text-text-secondary">Skor perhatian</p>
           <div className="mt-0.5 flex items-center gap-2">
             <p className="text-title-1-medium tabular-nums text-text-primary">{entry.score != null ? decimal.format(entry.score) : "–"}</p>
-            <Chip variant="bold" color={color}>{entry.score == null ? "Belum ada data" : entry.score >= 75 ? "Tinggi" : entry.score >= 50 ? "Sedang" : "Rendah"}</Chip>
+            <Chip variant="bold" color={color}>{scoreWord(entry.score)}</Chip>
           </div>
-          <p className="mt-1 text-body-2-regular text-text-tertiary">
+          <ScoreBar score={entry.score} label={`Skor perhatian ${entry.name}`} className="mt-2" />
+          <p className="mt-2 text-caption-1-regular text-text-tertiary">
             Dari {rank.metricLabel.toLowerCase()}.{rank.modelled ? " Indeks turunan model, bukan peringatan resmi." : ""}
           </p>
         </div>
       )}
 
-      <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1.5 px-1 text-body-2-regular">
+      {/* What to do, as steps: the advice lines are already ordered most specific first. */}
+      {priority && priority.advice.length > 0 && (
+        <div className="flex flex-col gap-1.5 px-1">
+          <p className="flex items-center gap-1.5 text-caption-1-medium text-text-secondary">
+            <RiLightbulbLine className="size-3.5" aria-hidden="true" />
+            Yang Perlu Dilakukan
+          </p>
+          <ol className="flex flex-col gap-1.5">
+            {priority.advice.map((line, index) => (
+              <li key={line} className="flex gap-2 text-body-2-regular text-text-primary">
+                {priority.advice.length > 1 && <span className="mt-px grid size-4.5 shrink-0 place-items-center rounded-full bg-background-tertiary-default text-caption-2-semibold tabular-nums text-text-secondary">{index + 1}</span>}
+                <span>{line}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {/* A priority already shows its figures above; only the plain ranking needs the table. */}
+      {!priority && <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1.5 px-1 text-body-2-regular">
         {facts.map(([term, value]) => (
           <div key={term} className="contents">
             <dt className="truncate text-text-secondary" title={term}>{term}</dt>
             <dd className="text-right tabular-nums text-text-primary">{value}</dd>
           </div>
         ))}
-      </dl>
+      </dl>}
 
       <Button
         variant="secondary"
