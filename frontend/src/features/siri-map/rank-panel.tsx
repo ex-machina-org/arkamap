@@ -23,19 +23,26 @@ export function RankPanel({ layer, label, selectedRegionId, onSelect }: {
   if (!rows.length) return <p className="py-4 text-center text-body-2-regular text-text-secondary">Belum ada nilai untuk data ini.</p>;
   const stops = rampStopsFor(layer.metric.metric, aspectOf(layer.metric.aspect));
   const shown = all ? rows : rows.slice(0, TOP);
+  const unit = layer.metric.unit && !layer.metric.unit.startsWith("indeks") ? layer.metric.unit : "";
   return (
     <div className="space-y-2">
-      <p className="text-body-2-regular text-text-secondary">{label ?? layer.metric.label}{layer.metric.unit ? ` (${layer.metric.unit})` : ""}, diurutkan dari data tanpa pembobotan.</p>
+      <p className="text-caption-1-regular text-text-tertiary">
+        <span className="text-caption-1-medium text-text-secondary">{label ?? layer.metric.label}</span>{unit ? `, dalam ${unit}` : ""}. Panjang bar dan warnanya sama dengan warna wilayah di peta.
+      </p>
       <ol className="space-y-0.5">
         {shown.map((row, i) => {
           const on = row.id === selectedRegionId;
+          const color = rampAt(stops, row.norm / 100);
           return (
             <li key={row.id}>
-              <button type="button" aria-current={on || undefined} onClick={() => onSelect(row.id)} className={cx("button-press-motion flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring", on ? "bg-background-primary-active" : "hover:bg-background-primary-hover")}>
-                <span className="w-5 shrink-0 text-right text-caption-1-regular tabular-nums text-text-tertiary">{i + 1}</span>
-                <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: rampAt(stops, row.norm / 100) }} />
-                <span className="min-w-0 flex-1 truncate text-body-medium text-text-primary">{row.name}</span>
-                <span className="shrink-0 text-body-semibold tabular-nums text-text-primary">{fmtAuto(row.value)}</span>
+              <button type="button" aria-current={on || undefined} aria-label={`${i + 1}. ${row.name}, ${fmtAuto(row.value)}${unit ? ` ${unit}` : ""}`} onClick={() => onSelect(row.id)} className={cx("button-press-motion grid w-full grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-x-2.5 gap-y-1 rounded-lg px-2 py-1.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring", on ? "bg-background-primary-active" : "hover:bg-background-primary-hover")}>
+                <span className="row-span-2 text-right text-caption-1-regular tabular-nums text-text-tertiary">{i + 1}</span>
+                <span className="truncate text-body-medium text-text-primary">{row.name}</span>
+                <span className="row-span-2 text-body-semibold tabular-nums text-text-primary">{fmtAuto(row.value)}</span>
+                {/* Length is the region's place on the layer's 0-100 scale, colour the one it has on the map. */}
+                <span aria-hidden="true" className="h-1 overflow-hidden rounded-full bg-background-tertiary-default">
+                  <span className="block h-full rounded-full" style={{ width: `${Math.max(2, Math.min(100, row.norm))}%`, backgroundColor: color }} />
+                </span>
               </button>
             </li>
           );

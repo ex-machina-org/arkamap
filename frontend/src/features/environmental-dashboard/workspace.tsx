@@ -6,6 +6,7 @@ import { ApiDashboard } from "./components/api-dashboard";
 import { useSession } from "@/hooks/use-session";
 import { greeting } from "./greeting";
 import { useProfileSwitcher } from "@/hooks/use-profile-switcher";
+import { profileArtwork } from "@/lib/profile-artwork";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 
 // Loaded when shown: each of these pulls in maplibre (device pages, the preview map) or the whole chat (Kodama's panel),
@@ -373,7 +374,11 @@ export default function EnvironmentalDashboardWorkspace({ devicePage, deviceId, 
         activeId={activeNav}
         assistant={!preview && assistantOpen ? <Suspense fallback={null}><JevAssistantPanel onClose={() => setAssistantOpen(false)} /></Suspense> : undefined}
         onAskAssistant={preview ? undefined : () => setAssistantOpen(true)}
-        identity={preview ? undefined : { name: session.me?.user.name ?? "Pengunjung", role: session.me?.profile?.role ?? "Map publik" }}
+        identity={preview ? undefined : {
+          name: session.me?.user.name ?? "Pengunjung",
+          role: session.me?.profile?.role ?? "Map publik",
+          avatarSrc: session.me?.profile ? profileArtwork(session.me.profile.mode) : undefined,
+        }}
         onAccountAction={preview ? undefined : label => { if (label === "Keluar" && session.me) void session.logout().catch(cause => toast.error(cause.message)); else window.dispatchEvent(new Event("arkamap-profile-open")); }}
         profiles={preview ? undefined : profileSwitcher.options}
         activeMode={preview ? selectedMode : session.me?.profile?.mode === "protected" ? "protect" : session.me?.profile?.mode === "responden" ? "responder" : session.me?.profile?.mode === "plan" ? "plan" : "all"}

@@ -493,7 +493,7 @@ export interface DashboardSidebarProps {
   onSuperintelligenceClick?: () => void;
   onNavigate?: (key: string) => void;
   className?: string;
-  identity?: { name: string; role: string };
+  identity?: { name: string; role: string; avatarSrc?: string };
   onAccountAction?: (label: string) => void;
   profiles?: ProfileOption[];
 }

@@ -21,6 +21,32 @@
   mix-blend-mode: normal;
 }
 
+/* A <details> that opens and closes with height instead of snapping. Browsers
+ * without ::details-content or interpolate-size keep the instant toggle. */
+@supports (interpolate-size: allow-keywords) {
+  .details-motion {
+    interpolate-size: allow-keywords;
+  }
+  .details-motion::details-content {
+    height: 0;
+    opacity: 0;
+    overflow: clip;
+    transition:
+      height 200ms cubic-bezier(0.23, 1, 0.32, 1),
+      opacity 150ms ease-out,
+      content-visibility 200ms allow-discrete;
+  }
+  .details-motion[open]::details-content {
+    height: auto;
+    opacity: 1;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .details-motion::details-content {
+      transition: none;
+    }
+  }
+}
+
 @keyframes ai-chat-text-shimmer {
   from {
     background-position: 200% center;

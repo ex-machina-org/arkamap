@@ -1,6 +1,6 @@
 "use client";
 
-import type { ComponentType, CSSProperties, ReactElement } from "react";
+import type { ComponentType, CSSProperties, ReactElement, ReactNode } from "react";
 import { RiDashboardLine, RiSidebarFoldLine, RiSidebarUnfoldLine } from "@remixicon/react";
 import { ThemeToggle } from "@/components/application/theme/theme-toggle";
 import { ArkamapMark } from "@/components/foundations/brand/arkamap-brand";
@@ -40,7 +40,6 @@ function FilterChip({ label, title, icon: Icon, count, pressed, color, onClick }
   color?: string;
   onClick: () => void;
 }) {
-  const empty = count === 0 && !pressed;
   return (
     <DockTooltip label={count == null ? title : `${title}: ${integer.format(count)}`}>
       <button
@@ -54,7 +53,7 @@ function FilterChip({ label, title, icon: Icon, count, pressed, color, onClick }
           FOCUS,
           pressed
             ? color ? "text-text-white shadow-sm" : "bg-background-primary-default text-text-primary shadow-card"
-            : cx("text-text-secondary hover:bg-background-primary-hover hover:text-text-primary", empty && "opacity-55"),
+            : "text-text-secondary hover:bg-background-primary-hover hover:text-text-primary",
         )}
       >
         {color && !pressed ? (
@@ -81,6 +80,8 @@ interface MapDockProps {
   onToggleSidebar: () => void;
   isAssistantActive: boolean;
   onToggleAssistant: () => void;
+  /** What colours the regions; leads the strip, since it and the filters both decide what the map shows. */
+  dataPicker?: ReactNode;
 }
 
 export function MapDock({
@@ -91,6 +92,7 @@ export function MapDock({
   onToggleSidebar,
   isAssistantActive,
   onToggleAssistant,
+  dataPicker,
 }: MapDockProps) {
   const total = counts ? HAZARD_ORDER.reduce((sum, type) => sum + counts[type], 0) : null;
   const PanelIcon = isSidebarOpen ? RiSidebarFoldLine : RiSidebarUnfoldLine;
@@ -119,11 +121,15 @@ export function MapDock({
         </div>
       </div>
 
-      {/* The one loud element: what the map shows, filterable, with live counts. */}
+      {/* The one loud element: what the map shows. Region colours first, then the event pins, filterable, with live counts. */}
       <nav
-        aria-label="Filter jenis kejadian"
+        aria-label="Isi peta"
         className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto rounded-full bg-background-secondary-default p-1 shadow-sidebar [scrollbar-width:none] md:flex-none"
       >
+        {dataPicker && <>
+          {dataPicker}
+          <span aria-hidden className="mx-1 h-5 w-px shrink-0 bg-border-button-default" />
+        </>}
         <FilterChip
           label="Semua"
           title="Semua kejadian"
@@ -133,7 +139,8 @@ export function MapDock({
           onClick={() => onSelectHazard("all")}
         />
         <span aria-hidden className="mx-1 h-5 w-px shrink-0 bg-border-button-default" />
-        {HAZARD_ORDER.map((type) => (
+        {/* A hazard with nothing on the map says nothing, so it leaves the strip; a picked one stays so it can be cleared. */}
+        {HAZARD_ORDER.filter((type) => counts?.[type] !== 0 || activeHazard === type).map((type) => (
           <FilterChip
             key={type}
             label={HAZARDS[type].label}

@@ -37,6 +37,8 @@ export interface SituationTile {
   value: string;
   caption: string;
   tone?: "rose" | "yellow" | "neutral";
+  /** 0-100 attention score behind the value, drawn as a bar. */
+  score?: number;
 }
 
 export interface RankDetail {
@@ -212,13 +214,13 @@ export function useSituation(view: View | undefined, signedIn: boolean): { situa
       const alert = [...view.alerts.region_alerts].sort((a, b) => b.normalised - a.normalised)[0];
       const warnings = view.alerts.weather_warnings?.length ?? 0;
       const tiles: SituationTile[] = [];
-      if (top) tiles.push({ label: "Paling perlu perhatian", value: top.name, caption: `Skor ${decimal.format(top.score ?? 0)} · ${label(rankMetric).toLowerCase()}`, tone: scoreTone(top.score) });
+      if (top) tiles.push({ label: "Paling perlu perhatian", value: top.name, caption: label(rankMetric), tone: scoreTone(top.score), score: top.score ?? undefined });
       if (mainEvent) tiles.push({ label: EVENT_LABEL[mainEvent.kind], value: integer.format(mainEvent.count), caption: `${mainEvent.days} hari terakhir` });
       if (alert) {
         // "PM2.5 tertinggi (prakiraan 48 jam)": the bracket goes to the caption so the label fits a half-width tile.
         const [, name = alert.label, qualifier] = alert.label.match(/^(.*?)\s*\((.*)\)$/) ?? [];
         const when = qualifier ? qualifier.charAt(0).toUpperCase() + qualifier.slice(1) : alert.name;
-        tiles.push({ label: name, value: formatValue(alert.value, unit(alert.metric)), caption: `${when} · skor ${decimal.format(alert.normalised)}`, tone: scoreTone(alert.normalised) });
+        tiles.push({ label: name, value: formatValue(alert.value, unit(alert.metric)), caption: when, tone: scoreTone(alert.normalised), score: alert.normalised });
       }
       else tiles.push({ label: "Peringatan cuaca", value: integer.format(warnings), caption: warnings ? "Aktif dari BMKG" : "Tidak ada yang aktif", tone: warnings ? "yellow" : "neutral" });
       return {
@@ -249,7 +251,7 @@ export function useSituation(view: View | undefined, signedIn: boolean): { situa
     const guestRows = (table.data?.rows ?? []).slice(0, 5);
     // The region tile leads: it is the only one whose value is a name, and it gets the full width.
     const tiles: SituationTile[] = data ? [
-      ...(data.fire_risk_top[0] ? [{ label: "Api aktif paling tinggi", value: data.fire_risk_top[0].name, caption: `Skor ${decimal.format(data.fire_risk_top[0].score)} · ${label(GUEST_METRIC).toLowerCase()}`, tone: scoreTone(data.fire_risk_top[0].score) }] : []),
+      ...(data.fire_risk_top[0] ? [{ label: "Api aktif paling tinggi", value: data.fire_risk_top[0].name, caption: label(GUEST_METRIC), tone: scoreTone(data.fire_risk_top[0].score), score: data.fire_risk_top[0].score }] : []),
       { label: "Titik panas", value: integer.format(data.counts.hotspots_7d), caption: "7 hari terakhir" },
       { label: "Gempa M4,5 ke atas", value: integer.format(data.counts.quakes_7d_m45), caption: "7 hari terakhir" },
     ] : [];

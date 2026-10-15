@@ -40,32 +40,35 @@ export function MapIncidentCard({
       initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
       animate={{ opacity: 1, scale: 1, transition: { duration: 0.18, ease: [0.23, 1, 0.32, 1] } }}
       exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.97, transition: { duration: 0.12, ease: "easeOut" } }}
-      className="w-full rounded-xl border border-border-button-default bg-background-primary-default p-3.5 shadow-dropdown"
+      // Same anatomy as RegionCard and the dashboard cards: grey card, the reading in a white inset.
+      className="flex w-full flex-col gap-3 rounded-2xl bg-background-secondary-default p-4 shadow-dropdown"
     >
-      <div className="flex items-start gap-3">
-        <span style={{ backgroundColor: hazard.color }} className="grid size-9 shrink-0 place-items-center rounded-lg text-text-white">
+      <header className="flex items-start gap-3">
+        <span style={{ backgroundColor: hazard.color }} className="grid size-9 shrink-0 place-items-center rounded-2lg text-text-white">
           <Icon className="size-5" aria-hidden="true" />
         </span>
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-body-semibold text-text-primary">{incident.title}</h3>
-          <p className="text-caption-1-regular text-text-tertiary">{hazard.label} · {relativeTime(incident.lastUpdated)}</p>
+          <h3 className="truncate text-title-3-medium text-text-primary">{incident.title}</h3>
+          <p className="text-body-2-regular text-text-secondary">{hazard.label}, {relativeTime(incident.lastUpdated)}</p>
         </div>
         <Button variant="ghost" size="xs" iconOnly leadingIcon={RiCloseLine} aria-label="Tutup detail" onClick={onClose} />
+      </header>
+
+      <div className="rounded-2lg bg-background-inner-default p-3 shadow-card">
+        <p className="text-title-1-medium tabular-nums text-text-primary">{incident.reading}</p>
+        <p className="mt-1 text-body-2-regular text-text-secondary">{incident.summary}</p>
       </div>
 
-      <p className="mt-3 text-title-1-semibold tabular-nums text-text-primary">{incident.reading}</p>
-      <p className="mt-1 text-body-regular text-text-secondary">{incident.summary}</p>
-
-      <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 border-t border-border-button-default pt-3 text-caption-1-regular">
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 px-1 text-body-2-regular">
         {facts.map(([term, value]) => (
           <div key={term} className="contents">
-            <dt className="text-text-tertiary">{term}</dt>
-            <dd className="min-w-0 break-words text-right text-text-primary">{value}</dd>
+            <dt className="text-text-secondary">{term}</dt>
+            <dd className="min-w-0 break-words text-right tabular-nums text-text-primary">{value}</dd>
           </div>
         ))}
       </dl>
 
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2">
         {onOpenResponderRoute && (
           <Button
             variant="primary"

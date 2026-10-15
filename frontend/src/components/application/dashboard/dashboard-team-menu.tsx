@@ -111,7 +111,8 @@ export function DashboardTeamMenu({
   onSettings,
   showTheme = true,
 }: {
-  identity?: { name: string; role: string };
+  /** `avatarSrc` is the active profile's portrait; without it the avatar shows initials. */
+  identity?: { name: string; role: string; avatarSrc?: string };
   onAction?: (label: string) => void;
   /** Monitoring profiles of the signed-in account; when there are any, the menu links to the profile picker. */
   profiles?: ProfileOption[];
@@ -154,7 +155,7 @@ export function DashboardTeamMenu({
           <Avatar
             size="md"
             color="accent"
-            src={identity ? undefined : "/avatars/michael-ekstrom.webp"}
+            src={identity ? identity.avatarSrc : "/avatars/michael-ekstrom.webp"}
             initials={identity ? initialsOf(identity.name) : undefined}
             alt={identity?.name ?? "Mahardika S.T."}
           />
@@ -197,7 +198,7 @@ export function DashboardTeamMenu({
             <Avatar
               size="md"
               color="accent"
-              src={identity ? undefined : "/avatars/michael-ekstrom.webp"}
+              src={identity ? identity.avatarSrc : "/avatars/michael-ekstrom.webp"}
               initials={identity ? initialsOf(identity.name) : undefined}
               alt={identity?.name ?? "Mahardika S.T."}
             />

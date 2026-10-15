@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Feature, FeatureCollection, MultiPolygon, Position } from "geojson";
 import type { ExpressionSpecification } from "maplibre-gl";
 import { toast } from "sonner";
+import { AnimatePresence, motion } from "motion/react";
+import { spring } from "@/lib/springs";
 import { RiArrowDownSLine } from "@remixicon/react";
 import { MapGeoJSON, MapMarker, MarkerContent, useMap } from "@/components/ui/map";
 import { StatusDot } from "@/components/base/badges/status-dot";
@@ -17,9 +19,8 @@ import { WindLayer } from "./wind-layer";
 
 export interface DockStatus {
   loading: boolean;
-  count: number;
   degraded: boolean;
-  /** Shown under the count, e.g. when the map holds only the newest points. */
+  /** Shown in the hotspot key, e.g. when the map holds only the newest points. */
   note?: string;
 }
 
@@ -66,63 +67,130 @@ function bounds(feature: Feature): [[number, number], [number, number]] | null {
 // Thick enough that the index colour reads as a band, but thin when zoomed out so 519 kab/kota do not turn into a mesh.
 const REGION_LINE_WIDTH: ExpressionSpecification = ["interpolate", ["linear"], ["zoom"], 4, 1, 7, 1.8, 11, 2.6];
 
-/** The legend's one section per layer actually drawn, so nothing on the map goes unexplained. */
-function Legend({ layer, label, showData, hotspots, quakes, heat, wind, windTime }: {
+const LEGEND_OPEN_KEY = "arkamap:legend-open";
+
+/** Small notes over the map grow from the corner they sit in; never from nothing, so they read as arriving rather than popping. */
+const NOTICE = {
+  initial: { opacity: 0, y: 4, scale: 0.96 },
+  animate: { opacity: 1, y: 0, scale: 1 },
+  exit: { opacity: 0, scale: 0.98, transition: spring.moderate.exit },
+  transition: spring.moderate,
+} as const;
+
+/** Remembered per browser; a first visit opens it from tablet width up, while phones keep the map clear. */
+function readLegendOpen() {
+  try {
+    const stored = localStorage.getItem(LEGEND_OPEN_KEY);
+    if (stored !== null) return stored === "1";
+  } catch {
+    // storage blocked: fall back to the width
+  }
+  return window.matchMedia("(min-width: 768px)").matches;
+}
+
+function Ramp({ colors, className }: { colors: readonly string[]; className?: string }) {
+  return <div aria-hidden="true" className={cx("h-1.5 rounded-full", className)} style={{ backgroundImage: `linear-gradient(to right, ${colors.join(", ")})` }} />;
+}
+
+/** The legend's one section per layer actually drawn, so nothing on the map goes unexplained. It folds to its title. */
+function Legend({ layer, label, showData, hotspots, quakes, heat, wind, windTime, note }: {
   layer?: MapLayer; label?: string; showData: boolean; hotspots: boolean; quakes: boolean; heat: boolean; wind: boolean; windTime?: string;
+  /** Said under the hotspot key, e.g. that the map holds only the newest points. */
+  note?: string;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(readLegendOpen);
   const metric = layer?.metric;
   const metricShown = showData && !heat && Boolean(metric);
   if (!metricShown && !heat && !wind) return null;
   const stops = metric ? rampStopsFor(metric.metric, aspectOf(metric.aspect)) : [];
   const highGood = metric?.polarity === "high_good";
   const title = metricShown ? label ?? metric?.label : heat ? "Suhu permukaan" : "Arah angin";
-  const section = "mt-2.5 border-t border-border-button-default pt-2.5";
-  const heading = "text-caption-1-medium text-text-secondary";
+  const swatch: readonly string[] | null = metricShown ? stops : heat ? HEAT_RAMP_CSS : null;
+  const section = "mt-3 border-t border-border-button-default pt-3";
+  const heading = "text-caption-1-medium text-text-primary";
+  const body = "text-caption-1-regular text-text-tertiary";
+
+  function toggle() {
+    setOpen(value => {
+      try { localStorage.setItem(LEGEND_OPEN_KEY, value ? "0" : "1"); } catch { /* storage blocked: it just is not remembered */ }
+      return !value;
+    });
+  }
+
   return (
-    <div className={cx("pointer-events-auto w-60 rounded-2lg bg-background-primary-default/95 p-3 shadow-card backdrop-blur-md max-md:w-52 max-md:p-2.5", open ? "max-h-[60svh] overflow-y-auto" : "overflow-hidden")}>
-      {/* Phones collapse the key to its title, so it does not cover the map. */}
-      <button type="button" aria-expanded={open} onClick={() => setOpen(value => !value)} className="flex w-full items-center gap-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring md:pointer-events-none">
-        <span className="min-w-0 flex-1 truncate text-body-2-medium text-text-primary">{title}</span>
-        <RiArrowDownSLine aria-hidden="true" className={cx("size-4 shrink-0 text-foreground-icon-secondary transition-transform md:hidden", open && "rotate-180")} />
+    // One width open or folded: only the height moves, so the text never stretches mid-animation.
+    <div className="pointer-events-auto w-64 overflow-hidden rounded-2xl border border-border-button-default bg-background-primary-default/95 shadow-xs backdrop-blur-md max-md:w-56">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-label={open ? `Kecilkan keterangan ${title}` : `Buka keterangan ${title}`}
+        onClick={toggle}
+        className="flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 text-left outline-none hover:bg-background-primary-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-border-focus-ring"
+      >
+        <span className="min-w-0 flex-1 truncate text-body-2-semibold text-text-primary">{title}</span>
+        {/* Folded, a sliver of the ramp keeps the colours explained at a glance. */}
+        <AnimatePresence initial={false}>
+          {!open && swatch && (
+            <motion.span key="swatch" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, transition: spring.fast.exit }} transition={spring.moderate} className="w-10 shrink-0">
+              <Ramp colors={swatch} />
+            </motion.span>
+          )}
+        </AnimatePresence>
+        <RiArrowDownSLine aria-hidden="true" className={cx("size-4 shrink-0 text-foreground-icon-secondary transition-transform duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none", open ? "rotate-0" : "rotate-180")} />
       </button>
-      <div className={cx(!open && "max-md:hidden")}>
-        {metricShown && metric && <>
-          {metric.description && <p className="mt-1 line-clamp-3 text-caption-1-regular text-text-secondary">{metric.description}</p>}
-          <div className="mt-2 h-2 rounded-full" style={{ backgroundImage: `linear-gradient(to right, ${stops.join(", ")})` }} />
-          <div className="mt-1 flex justify-between text-caption-1-regular tabular-nums text-text-secondary">
-            <span>{fmt(highGood ? metric.scale_max : metric.scale_min)}</span>
-            <span>{fmt(highGood ? metric.scale_min : metric.scale_max)} {metric.unit && !metric.unit.startsWith("indeks") ? metric.unit : ""}</span>
-          </div>
-          <p className={cx(section, "text-caption-1-regular text-text-tertiary")}>
-            Warna pekat berarti paling perlu perhatian{highGood ? ", yaitu nilai paling sedikit" : ""}. Skor relatif antarwilayah, bukan probabilitas bencana. Wilayah tanpa data tidak diwarnai.
-          </p>
-        </>}
-        {/* Hotspots and quakes use their own warm palette, so they get their own key. */}
-        {metricShown && (hotspots || quakes) && (
-          <div className={section}>
-            <p className={heading}>{hotspots ? "Titik panas (di atas peta)" : "Gempa (di atas peta)"}</p>
-            <div className="mt-1.5 h-2 rounded-full" style={{ backgroundImage: `linear-gradient(to right, ${(hotspots ? OVERLAY_RAMPS.hotspot : OVERLAY_RAMPS.quake).join(", ")})` }} />
-            <p className="mt-1.5 text-caption-1-regular text-text-tertiary">{hotspots ? "Makin pekat, titik panas makin rapat. Dibobot dengan kekuatan api (FRP)." : "Lingkaran makin besar dan pekat, magnitudo makin tinggi. 30 hari terakhir, M4 ke atas."}</p>
-          </div>
-        )}
-        {heat && (
-          <div className={metricShown ? section : "mt-2"}>
-            {metricShown && <p className={heading}>Suhu permukaan</p>}
-            <div className="mt-1.5 h-2 rounded-full" style={{ backgroundImage: `linear-gradient(to right, ${HEAT_RAMP_CSS.join(", ")})` }} />
-            <div className="mt-1 flex justify-between text-caption-1-regular tabular-nums text-text-secondary"><span>{HEAT_RANGE[0]}°C</span><span>{HEAT_RANGE[1]}°C</span></div>
-            <p className="mt-1.5 text-caption-1-regular text-text-tertiary">Suhu tanah dan atap, jauh lebih panas dari suhu udara. Warna wilayah disembunyikan selama lapisan ini tampil.</p>
-          </div>
-        )}
-        {wind && (
-          <div className={metricShown || heat ? section : "mt-2"}>
-            {(metricShown || heat) && <p className={heading}>Arah angin</p>}
-            <p className="mt-1.5 text-caption-1-regular text-text-tertiary">
-              Garis mengalir mengikuti arah angin bertiup, ke mana asap kebakaran terbawa. Biru muda berarti pelan, makin putih dan cepat berarti makin kencang. Grid sekitar 85 km{windTime ? `, data ${new Date(windTime).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}` : ""}.
+      <AnimatePresence initial={false}>
+      {open && (
+        <motion.div
+          key="body"
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: "auto", opacity: 1 }}
+          exit={{ height: 0, opacity: 0, transition: spring.moderate.exit }}
+          transition={spring.moderate}
+          className="max-h-[50svh] overflow-y-auto"
+        >
+        <div className="px-3 pb-3">
+          {metricShown && metric && <>
+            {metric.description && <p className="line-clamp-2 text-caption-1-regular text-text-secondary">{metric.description}</p>}
+            <Ramp colors={stops} className="mt-2.5" />
+            <div className="mt-1 flex justify-between text-caption-1-regular tabular-nums text-text-tertiary">
+              <span>{fmt(highGood ? metric.scale_max : metric.scale_min)}</span>
+              <span>{fmt(highGood ? metric.scale_min : metric.scale_max)} {metric.unit && !metric.unit.startsWith("indeks") ? metric.unit : ""}</span>
+            </div>
+            <p className={cx(body, "mt-2")}>
+              Makin pekat, makin perlu perhatian{highGood ? " (nilai paling sedikit)" : ""}. Skor relatif antarwilayah, bukan peluang bencana; wilayah tanpa data tidak diwarnai.
             </p>
-          </div>
-        )}
-      </div>
+          </>}
+          {/* Hotspots and quakes use their own warm palette, so they get their own key. */}
+          {metricShown && (hotspots || quakes) && (
+            <div className={section}>
+              <p className={heading}>{hotspots ? "Titik Panas" : "Gempa"}</p>
+              <Ramp colors={hotspots ? OVERLAY_RAMPS.hotspot : OVERLAY_RAMPS.quake} className="mt-2" />
+              <p className={cx(body, "mt-2")}>
+                {hotspots ? "Makin pekat, titik panas makin rapat, dibobot kekuatan api (FRP)." : "Makin besar dan pekat, magnitudo makin tinggi. 30 hari terakhir, M4 ke atas."}
+                {hotspots && note ? ` ${note}` : ""}
+              </p>
+            </div>
+          )}
+          {heat && (
+            <div className={metricShown ? section : undefined}>
+              {metricShown && <p className={heading}>Suhu Permukaan</p>}
+              <Ramp colors={HEAT_RAMP_CSS} className={metricShown ? "mt-2" : undefined} />
+              <div className="mt-1 flex justify-between text-caption-1-regular tabular-nums text-text-tertiary"><span>{HEAT_RANGE[0]}°C</span><span>{HEAT_RANGE[1]}°C</span></div>
+              <p className={cx(body, "mt-2")}>Suhu tanah dan atap, jauh lebih panas dari suhu udara. Warna wilayah disembunyikan selama lapisan ini tampil.</p>
+            </div>
+          )}
+          {wind && (
+            <div className={metricShown || heat ? section : undefined}>
+              {(metricShown || heat) && <p className={heading}>Arah Angin</p>}
+              <p className={cx(body, (metricShown || heat) && "mt-1")}>
+                Garis mengikuti arah angin, ke mana asap terbawa. Biru muda berarti pelan, makin putih makin kencang. Grid sekitar 85 km{windTime ? `, data ${new Date(windTime).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}` : ""}.
+              </p>
+            </div>
+          )}
+        </div>
+        </motion.div>
+      )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -273,18 +341,20 @@ export function SpatialLayers({ warnings, choropleth, layer, layerError, showDat
       </p>
     )}
     <div className="pointer-events-none absolute bottom-3 left-3 z-20 flex max-w-[calc(100%-4.5rem)] flex-col items-start gap-2">
-      <Legend layer={layer} label={choropleth?.label} showData={showData} hotspots={showHotspots} quakes={showQuakes} heat={heat} wind={wind} windTime={grid?.observed_at} />
-      <div className="pointer-events-auto flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-border-button-default bg-background-primary-default/95 px-2.5 py-1.5 shadow-2xs backdrop-blur-md">
-        <span className="flex items-center gap-1.5 text-caption-1-medium text-text-secondary" role="status">
-          <StatusDot color={status.loading || status.degraded ? "yellow" : "green"} />
-          {status.loading ? "Memuat data..." : status.degraded ? `${status.count} kejadian, sebagian sumber tidak tersedia` : `${status.count} kejadian dari API`}
-        </span>
-        {!status.loading && status.note && <span className="basis-full text-caption-1-regular text-text-tertiary max-md:hidden">{status.note}</span>}
-      </div>
-      {(buildings || problem) && <div className="pointer-events-auto max-w-xs rounded-lg border border-border-button-default bg-background-primary-default/95 px-2.5 py-1.5 text-caption-1-regular text-text-secondary shadow-2xs backdrop-blur-md">
-        {buildings && <p>Bangunan tampil mulai zoom 14. Sumber: OSM.</p>}
-        {problem && <p role="alert" className="text-status-rose-text">{problem}</p>}
-      </div>}
+      <Legend layer={layer} label={choropleth?.label} showData={showData} hotspots={showHotspots} quakes={showQuakes} heat={heat} wind={wind} windTime={grid?.observed_at} note={status.note} />
+      {/* The dock already counts every event, so the map only speaks up while loading or when a source is missing. */}
+      <AnimatePresence initial={false}>
+        {(status.loading || status.degraded) && (
+          <motion.span key="status" role="status" {...NOTICE} className="pointer-events-auto flex origin-bottom-left items-center gap-1.5 rounded-full border border-border-button-default bg-background-primary-default/95 px-2.5 py-1 text-caption-1-medium text-text-secondary shadow-xs backdrop-blur-md">
+            <StatusDot color="yellow" />
+            {status.loading ? "Memuat data peta..." : "Sebagian sumber tidak tersedia"}
+          </motion.span>
+        )}
+        {(buildings || problem) && <motion.div key="notice" {...NOTICE} className="pointer-events-auto max-w-xs origin-bottom-left rounded-2lg border border-border-button-default bg-background-primary-default/95 px-3 py-2 text-caption-1-regular text-text-secondary shadow-xs backdrop-blur-md">
+          {buildings && <p>Bangunan tampil mulai zoom 14. Sumber: OSM.</p>}
+          {problem && <p role="alert" className="text-status-rose-text">{problem}</p>}
+        </motion.div>}
+      </AnimatePresence>
     </div>
   </>;
 }

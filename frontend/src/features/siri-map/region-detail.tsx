@@ -11,6 +11,7 @@ import { ASPECTS, ASPECT_ORDER, aspectOf, fmt, fmtAuto, type Aspect, type Metric
 
 type Indicator = DTO<"IndicatorValue">;
 
+// Dashboard card anatomy, as in situation-panel.tsx: grey card, white insets.
 const INSET = "rounded-2lg bg-background-inner-default shadow-card";
 // Fixed series order per aspect, so one aspect keeps one colour across every chart.
 const ASPECT_SERIES: Record<Aspect, string> = { lingkungan: SERIES[0], energi: SERIES[1], urban: SERIES[2] };
@@ -136,7 +137,7 @@ export function RegionDetail({ regionId, metrics, activeMetric, peerValues, onCl
   const data = detail.data;
 
   return (
-    <section aria-label="Rincian wilayah" className="space-y-3 rounded-2xl bg-background-secondary-default p-4">
+    <section aria-label="Rincian wilayah" className="space-y-4 rounded-2xl bg-background-secondary-default p-4">
       <header className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-body-2-regular text-text-secondary">Rincian wilayah</p>
