@@ -63,12 +63,13 @@ export type Stat = {
 
 export type StatPart = { label: string; value: number; color: keyof typeof PART_COLORS };
 
-/** Fills for the breakdown bar and its list dots. */
+/** Fills for the breakdown bar and its list dots: the alert levels' own red / amber / green (as on the alert rows),
+ *  not the dark *-800 text tokens, where yellow reads as brown. */
 const PART_COLORS = {
-  rose: "bg-status-rose-text",
-  yellow: "bg-status-yellow-text",
-  lime: "bg-status-lime-text",
-  purple: "bg-status-purple-text",
+  rose: "bg-red-500",
+  yellow: "bg-amber-400",
+  lime: "bg-green-500",
+  purple: "bg-violet-500",
   neutral: "bg-foreground-icon-secondary",
 };
 
