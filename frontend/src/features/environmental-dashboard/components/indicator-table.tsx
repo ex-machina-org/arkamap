@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { RiFlaskLine, RiSensorLine } from "@remixicon/react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/application/data-table/data-table";
 import { StatHint } from "@/components/application/dashboard/stat-cards";
@@ -7,6 +8,7 @@ import type { DTO } from "@/lib/api/client";
 import { clampPercent, formatDecimal, formatPeriodText } from "../format";
 import { prettifyId } from "../labels";
 import { useSourceName } from "../use-source-catalog";
+import { Pill } from "./pill";
 
 type Row = DTO<"OurIndicator"> & { id: string };
 
@@ -21,8 +23,8 @@ export function IndicatorTable({ region, title }: { region: DTO<"OurRegion">; ti
       cell: ({ row }) => <div className="flex min-w-0 items-center gap-2">
         <span className="truncate text-body-medium text-text-primary">{row.original.label}</span>
         <StatHint label={row.original.label} hint={row.original.reason} />
-        {row.original.is_modelled && <Chip variant="caption" color="purple">MODEL</Chip>}
-        {row.original.added_for_sensor && <Chip variant="caption" color="cyan">Sensor</Chip>}
+        {row.original.is_modelled && <Pill icon={RiFlaskLine} iconClassName="text-purple-500">Model</Pill>}
+        {row.original.added_for_sensor && <Pill icon={RiSensorLine} iconClassName="text-cyan-500">Sensor</Pill>}
       </div>,
     },
     {
