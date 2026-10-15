@@ -61,6 +61,11 @@ assert lay["pompa"]["widget"] == "status" and lay["rssi"]["hidden"] and not lay[
 assert rule_pick("Petani padi")[0]["metric"] == "dry_days"            # responden (default) puts risk first
 assert rule_pick("operator PLTS atap")[0]["metric"] == "solar_ghi_annual"
 assert rule_pick("mahasiswa")[0]["metric"] == "fire_risk"      # default set
+# panels: without the AI an air-quality profile still gets air panels, and only known ids
+from app import panels
+from app.iot.relevance import rule_reading
+air = rule_reading("dinas kesehatan, memantau polusi udara")
+assert air["panels"][0]["id"].startswith("aq_") and all(p["id"] in {q["id"] for q in panels.PANELS} for p in air["panels"])
 # MQTT naming: the bridge trusts ingest/dev<id>, broker ACL allows only that topic
 from app.iot import broker
 from app.iot.mqtt_bridge import _TOPIC
