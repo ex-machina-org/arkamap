@@ -1,15 +1,21 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { motion } from "motion/react";
 import { RiArrowDownSLine } from "@remixicon/react";
 import { Chip } from "@/components/base/badges/chip";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import { spring } from "@/lib/springs";
 import { cx } from "@/utils/cx";
 import { relativeTime } from "./format";
 import { HAZARDS } from "./hazards";
 import type { SpatialIncident } from "./types";
 
 const LIST_LIMIT = 50;
-// Dashboard card recipe; see situation-panel.tsx.
+const PANEL_WIDTH = 380;
+// The dashboard's card anatomy (environmental-dashboard/components/dashboard-card.tsx, which this feature may not import):
+// the panel is the page, sections are grey cards on it, items are white insets in them. Two levels, never more.
+const CARD = "rounded-2xl bg-background-secondary-default";
 const INSET = "rounded-2lg bg-background-inner-default shadow-card";
 
 interface SidePanelProps {
@@ -21,7 +27,7 @@ interface SidePanelProps {
   onSelectIncident: (incident: SpatialIncident) => void;
   /** What the profile should look at first. */
   summary: ReactNode;
-  /** Free exploration tools, kept below the summary. */
+  /** National summaries and reports, kept below the summary. */
   explore: ReactNode;
   /** The coloured layer's regions in order. */
   ranking: ReactNode;
@@ -31,11 +37,12 @@ interface SidePanelProps {
 
 function Section({ title, meta, children }: { title: string; meta?: ReactNode; children: ReactNode }) {
   return (
-    <details className="group rounded-2xl bg-background-secondary-default">
-      <summary className="flex cursor-pointer list-none items-center gap-2 rounded-2xl px-4 py-3 outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring [&::-webkit-details-marker]:hidden">
-        <span className="flex-1 text-body-medium text-text-primary">{title}</span>
+    // A dashboard card whose body folds away; the title takes the card title style.
+    <details className={cx(CARD, "details-motion group")}>
+      <summary className="flex cursor-pointer list-none items-center gap-2 rounded-2xl p-4 outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring [&::-webkit-details-marker]:hidden">
+        <span className="flex-1 text-title-3-medium text-text-primary">{title}</span>
         {meta}
-        <RiArrowDownSLine aria-hidden="true" className="size-4 text-foreground-icon-secondary transition-transform duration-200 ease-out group-open:rotate-180 motion-reduce:transition-none" />
+        <RiArrowDownSLine aria-hidden="true" className="size-4 text-foreground-icon-secondary transition-transform duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] group-open:rotate-180 motion-reduce:transition-none" />
       </summary>
       <div className="px-4 pb-4">{children}</div>
     </details>
@@ -82,26 +89,39 @@ export function SidePanel({
   ranking,
   detail,
 }: SidePanelProps) {
+  const docked = useMediaQuery("(min-width: 1280px)");
+  // Docked, the panel gives its width back to the map, which follows it frame by frame; the gap before it closes too.
+  // Over the map, it slides off the right edge instead. Hidden once closed, so it leaves the tab order.
+  const target = docked
+    ? isOpen ? { width: PANEL_WIDTH, marginLeft: 0, opacity: 1, visibility: "visible" as const } : { width: 0, marginLeft: -12, opacity: 0, transitionEnd: { visibility: "hidden" as const } }
+    : isOpen ? { x: 0, visibility: "visible" as const } : { x: "calc(100% + 1rem)", transitionEnd: { visibility: "hidden" as const } };
   return (
-    <aside
+    <motion.aside
+      // A different mode starts from clean styles rather than the other mode's width or offset.
+      key={docked ? "docked" : "overlay"}
       aria-label="Panel data wilayah"
       data-open={isOpen}
       inert={!isOpen}
+      initial={false}
+      animate={target}
+      // Entering uses the large-surface tier; leaving is the quicker tween, so closing feels final.
+      transition={isOpen ? spring.slow : spring.slow.exit}
       className={cx(
-        "z-30 flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border-button-default bg-background-primary-default shadow-2xs",
-        // Right of the map, clear of the legend at its bottom left. Wide screens dock it; narrower ones slide it over the map so the map keeps its width.
-        "xl:relative xl:h-full xl:w-[380px] xl:shrink-0 xl:data-[open=false]:hidden",
-        "max-xl:absolute max-xl:inset-y-0 max-xl:right-0 max-xl:w-[min(380px,calc(100%-1.5rem))] max-xl:shadow-dropdown",
-        "max-xl:transition-[transform,visibility] max-xl:duration-200 max-xl:ease-[cubic-bezier(0.32,0.72,0,1)] max-xl:data-[open=false]:invisible max-xl:data-[open=false]:translate-x-[calc(100%+1rem)] motion-reduce:transition-none",
+        // Docked, the panel is part of the page like the dashboard's content column: no frame of its own, cards straight on the page colour.
+        "z-30 flex min-h-0 flex-col overflow-hidden rounded-2xl bg-background-full",
+        "xl:relative xl:h-full xl:shrink-0",
+        // Over the map it needs an edge, so it gets the border and the raised shadow there only.
+        "max-xl:absolute max-xl:inset-y-0 max-xl:right-0 max-xl:w-[min(380px,calc(100%-1.5rem))] max-xl:border max-xl:border-border-button-default max-xl:shadow-dropdown",
       )}
     >
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3 [scrollbar-width:thin]">
+      {/* Fixed width while docked, so the content is clipped as the panel narrows instead of reflowing every frame. */}
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto [scrollbar-width:thin] max-xl:p-3 xl:w-[380px] xl:min-w-[380px]">
         {detail}
         {summary}
 
         <Section
           title="Kejadian tercatat"
-          meta={loading ? <span className="text-body-2-regular text-text-tertiary">Memuat...</span> : <Chip variant="caption" color="soft">{incidents.length}</Chip>}
+          meta={loading ? <span className="text-body-2-regular text-text-tertiary">Memuat...</span> : <Chip variant="caption" color="soft">{incidents.length.toLocaleString("id-ID")}</Chip>}
         >
           <div className="space-y-1.5">
             {errors.map((error, i) => (
@@ -125,8 +145,8 @@ export function SidePanel({
 
         <Section title="Peringkat wilayah">{ranking}</Section>
 
-        <Section title="Jelajahi data">{explore}</Section>
+        <Section title="Data Publik">{explore}</Section>
       </div>
-    </aside>
+    </motion.aside>
   );
 }
