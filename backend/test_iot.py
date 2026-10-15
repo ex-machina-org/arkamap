@@ -118,6 +118,8 @@ print("ok")
 
 # quickstart: examples carry the device's own topic/key and valid code
 import ast
+import json
+from urllib.parse import urlsplit
 from app.iot import quickstart
 qs = quickstart.build({"id": 7, "name": "Uji", "category": "cuaca"}, "dev_abc")
 assert qs["mqtt"]["topic"] == "ingest/dev7" and qs["mqtt"]["username"] == "dev7"
@@ -125,6 +127,18 @@ assert parse(qs["payload"]) and all("dev_abc" in v for v in qs["snippets"].value
 for k in ("python", "python_mqtt"):
     ast.parse(qs["snippets"][k])
 assert "<API_KEY>" in quickstart.build({"id": 7, "name": "Uji", "category": "cuaca"})["snippets"]["curl"]
+# Through the frontend proxy, devices get the frontend's domain, never the backend's.
+front = "https://arkamap.example"
+quickstart.CORS_ORIGINS.append(front)
+assert quickstart.base_for(front + "/") == front
+assert quickstart.base_for("https://evil.example") == quickstart.PUBLIC_URL     # not allowed
+assert quickstart.base_for("http://arkamap.example") == quickstart.PUBLIC_URL   # not https
+assert quickstart.base_for(None) == quickstart.PUBLIC_URL
+via = quickstart.build({"id": 7, "name": "Uji", "category": "cuaca"}, "dev_abc", front)
+backend_host = urlsplit(quickstart.PUBLIC_URL).hostname
+assert via["url"] == front + "/api/ingest" and via["mqtt"]["url"] == "wss://arkamap.example/api/mqtt"
+assert backend_host not in json.dumps(via)
+quickstart.CORS_ORIGINS.remove(front)
 print("quickstart ok")
 
 # fixed categories: rules only where the name is clear, else "lainnya"

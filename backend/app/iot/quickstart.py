@@ -3,7 +3,7 @@ key, so a sensor owner never has to assemble a request by hand."""
 import json
 from urllib.parse import urlsplit
 
-from ..config import PUBLIC_URL
+from ..config import CORS_ORIGINS, PUBLIC_URL
 from .broker import topic, username
 
 KEY_PLACEHOLDER = "<API_KEY>"   # the full key is only known right after create/rotate
@@ -19,10 +19,18 @@ def payload(device: dict) -> dict:
             "data": {"suhu": 29.4, "kelembapan": 71, "baterai": {"volt": 3.9}}}
 
 
-def build(device: dict, key: str | None = None) -> dict:
+def base_for(origin: str | None) -> str:
+    """Where devices should send. The frontend proxy forwards every call and names its own
+    origin in X-Arkamap-Origin; devices then use that domain and the backend's address stays
+    unpublished. Only an https origin listed in CORS_ORIGINS counts; otherwise PUBLIC_URL."""
+    origin = (origin or "").rstrip("/")
+    return origin if origin.startswith("https://") and origin in CORS_ORIGINS else PUBLIC_URL
+
+
+def build(device: dict, key: str | None = None, base: str = PUBLIC_URL) -> dict:
     key = key or KEY_PLACEHOLDER
-    url = f"{PUBLIC_URL}/api/ingest"
-    host = urlsplit(PUBLIC_URL).hostname
+    url = f"{base}/api/ingest"
+    host = urlsplit(base).hostname
     example = payload(device)
     # snippets fill "waktu" with the clock at send time
     data_json = json.dumps(example["data"], ensure_ascii=False)

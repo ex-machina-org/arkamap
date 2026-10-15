@@ -399,7 +399,7 @@ def delete_profile(profile_id: int, user: dict = Depends(current_user)) -> dict:
 
 
 @router.post("/me/devices", status_code=201, response_model=DeviceCreated, responses={401: {"model": ErrorResponse}})
-def create_device(body: DeviceIn, user: dict = Depends(current_user)) -> dict:
+def create_device(body: DeviceIn, request: Request, user: dict = Depends(current_user)) -> dict:
     """Returns the API key ONCE. Store it on the sensor; we keep only a hash."""
     key, key_hash, prefix = new_device_key()
     region = _point_region(body.location) if body.location else None
@@ -424,7 +424,7 @@ def create_device(body: DeviceIn, user: dict = Depends(current_user)) -> dict:
         log.warning("buat kredensial MQTT gagal: %s", exc)
         raise HTTPException(503, "broker MQTT sedang tidak tersedia; coba lagi") from None
     dev = _own_device(user, d["id"])
-    return {"device": _public(dev), "api_key": key, "quickstart": quickstart.build(dev, key)}
+    return {"device": _public(dev), "api_key": key, "quickstart": quickstart.build(dev, key, _device_base(request))}
 
 
 @router.get("/me/devices", response_model=list[DeviceOut], responses={401: {"model": ErrorResponse}})
@@ -519,7 +519,7 @@ def list_events(device_id: int, user: dict = Depends(current_user)) -> list[dict
 
 
 @router.post("/me/devices/{device_id}/key", response_model=KeyRotated, responses={401: {"model": ErrorResponse}})
-def rotate_key(device_id: int, user: dict = Depends(current_user)) -> dict:
+def rotate_key(device_id: int, request: Request, user: dict = Depends(current_user)) -> dict:
     """New key; the old one stops working immediately."""
     dev = _own_device(user, device_id)
     key, key_hash, prefix = new_device_key()
@@ -530,13 +530,18 @@ def rotate_key(device_id: int, user: dict = Depends(current_user)) -> dict:
         raise HTTPException(503, "broker MQTT sedang tidak tersedia; coba lagi") from None
     execute("UPDATE device SET key_hash = %s, key_prefix = %s WHERE id = %s",
             (key_hash, prefix, device_id))
-    return {"api_key": key, "key_prefix": prefix, "quickstart": quickstart.build(dev, key)}
+    return {"api_key": key, "key_prefix": prefix, "quickstart": quickstart.build(dev, key, _device_base(request))}
 
 
 @router.get("/me/devices/{device_id}/quickstart", response_model=Quickstart, responses={401: {"model": ErrorResponse}})
-def device_quickstart(device_id: int, user: dict = Depends(current_user)) -> dict:
+def device_quickstart(device_id: int, request: Request, user: dict = Depends(current_user)) -> dict:
     """Examples with <API_KEY> in place of the key (we only keep its hash)."""
-    return quickstart.build(_own_device(user, device_id))
+    return quickstart.build(_own_device(user, device_id), base=_device_base(request))
+
+
+def _device_base(request: Request) -> str:
+    """The address devices are told to use: the frontend's, when the call came through its proxy."""
+    return quickstart.base_for(request.headers.get("x-arkamap-origin"))
 
 
 @router.put("/me/devices/{device_id}/layout", response_model=list[WidgetSpec], responses={401: {"model": ErrorResponse}})
