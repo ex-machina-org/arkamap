@@ -1,9 +1,10 @@
 "use client";
 
 import { goTo } from "@/lib/navigate";
-import { useMemo, useState } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 import {
   RiMore2Fill,
+  RiDeleteBinLine,
   RiFileCopyLine,
   RiInformationLine,
   RiSearchLine,
@@ -15,13 +16,15 @@ import {
 import { toast } from "sonner";
 
 import { StatCards, type Stat } from "@/components/application/dashboard/stat-cards";
-import { Chip } from "@/components/base/badges/chip";
 import { Dropdown, DropdownTrigger, DropdownPopover, DropdownGroup, DropdownItem } from "@/components/base/dropdown/dropdown";
 import { DataTable } from "@/components/application/data-table/data-table";
 import { Input } from "@/components/base/input/input";
 import { Select, SelectItem } from "@/components/base/select/select";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useDevices } from "./device-api";
+import { request } from "@/lib/api/client";
+import { useConfirm } from "./components/device-helpers";
+import { Pill } from "./components/pill";
 import { cx } from "@/utils/cx";
 import {
   DEVICE_KIND_LABEL,
@@ -31,17 +34,27 @@ import {
   type IotDevice,
 } from "./device-data";
 
-const STATUS_TONE = {
-  online: "lime",
-  offline: "rose",
-  calibration: "yellow",
-} as const satisfies Record<DeviceStatus, "lime" | "rose" | "yellow">;
+const STATUS_DOT = { online: "green", offline: "red", calibration: "amber" } as const satisfies Record<DeviceStatus, "green" | "red" | "amber">;
 
 const LOW_BATTERY_THRESHOLD = 20;
 
+/** Reloads the device list; the table's columns are static, so the row menu reaches it through context. */
+const RefreshDevices = createContext<() => void>(() => {});
+
 function DeviceActions({ device }: { device: IotDevice }) {
   const [isOpen, setIsOpen] = useState(false);
-  return (
+  const refresh = useContext(RefreshDevices);
+  const { ask, dialog } = useConfirm();
+  const remove = async () => {
+    try {
+      await request(`/me/devices/${device.backendId}`, { method: "DELETE" });
+      toast.success("Alat Dihapus", { description: device.name });
+      refresh();
+    } catch (cause) {
+      toast.error("Alat Gagal Dihapus", { description: cause instanceof Error ? cause.message : undefined });
+    }
+  };
+  return (<>
     <Dropdown isOpen={isOpen} onOpenChange={setIsOpen}>
       <DropdownTrigger
         aria-label={`Aksi ${device.name}`}
@@ -67,9 +80,24 @@ function DeviceActions({ device }: { device: IotDevice }) {
             <RiFileCopyLine className="size-4" aria-hidden />Salin ID
           </DropdownItem>
         </DropdownGroup>
+        {device.backendId && <DropdownGroup className="mt-1 border-t border-border-button-default pt-1">
+          <DropdownItem onSelect={() => {
+            setIsOpen(false);
+            ask({
+              title: `Hapus "${device.name}"?`,
+              description: "Alat, kunci, login MQTT, dan seluruh pembacaannya dihapus permanen. Tindakan ini tidak bisa dibatalkan.",
+              confirmLabel: "Hapus Alat",
+              destructive: true,
+              run: () => void remove(),
+            });
+          }} className="gap-2 px-2 py-1.5 text-text-error-primary">
+            <RiDeleteBinLine className="size-4" aria-hidden />Hapus Alat
+          </DropdownItem>
+        </DropdownGroup>}
       </DropdownPopover>
     </Dropdown>
-  );
+    {dialog}
+  </>);
 }
 
 const DEVICE_COLUMNS: ColumnDef<IotDevice>[] = [
@@ -93,7 +121,7 @@ const DEVICE_COLUMNS: ColumnDef<IotDevice>[] = [
     cell: ({ row: { original: device } }) => (
       <div className="flex items-center gap-2 whitespace-nowrap">
         {device.owner}
-        {device.ownership === "byod" && <Chip variant="caption" color="purple">BYOD</Chip>}
+        {device.ownership === "byod" && <Pill icon={RiUserSharedLine} iconClassName="text-purple-500">BYOD</Pill>}
       </div>
     ),
   },
@@ -109,7 +137,7 @@ const DEVICE_COLUMNS: ColumnDef<IotDevice>[] = [
   {
     accessorKey: "status", header: "Status",
     cell: ({ row: { original: device } }) => (
-      <Chip variant="caption" color={STATUS_TONE[device.status]}>{DEVICE_STATUS_LABEL[device.status]}</Chip>
+      <Pill dot={STATUS_DOT[device.status]} pulse={device.status === "online"}>{DEVICE_STATUS_LABEL[device.status]}</Pill>
     ),
   },
   {
@@ -133,8 +161,16 @@ const DEVICE_COLUMNS: ColumnDef<IotDevice>[] = [
   { id: "actions", header: "Aksi", enableSorting: false, cell: ({ row }) => <DeviceActions device={row.original} /> },
 ];
 
+/**
+ * Kodama leaning on a ledge, one pose per stat card: the ledge rests on top of the card's footer
+ * band (bottom-11 = band height + card padding). Decorative only.
+ */
+const kodama = (pose: "calm" | "gps" | "peek" | "thumbs") =>
+  <img src={`/brand/mascot-${pose}.webp`} alt="" aria-hidden width={420} height={401} loading="lazy"
+    className="pointer-events-none absolute right-3 bottom-11 -z-10 h-24 w-auto select-none" />;
+
 export function DeviceRegistry() {
-  const { devices, error, loading } = useDevices();
+  const { devices, error, loading, refresh } = useDevices();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [kindFilter, setKindFilter] = useState("all");
@@ -167,6 +203,7 @@ export function DeviceRegistry() {
         deltaColor: "neutral",
         tone: "blue",
         caption: "Instansi & BYOD",
+        background: kodama("calm"),
         hint: "Seluruh perangkat IoT yang terdaftar pada platform, termasuk milik instansi dan mitra.",
       },
       {
@@ -177,6 +214,7 @@ export function DeviceRegistry() {
         deltaColor: "lime",
         tone: "emerald",
         caption: `${total - online} tidak aktif`,
+        background: kodama("thumbs"),
         hint: "Perangkat yang mengirim telemetri dalam interval terakhir.",
       },
       {
@@ -188,6 +226,7 @@ export function DeviceRegistry() {
         tone: "orange",
         caption: "Offline / baterai rendah",
         hint: "Perangkat offline, sedang kalibrasi, atau berbaterai rendah.",
+        background: kodama("peek"),
       },
       {
         icon: RiUserSharedLine,
@@ -197,6 +236,7 @@ export function DeviceRegistry() {
         deltaColor: "neutral",
         tone: "purple",
         caption: "Milik warga & mitra",
+        background: kodama("gps"),
         hint: "Perangkat milik warga, komunitas, atau mitra yang dihubungkan sendiri (Bring Your Own Device).",
       },
     ];
@@ -209,6 +249,7 @@ export function DeviceRegistry() {
     <div className="flex flex-col gap-3">
       <StatCards variant="footer" columns={4} stats={stats} />
 
+      <RefreshDevices.Provider value={refresh}>
       <DataTable
         data={filteredDevices}
         columns={DEVICE_COLUMNS}
@@ -250,6 +291,7 @@ export function DeviceRegistry() {
           </>
         }
       />
+      </RefreshDevices.Provider>
     </div>
     </>
   );

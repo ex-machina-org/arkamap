@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { RowStatus } from "../alert-level";
 
 /** What a row is about; picks the drawing beside it. */
-export type AlertKind = "device" | "source" | "fire" | "fireRisk" | "heat" | "weather" | "quake" | "disaster" | "region";
+export type AlertKind = "device" | "source" | "fire" | "fireRisk" | "heat" | "weather" | "quake" | "disaster" | "region" | "info";
 
 type Mood = RowStatus["color"];
 
@@ -75,6 +75,12 @@ const PROPS: Record<Exclude<AlertKind, "device">, { back?: ReactNode; front?: Re
   quake: { front: <path d="M2.5 19.5l1.8 2.5-1.8 2.5 1.8 2.5M37.5 19.5l-1.8 2.5 1.8 2.5-1.8 2.5" fill="none" stroke="#a16207" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" /> },
   // The orange alarm strokes from the mascot art.
   disaster: { front: <path d="M3.5 9.5l2.6 3.6M1.5 16l3.8 1M36.5 9.5l-2.6 3.6M38.5 16l-3.8 1" stroke="#f97316" strokeWidth="1.8" strokeLinecap="round" /> },
+  // Holding up a small ID card, for record-keeping details.
+  info: { front: <>
+    <rect x="26" y="28" width="13" height="10" rx="1.6" fill="#fff" stroke="#94a3b8" strokeWidth=".8" transform="rotate(-8 32.5 33)" />
+    <rect x="27.8" y="30.4" width="3.6" height="4.4" rx=".6" fill="#7dd3fc" transform="rotate(-8 32.5 33)" />
+    <path d="M32.6 30.8h4.6M32.6 32.8h4.6M32.6 34.8h3" stroke="#94a3b8" strokeWidth=".8" strokeLinecap="round" transform="rotate(-8 32.5 33)" />
+  </> },
   region: { front: <>
     <path d="M33 39.5s-4.6-4.7-4.6-8a4.6 4.6 0 0 1 9.2 0c0 3.3-4.6 8-4.6 8z" fill="#ef4444" />
     <circle cx="33" cy="31.4" r="1.7" fill="#fff" />

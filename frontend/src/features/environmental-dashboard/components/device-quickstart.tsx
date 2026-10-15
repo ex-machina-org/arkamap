@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { RiCheckboxCircleLine, RiFileCopyLine } from "@remixicon/react";
+import { RiArrowDownSLine, RiCheckboxCircleLine, RiFileCopyLine } from "@remixicon/react";
 import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
@@ -71,6 +71,40 @@ function Step({ n, title, hint, children }: { n: number; title: string; hint?: R
 
 const code = (text: string) => <code className="font-mono text-text-primary">{text}</code>;
 
+/** Quoted names and URL flags read as code. */
+const CODE_TOKEN = /("[^"]*"|\?\w+=\w+)/;
+
+function RuleText({ rule }: { rule: string }) {
+  // The term before the first ":" or " = " leads the rule, when it is short enough to be a term.
+  const cut = [rule.indexOf(": "), rule.indexOf(" = ")].filter(at => at > 0 && at < 40).sort((a, b) => a - b)[0];
+  const lead = cut ? rule.slice(0, cut) : undefined;
+  const rest = cut ? rule.slice(cut).replace(/^(: | = )/, "") : rule;
+  const tokens = (text: string) => text.split(CODE_TOKEN).map((part, index) => index % 2 ? <code key={index} className="rounded bg-background-supporting-default px-1 font-mono text-caption-1-regular text-text-primary">{part}</code> : part);
+  return <span className="min-w-0 text-body-2-regular text-pretty text-text-secondary">
+    {lead && <span className="text-body-2-medium text-text-primary">{tokens(lead)}{" "}</span>}{tokens(rest)}
+  </span>;
+}
+
+const RULES_SHOWN = 5;
+
+/** The server's rules as one tidy list; the first few show, the rest fold away. */
+function Rules({ rules }: { rules: string[] }) {
+  const row = (rule: string) => <li key={rule} className="flex items-start gap-2.5 px-3 py-2.5">
+    <RiCheckboxCircleLine className="mt-0.5 size-4 shrink-0 text-status-lime-text" aria-hidden /><RuleText rule={rule} />
+  </li>;
+  const more = rules.slice(RULES_SHOWN);
+  return <div className="overflow-hidden rounded-2xl bg-background-inner-default shadow-card">
+    <ul className="divide-y divide-border-button-default">{rules.slice(0, RULES_SHOWN).map(row)}</ul>
+    {!!more.length && <details className="group border-t border-border-button-default">
+      <summary className="flex cursor-pointer list-none items-center gap-1 px-3 py-2.5 text-body-2-medium text-text-secondary outline-none hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring focus-visible:ring-inset [&::-webkit-details-marker]:hidden">
+        <span className="group-open:hidden">Tampilkan {more.length} aturan lainnya</span><span className="hidden group-open:inline">Sembunyikan</span>
+        <RiArrowDownSLine aria-hidden className="size-4 transition-transform group-open:rotate-180 motion-reduce:transition-none" />
+      </summary>
+      <ul className="divide-y divide-border-button-default border-t border-border-button-default">{more.map(row)}</ul>
+    </details>}
+  </div>;
+}
+
 /** What to send and where: the payload, both endpoints, and the server's rules. */
 function Implementation({ quickstart }: { quickstart: DTO<"Quickstart"> }) {
   const mqtt = quickstart.mqtt;
@@ -99,12 +133,8 @@ function Implementation({ quickstart }: { quickstart: DTO<"Quickstart"> }) {
         </div>
       </div>
     </Step>
-    <Step n={3} title="Perhatikan Aturan">
-      <ul className="grid gap-2 sm:grid-cols-2">
-        {quickstart.rules.map(rule => <li key={rule} className="flex items-start gap-2 text-body-2-regular text-pretty text-text-secondary">
-          <RiCheckboxCircleLine className="mt-0.5 size-4 shrink-0 text-status-lime-text" aria-hidden />{rule}
-        </li>)}
-      </ul>
+    <Step n={3} title="Perhatikan Aturan" hint="Yang paling penting di atas; sisanya bisa dibuka bila perlu.">
+      <Rules rules={quickstart.rules} />
     </Step>
   </ol>;
 }
