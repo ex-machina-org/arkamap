@@ -98,6 +98,16 @@ function MapBoundsController({ region }: { region?: number[] }) {
   return null;
 }
 
+/** MapLibre opens the compact credit line expanded on wide maps; it starts folded to its (i) button instead. */
+function FoldedAttribution() {
+  const { map, isLoaded } = useMap();
+  useEffect(() => {
+    if (!map || !isLoaded) return;
+    map.getContainer().querySelector(".maplibregl-ctrl-attrib")?.classList.remove("maplibregl-compact-show");
+  }, [map, isLoaded]);
+  return null;
+}
+
 /** A camera request. A new object is a new request, so focusing the same incident twice still moves the map. */
 export interface CameraTarget {
   coords: [number, number];
@@ -304,7 +314,8 @@ export function MapViewport({
         <MapCameraController target={camera} pitch={is3D ? 48 : 0} intro={intro} framed={framed} />
 
         <SpatialLayers warnings={warnings} choropleth={choropleth} layer={layer} layerError={layerError} showData={showData} basemap={basemap} wind={wind} selectedRegionId={selectedRegionId} onSelectRegion={onSelectRegion} onRegionCenter={onRegionCenter} buildings={is3D} events={events} focus={focus} boundary={boundary} nationalMask={nationalMask} status={status} />
-        <MapControls position="bottom-right" showCompass showFullscreen showZoom />
+        <MapControls position="bottom-right" showCompass showFullscreen showZoom className="right-3" />
+        <FoldedAttribution />
 
         {groups.map(({ type, data }) => {
           const color = HAZARDS[type].color;
