@@ -10,22 +10,22 @@ means one entry here and one renderer there.
 
 PANELS = [
     # ── kualitas udara
-    {"id": "aq_index", "theme": "udara", "title": "Indeks Kualitas Udara",
+    {"id": "aq_index", "theme": "udara", "title": "Indeks Kualitas Udara (AQI)",
      "metrics": ["aqi_forecast_max"],
      "description": "Gauge US AQI dengan kategori (Baik s.d. Berbahaya) dan batas normalnya: sekarang di mana dibanding standar."},
-    {"id": "aq_pollutants", "theme": "udara", "title": "Polutan terhadap Baku Mutu",
+    {"id": "aq_pollutants", "theme": "udara", "title": "Polutan Udara vs Batas Aman",
      "metrics": ["pm25_mean", "pm10_mean", "no2_mean", "so2_mean", "o3_max8h", "co_mean"],
      "description": "Batang tiap polutan sebagai persen baku mutu nasional/pedoman WHO; mana yang melewati batas."},
-    {"id": "aq_pm25_week", "theme": "udara", "title": "PM2.5, 7 Hari",
+    {"id": "aq_pm25_week", "theme": "udara", "title": "Debu Halus (PM2.5), 7 Hari",
      "metrics": ["pm25_mean"],
      "description": "Garis PM2.5 tujuh hari terakhir dengan garis pedoman WHO dan baku mutu nasional."},
     {"id": "aq_pollutants_week", "theme": "udara", "title": "Polutan Udara, 7 Hari",
      "metrics": ["pm25_mean", "pm10_mean", "no2_mean", "so2_mean"],
      "description": "Beberapa garis polutan sekaligus selama tujuh hari: mana yang naik bersamaan."},
-    {"id": "aq_outlook", "theme": "udara", "title": "Udara Sekarang vs 48 Jam ke Depan",
+    {"id": "aq_outlook", "theme": "udara", "title": "Debu Halus: Sekarang vs 2 Hari ke Depan",
      "metrics": ["pm25_mean", "pm25_forecast_max"],
      "description": "Batang PM2.5 sekarang dibanding prakiraan tertinggi 48 jam ke depan."},
-    {"id": "aq_ranking", "theme": "udara", "title": "PM2.5 Wilayah Sekitar",
+    {"id": "aq_ranking", "theme": "udara", "title": "Debu Halus di Wilayah Sekitar",
      "metrics": ["pm25_mean"],
      "description": "Peringkat PM2.5 wilayah tetangga dengan garis baku mutu."},
     # ── kebakaran
@@ -35,25 +35,25 @@ PANELS = [
     {"id": "fire_risk", "theme": "kebakaran", "title": "Rawan Kebakaran",
      "metrics": ["fire_risk", "dry_days", "hotspot_count_7d"],
      "description": "Gauge indeks rawan kebakaran 0-100 dengan hari kering berturut dan titik panas."},
-    {"id": "fire_week", "theme": "kebakaran", "title": "Titik Panas, 7 Hari",
+    {"id": "fire_week", "theme": "kebakaran", "title": "Titik Api, 7 Hari",
      "metrics": ["hotspot_count_7d"],
      "description": "Batang jumlah titik panas per hari selama tujuh hari."},
     # ── panas dan cuaca
-    {"id": "heat_week", "theme": "cuaca", "title": "Suhu Maksimum, 7 Hari",
+    {"id": "heat_week", "theme": "cuaca", "title": "Suhu Terpanas Harian, 7 Hari",
      "metrics": ["temp_max_mean"],
      "description": "Garis suhu maksimum harian tujuh hari terakhir."},
-    {"id": "heat_now", "theme": "cuaca", "title": "Panas dan UV",
+    {"id": "heat_now", "theme": "cuaca", "title": "Panas dan Sinar UV",
      "metrics": ["heat_index_max", "uv_index_max", "wet_bulb_max"],
      "description": "Suhu terasa, indeks UV, dan wet-bulb tertinggi 3 hari ke depan dengan kategorinya."},
-    {"id": "rain_outlook", "theme": "cuaca", "title": "Hujan 30 Hari: Lalu vs Prakiraan",
+    {"id": "rain_outlook", "theme": "cuaca", "title": "Hujan: Sebulan Lalu vs Sebulan ke Depan",
      "metrics": ["rain_30d", "rain_forecast_30d"],
      "description": "Batang hujan 30 hari terakhir dibanding prakiraan 30 hari ke depan."},
     # ── air
-    {"id": "water_now", "theme": "air", "title": "Air: Debit dan Tekanan",
+    {"id": "water_now", "theme": "air", "title": "Air Sungai dan Air Bersih",
      "metrics": ["river_discharge", "water_stress"],
      "description": "Garis debit sungai tujuh hari dan gauge tekanan air bersih."},
     # ── laut
-    {"id": "marine_week", "theme": "laut", "title": "Gelombang dan Suhu Laut, 7 Hari",
+    {"id": "marine_week", "theme": "laut", "title": "Laut: Gelombang dan Suhu, 7 Hari",
      "metrics": ["wave_height_max", "sea_surface_temp"],
      "description": "Garis gelombang tertinggi dan suhu permukaan laut tujuh hari."},
     # ── gempa
@@ -61,7 +61,7 @@ PANELS = [
      "metrics": ["seismic_hazard", "quake_count_30y", "quake_max_mag_30y"],
      "description": "Gauge kerawanan gempa 0-100 dengan jumlah dan magnitudo gempa terkuat 30 tahun."},
     # ── energi
-    {"id": "solar_week", "theme": "energi", "title": "Iradiasi Matahari",
+    {"id": "solar_week", "theme": "energi", "title": "Sinar Matahari untuk Panel Surya",
      "metrics": ["solar_ghi", "solar_rooftop_mwp", "solar_ghi_annual"],
      "description": "Garis iradiasi tujuh hari dan potensi PLTS atap wilayah."},
     # ── kota
@@ -69,7 +69,7 @@ PANELS = [
      "metrics": ["health_facilities_per_10k", "schools_per_10k", "transit_stop_density", "road_density"],
      "description": "Batang tingkat layanan (fasilitas kesehatan, sekolah, halte, jalan) dibanding wilayah lain."},
     # ── lintas tema
-    {"id": "profile_attention", "theme": "ringkasan", "title": "Tingkat Perhatian Indikator",
+    {"id": "profile_attention", "theme": "ringkasan", "title": "Indikator yang Perlu Diperhatikan",
      "metrics": [],   # reads the profile's own metrics
      "description": "Batang 0-100 tiap indikator pilihan profil: mana yang paling perlu perhatian dibanding wilayah lain."},
 ]

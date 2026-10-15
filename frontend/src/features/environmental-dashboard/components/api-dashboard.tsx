@@ -8,7 +8,7 @@ import type { DTO } from "@/lib/api/client";
 import { useMetricCatalog } from "../use-metric-catalog";
 import { usePanelCatalog } from "../use-region-data";
 import { useWidgetLayout } from "../use-widget-layout";
-import { defaultWidgets } from "../widget-layout";
+import { defaultWidgets, limitsOf } from "../widget-layout";
 import { CurationAnnouncement } from "./curation-announcement";
 import { PanelUnavailable } from "./dashboard-card";
 import { DashboardSkeleton } from "./dashboard-skeleton";
@@ -37,7 +37,7 @@ function CustomisableDashboard({ data, view, refresh, actionSlot }: { data: DTO<
   const settingsItem = dashboard.items.find(item => item.id === settingsId);
   // Device numbers mean nothing without a device: hidden (not removed) until one is registered and the data reloads.
   const shown = devices.length ? dashboard.items : dashboard.items.filter(item => item.type !== "kpi-iot");
-  const widgets = shown.map(item => ({ id: item.id, type: item.type, title: item.title ?? defaultTitle(item, ctx), node: renderWidget(item, ctx) }));
+  const widgets = shown.map(item => ({ id: item.id, type: item.type, title: item.title ?? defaultTitle(item, ctx), node: renderWidget(item, ctx), limits: limitsOf(item) }));
 
   const controls = <div className="flex flex-wrap items-center justify-end gap-2">
     {editing && dashboard.customised && <Button size="small" variant="ghost" leadingIcon={RiRefreshLine} onClick={dashboard.reset}>Kembalikan Bawaan</Button>}

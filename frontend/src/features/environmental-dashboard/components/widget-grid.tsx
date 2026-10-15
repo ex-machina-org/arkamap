@@ -4,10 +4,10 @@ import ReactGridLayout, { useContainerWidth, type Layout } from "react-grid-layo
 import "react-grid-layout/css/styles.css";
 import { Button } from "@/components/base/buttons/button";
 import { cx } from "@/utils/cx";
-import { GRID, WIDGET_SIZES, byReadingOrder, rowsToPx, type Placement, type WidgetType } from "../widget-layout";
+import { GRID, byReadingOrder, rowsToPx, type Placement, type SizeLimits, type WidgetType } from "../widget-layout";
 import "./widget-grid.css";
 
-export type WidgetItem = { id: string; type: WidgetType; title: string; node: ReactNode };
+export type WidgetItem = { id: string; type: WidgetType; title: string; node: ReactNode; limits: SizeLimits };
 
 // Below this the cards stack in one column in reading order; editing there uses the move buttons.
 const GRID_MIN_WIDTH = 960;
@@ -43,8 +43,10 @@ export function WidgetGrid({ widgets, layout, editing, onLayoutChange, onMove, o
   const placed = useMemo(() => layout.flatMap(item => {
     const widget = byId.get(item.i);
     if (!widget) return [];
-    const { minW, minH } = WIDGET_SIZES[widget.type];
-    return [{ ...item, minW, minH }];
+    const { minW, minH, maxH } = widget.limits;
+    // A layout saved before the limits existed is pulled back inside them, so nothing is cut off.
+    const h = Math.min(Math.max(item.h, minH), maxH ?? Infinity);
+    return [{ ...item, w: Math.max(item.w, minW), h, minW, minH, maxH }];
   }), [layout, byId]);
   const order = useMemo(() => [...placed].sort(byReadingOrder), [placed]);
   const wide = mounted && width >= GRID_MIN_WIDTH;
