@@ -82,6 +82,14 @@ const NATIONAL_VIEW: CameraTarget = { coords: [118, -2.5], zoom: 4.6, zoomMode: 
 // the same view as a different object, so MapCameraController flies there again
 const NATIONAL_AGAIN: CameraTarget = { ...NATIONAL_VIEW };
 
+/** `/map?lat=&lon=` (an alert's point) or `/map?region=` (an alert's region), as linked from the alerts page. */
+function readLinkTarget() {
+  const params = new URLSearchParams(window.location.search);
+  const lat = Number(params.get("lat")), lon = Number(params.get("lon"));
+  const point = params.has("lat") && params.has("lon") && Number.isFinite(lat) && Number.isFinite(lon) ? [lon, lat] as [number, number] : null;
+  return { point, region: params.get("region") };
+}
+
 function isTyping(target: EventTarget | null) {
   return target instanceof HTMLElement && (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName));
 }
@@ -98,9 +106,11 @@ export function SiriMapWorkspace() {
   // straight away, else (first visit) the profile's once it answers.
   const [signedIn] = useState(() => apiHeaders().has("Authorization"));
   const [lastFocus] = useState(() => (signedIn ? readLastFocus() : undefined));
+  const [link] = useState(readLinkTarget);
   const settled = !sessionLoading && !dashboard.loading;
-  const startBounds = isRegional ? focus.bbox : settled ? undefined : lastFocus;
-  const mapReady = !signedIn || Boolean(lastFocus) || settled;
+  // A linked point may lie outside the profile's region, so it opens unframed (inside Indonesia) on that point.
+  const startBounds = link.point ? undefined : isRegional ? focus.bbox : settled ? undefined : lastFocus;
+  const mapReady = !signedIn || Boolean(lastFocus) || Boolean(link.point) || settled;
   useEffect(() => {
     if (settled) writeLastFocus(isRegional ? focus.bbox : undefined);
   }, [settled, isRegional, focus]);
@@ -122,8 +132,8 @@ export function SiriMapWorkspace() {
   const incidents = spatial.incidents;
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
 
-  const [camera, setCamera] = useState<CameraTarget>(NATIONAL_VIEW);
-  const [introCamera] = useState(isFirstVisit);
+  const [camera, setCamera] = useState<CameraTarget>(() => link.point ? { coords: link.point, zoom: 9, zoomMode: "exact" } : NATIONAL_VIEW);
+  const [introCamera] = useState(isFirstVisit && !link.point);
   // Opened on last time's region but the profile no longer has one: a new target object flies back to Indonesia.
   const cameraTarget = settled && lastFocus && !isRegional && camera === NATIONAL_VIEW ? NATIONAL_AGAIN : camera;
   const [is3D, setIs3D] = useState(false);
@@ -251,6 +261,27 @@ export function SiriMapWorkspace() {
     setSelectedRegion(null);
     if (metricChoice === "auto") setMetricChoice(situation?.choropleth.metric ?? "fire_risk");
   }
+
+  // Open the linked alert's card once its incident (nearest within ~5 km) or region has loaded.
+  const linkHandled = useRef(false);
+  useEffect(() => {
+    if (linkHandled.current) return;
+    if (link.point) {
+      const [lon, lat] = link.point;
+      const near = incidents
+        .map((incident) => ({ incident, d: Math.hypot(incident.coords[0] - lon, incident.coords[1] - lat) }))
+        .filter(({ d }) => d < 0.05)
+        .sort((a, b) => a.d - b.d)[0];
+      if (!near) return;
+      linkHandled.current = true;
+      setSelectedIncidentId(near.incident.id);
+      if (!isDocked) setIsSidebarOpen(false);
+    } else if (link.region && mapLayer.layer?.features.some((item) => item.properties.region_id === link.region)) {
+      linkHandled.current = true;
+      pickRegionById(link.region);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once both feeds can answer; pickRegionById reads them
+  }, [incidents, mapLayer.layer]);
 
   const regionAnchor = selectedRegion
     ? selectedRegion.anchor ?? (regionCenter?.regionId === selectedRegion.entry.regionId ? regionCenter.center : null)
