@@ -10,8 +10,10 @@ import { cardClass } from "./dashboard-card";
 type IconComponent = ComponentType<{ className?: string; "aria-hidden"?: boolean | "true" | "false" }>;
 
 /** Card with an icon-tile header: the shared shape of every form and settings section in the device pages. */
-export function SectionCard({ icon, tone = "blue", title, description, action, children, className }: {
+export function SectionCard({ icon, tone = "blue", art, title, description, action, children, className }: {
   icon: IconComponent;
+  /** A drawing (Kodama, the device board) in place of the gradient icon tile. */
+  art?: ReactNode;
   tone?: StatTone;
   title: string;
   description?: ReactNode;
@@ -23,7 +25,8 @@ export function SectionCard({ icon, tone = "blue", title, description, action, c
     <header className="flex flex-wrap items-center justify-between gap-3">
       {/* Tile centred on the title + description block, so both lines read as one label for it. */}
       <div className="flex min-w-0 flex-1 items-center gap-3">
-        <StatIconTile icon={icon} tone={tone} />
+        {art ? <span aria-hidden className="grid size-11 shrink-0 place-items-center rounded-xl bg-background-inner-default shadow-card">{art}</span>
+          : <StatIconTile icon={icon} tone={tone} />}
         <div className="flex min-w-0 flex-col gap-0.5">
           <h2 className="text-title-3-medium text-pretty text-text-primary">{title}</h2>
           {description && <p className="max-w-prose text-body-2-regular text-pretty text-text-secondary">{description}</p>}

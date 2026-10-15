@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { RiArrowLeftLine, RiArrowRightLine, RiCheckLine, RiCloseLine, RiCpuLine, RiCrosshair2Line, RiInformationLine, RiListUnordered, RiMap2Line, RiMapPin2Line } from "@remixicon/react";
+import { RiArrowLeftLine, RiArrowRightLine, RiCheckLine, RiCloseLine, RiCpuFill, RiCrosshair2Line, RiInformationFill, RiListUnordered, RiMap2Line, RiMapPin2Fill, RiMapPin2Line } from "@remixicon/react";
 import { toast } from "sonner";
-import { Chip } from "@/components/base/badges/chip";
 import { Button, ButtonLink } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
@@ -12,6 +11,7 @@ import { Map, MapMarker, MarkerContent, useMap } from "@/components/ui/map";
 import { SESSION_CHANGED } from "@/hooks/use-session";
 import { cx } from "@/utils/cx";
 import { cardClass, insetClass } from "./components/dashboard-card";
+import { AlertArt } from "./components/alert-art";
 import { DeviceConnect } from "./components/device-connect";
 import { KIND_ICON } from "./components/device-helpers";
 import { Notice, SectionCard } from "./components/device-ui";
@@ -96,7 +96,7 @@ export function Stepper({ active, onSelect }: { active: 0 | 1; onSelect?: (step:
  */
 function KindField({ kind, custom, onKind, onCustom }: { kind: DeviceKindChoice; custom: string; onKind: (kind: DeviceKindChoice) => void; onCustom: (value: string) => void }) {
   return <div className="flex flex-col gap-1.5">
-    <span id="device-kind-label" className="text-body-medium text-text-primary">Jenis Alat</span>
+    <span id="device-kind-label" className="flex items-center gap-0.5 text-body-medium text-text-primary">Jenis Alat<span aria-hidden className="text-text-error-primary">*</span></span>
     {kind === "other"
       ? <div className="flex items-start gap-2">
         <Input aria-labelledby="device-kind-label" name="customKind" value={custom} onChange={onCustom} autoFocus isRequired maxLength={50} validationBehavior="native"
@@ -180,22 +180,27 @@ export function DeviceForm() {
   const savedPoint = created && draft.location?.lat === created.device.lat && draft.location?.lon === created.device.lon;
   return <form onSubmit={submit} className="flex w-full min-w-0 flex-col gap-5">
     <Stepper active={0} />
+    {/* The order and what can be skipped, before any field. */}
+    <p className="text-body-2-regular text-pretty text-text-secondary">
+      Isi berurutan dari atas. Hanya bagian <span className="text-body-2-medium text-text-primary">1. Identitas Alat</span> yang wajib; kolom bertanda <span className="text-text-error-primary">*</span> harus diisi. Bagian 2 dan 3 boleh dilewati.
+    </p>
     {created && <Notice tone="info" title="Mengubah Alat Yang Sudah Dibuat">Kunci API tidak berubah. ID, kepemilikan, dan pemilik tidak bisa diubah lagi.</Notice>}
 
-    <SectionCard icon={RiCpuLine} tone="blue" title="Identitas Alat" description="Nama dan jenis membantu Anda mengenali alat. Field data dikenali otomatis dari kiriman sensor.">
+    <SectionCard icon={RiCpuFill} tone="blue" art={<AlertArt kind="device" mood="lime" />} title="1. Identitas Alat"
+      description="Nama dan jenis membantu Anda mengenali alat. Field data dikenali otomatis dari kiriman sensor.">
       <div className="grid items-start gap-5 sm:grid-cols-2">
         <Input label="Nama Alat" name="name" value={draft.name} onChange={name => set({ name })} placeholder="Contoh: Sensor Sawah 1" isRequired maxLength={100} validationBehavior="native" />
         <KindField kind={draft.kind} custom={draft.custom} onKind={kind => set({ kind })} onCustom={custom => set({ custom })} />
       </div>
     </SectionCard>
 
-    <SectionCard icon={RiMapPin2Line} tone="emerald" title="Lokasi Pemasangan" action={<Chip variant="caption" color="neutral">Opsional</Chip>}
+    <SectionCard icon={RiMapPin2Fill} tone="emerald" art={<AlertArt kind="region" mood="lime" />} title="2. Lokasi Pemasangan"
       description="Tanpa titik lokasi, alat tidak bisa dibagikan ke komunitas dan tidak mendapat pembanding data wilayah. Nama wilayah ditentukan server dari titik ini.">
       <LocationField value={draft.location} onChange={location => set({ location })} onError={setError} regionName={savedPoint ? created?.device.region_name : undefined} />
     </SectionCard>
 
-    <SectionCard icon={RiInformationLine} tone="purple" title="Info Tambahan" action={<Chip variant="caption" color="neutral">Opsional</Chip>}
-      description="ID, kepemilikan, dan pemilik untuk pencatatan. Tidak bisa diubah setelah alat dibuat.">
+    <SectionCard icon={RiInformationFill} tone="purple" art={<AlertArt kind="info" mood="lime" />} title="3. Info Tambahan"
+      description="ID, kepemilikan, dan pemilik untuk pencatatan. Isi sekarang bila perlu: tidak bisa diubah setelah alat dibuat.">
       <div className="grid items-start gap-5 sm:grid-cols-2">
         <Input label="ID Atau Nomor Seri" name="id" value={draft.externalId} onChange={externalId => { set({ externalId }); setIdError(undefined); }} isDisabled={locked}
           placeholder="Contoh: ESP32-A1" hint={idError ?? "Unik untuk setiap alat di akun Anda."} isInvalid={Boolean(idError)} maxLength={100} />
