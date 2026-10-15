@@ -43,7 +43,8 @@ import { LayerRail } from "./layer-rail";
 import { RankPanel } from "./rank-panel";
 import { RegionDetail } from "./region-detail";
 import { useMapLayer } from "./use-map-layer";
-import { parentName, type Level } from "./atlas";
+import { aspectOf, parentName, rampStopsFor, type Level } from "./atlas";
+import { DataPicker } from "./data-picker";
 import { formatCoords } from "./format";
 import { HAZARDS, HAZARD_ORDER } from "./hazards";
 import type { BasemapType, HazardType, SpatialIncident } from "./types";
@@ -310,6 +311,25 @@ export function SiriMapWorkspace() {
         onToggleSidebar={toggleSidebar}
         isAssistantActive={isAssistantActive}
         onToggleAssistant={() => (isAssistantActive ? closeAssistant() : openAssistant())}
+        dataPicker={
+          <DataPicker
+            label={choropleth?.label}
+            swatch={mapLayer.layer ? rampStopsFor(mapLayer.layer.metric.metric, aspectOf(mapLayer.layer.metric.aspect)) : undefined}
+          >
+            {(close) => (
+              <LayerRail
+                metrics={metrics}
+                active={metricChoice}
+                // A metric or a region is a final pick, so the picker steps aside to show the map; level and search keep it open.
+                onPick={(metric) => { setMetricChoice(metric); close(); }}
+                level={metricChoice === "auto" ? situation?.choropleth.level ?? "provinsi" : level}
+                onLevelChange={changeLevel}
+                regions={regionList}
+                onPickRegion={(id) => { pickRegionById(id); close(); }}
+              />
+            )}
+          </DataPicker>
+        }
       />
 
       <div className="relative flex min-h-0 min-w-0 flex-1 gap-3">
@@ -492,21 +512,7 @@ export function SiriMapWorkspace() {
               onAsk={handleAsk}
             />
           }
-          explore={
-            <PublicDataPanel
-              rail={
-                <LayerRail
-                  metrics={metrics}
-                  active={metricChoice}
-                  onPick={setMetricChoice}
-                  level={metricChoice === "auto" ? situation?.choropleth.level ?? "provinsi" : level}
-                  onLevelChange={changeLevel}
-                  regions={regionList}
-                  onPickRegion={pickRegionById}
-                />
-              }
-            />
-          }
+          explore={<PublicDataPanel />}
           ranking={<RankPanel layer={mapLayer.layer} label={choropleth?.label} selectedRegionId={selectedRegion?.entry.regionId ?? null} onSelect={pickRegionById} />}
           detail={selectedRegion && (
             <RegionDetail

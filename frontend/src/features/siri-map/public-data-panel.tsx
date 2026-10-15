@@ -25,8 +25,8 @@ function ErrorText({ children }: { children: ReactNode }) {
   return <p role="alert" className="rounded-lg bg-status-rose-background px-3 py-2 text-caption-1-medium text-status-rose-text">{children}</p>;
 }
 
-/** `rail` picks what colours the regions; the rest are national summaries and reports. */
-export function PublicDataPanel({ rail }: { rail: ReactNode }) {
+/** National summaries and reports. What colours the regions is picked from the dock (DataPicker), next to the map it changes. */
+export function PublicDataPanel() {
   const overview = useApi("/public/overview", "PublicOverview");
   const [regionId, setRegionId] = useState("");
   const [query, setQuery] = useState("");
@@ -78,10 +78,6 @@ export function PublicDataPanel({ rail }: { rail: ReactNode }) {
           </Collapsible>
         </Section>
       )}
-
-      <Section title="Warna wilayah" hint="Bawaan mengikuti profil. Pilih data lain untuk mewarnai wilayah.">
-        {rail}
-      </Section>
 
       <Section title="Laporan wilayah">
         <Input label="Cari wilayah" placeholder="Ketik minimal 2 huruf" value={query} onChange={setQuery} />
