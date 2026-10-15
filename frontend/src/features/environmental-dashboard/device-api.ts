@@ -91,15 +91,21 @@ export function useDevice(id: number, pollMs?: number) {
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
+/** The frontend's public domain: what devices use, also when this page runs on localhost. */
+const DEVICE_ORIGIN = "https://arkamap.winatra.app";
+
 /**
- * Devices talk to the site's own domain, which proxies /api (HTTP ingest and the MQTT WebSocket)
+ * Devices talk to the frontend's domain, which proxies /api (HTTP ingest and the MQTT WebSocket)
  * to the backend, so the backend's address is never shown. The backend fills these from its
- * PUBLIC_URL; whatever that is, every URL, the MQTT address and each code example get this page's origin.
+ * PUBLIC_URL; whatever that is, every URL, the MQTT address and each code example get the frontend's
+ * domain: this page's origin once deployed, DEVICE_ORIGIN while developing on localhost.
  */
-export function viaFrontend(quickstart: DTO<"Quickstart">, here: Pick<Location, "origin" | "host" | "hostname"> = window.location): DTO<"Quickstart"> {
+export function viaFrontend(quickstart: DTO<"Quickstart">, page: Pick<Location, "origin" | "hostname"> = window.location): DTO<"Quickstart"> {
   const from = new URL(quickstart.url);
-  // A device cannot reach the developer's localhost, so a local dev page keeps the backend's address.
-  if (from.host === here.host || LOCAL_HOSTS.has(here.hostname)) return quickstart;
+  // A backend on this machine (plain `npm run dev`) is the one a test device can reach: keep it.
+  if (LOCAL_HOSTS.has(from.hostname)) return quickstart;
+  const here = new URL(LOCAL_HOSTS.has(page.hostname) ? DEVICE_ORIGIN : page.origin);
+  if (from.host === here.host) return quickstart;
   // Origin first (http→https too), then host:port (wss://), then the bare hostname (MQTT host settings).
   const swap = (text: string) => text.replaceAll(from.origin, here.origin).replaceAll(from.host, here.host).replaceAll(from.hostname, here.hostname);
   return {
