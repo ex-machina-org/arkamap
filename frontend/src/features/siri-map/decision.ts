@@ -16,13 +16,36 @@ export const FIRE_SMOKE_FIELDS: ReadonlySet<string> = new Set(["pemadam", "keseh
 
 export type PriorityLevel = "siaga" | "waspada";
 
+/** One hazard measured against its own scale, so the UI can draw where it sits instead of describing it. */
+export interface PrioritySignal {
+  kind: "smoke" | "fire";
+  label: string;
+  value: string;
+  unit: string;
+  /** Index into `steps` the value falls in. */
+  step: number;
+  steps: readonly string[];
+  /** A second figure for the same hazard, e.g. the forecast peak or the density behind the step. */
+  note?: string;
+}
+
+/** Conditions that shape the hazard without being one: dry spell, coming rain, fire intensity. */
+export interface PriorityContext {
+  kind: "dry" | "rain" | "frp";
+  label: string;
+  value: string;
+}
+
 export interface Priority {
   regionId: string;
   name: string;
   level: PriorityLevel;
   population: number | null;
-  /** One sentence per finding, for the list. */
+  /** One sentence per finding, for the assistant and screen readers. */
   reasons: string[];
+  /** The same findings as data, for meters. */
+  signals: PrioritySignal[];
+  context: PriorityContext[];
   /** Label and value pairs, for the region card. */
   facts: [string, string][];
   /** What to do, most specific first. */
@@ -36,11 +59,18 @@ export interface PrioritySummary {
   items: Priority[];
   /** Regions over a threshold, including those past the visible list. */
   total: number;
+  /** `total` split by level. */
+  levels: Record<PriorityLevel, number>;
 }
 
 type IspuCategory = "baik" | "sedang" | "tidak sehat" | "sangat tidak sehat" | "berbahaya";
 
 const CATEGORIES: IspuCategory[] = ["baik", "sedang", "tidak sehat", "sangat tidak sehat", "berbahaya"];
+
+/** Display names of the ISPU categories, in order. */
+export const ISPU_STEPS = ["Baik", "Sedang", "Tidak sehat", "Sangat tidak sehat", "Berbahaya"] as const;
+/** Display names of the fire tiers below, in order. */
+export const FIRE_STEPS = ["Rendah", "Sedang", "Tinggi", "Sangat tinggi"] as const;
 
 /** ISPU value and PM2.5 concentration (ug/m3, 24 h) at the top of each band, Permen LHK 14/2020 Lampiran I. */
 const PM25_BANDS: { ispu: number; ug: number }[] = [
@@ -145,6 +175,24 @@ export function assessPriorities(rows: readonly Record<string, unknown>[], areaK
     if (fire >= 1 && rain != null) reasons.push(`hujan 30 hari ke depan diprakirakan ${decimal.format(rain)} mm`);
     if (rain != null) facts.push(["Hujan 30 hari ke depan", `${decimal.format(rain)} mm`]);
 
+    const signals: PrioritySignal[] = [];
+    if (pm != null) {
+      signals.push({
+        kind: "smoke", label: "Asap (PM2.5)", value: decimal.format(pm), unit: "µg/m³", step: smoke, steps: ISPU_STEPS,
+        note: peak != null && categoryOf(peak) > smoke ? `Puncak 48 jam ${peak > 500 ? "di atas 500" : decimal.format(peak)}` : undefined,
+      });
+    }
+    if (hotspots != null) {
+      signals.push({
+        kind: "fire", label: "Titik panas 7 hari", value: integer.format(hotspots), unit: "titik", step: fire, steps: FIRE_STEPS,
+        note: area != null && area > 0 ? `${integer.format(Math.round((hotspots / area) * 10_000))} per 10.000 km²` : undefined,
+      });
+    }
+    const context: PriorityContext[] = [];
+    if (dry != null) context.push({ kind: "dry", label: "Hari kering", value: `${integer.format(dry)} hari` });
+    if (rain != null) context.push({ kind: "rain", label: "Hujan 30 hari", value: `${decimal.format(rain)} mm` });
+    if (frp != null && frp > 0) context.push({ kind: "frp", label: "Api terkuat", value: `${decimal.format(frp)} MW` });
+
     const advice: string[] = [];
     if (smoke >= 2) advice.push(SMOKE_ADVICE[smoke]);
     if (fire >= 2) advice.push(FIRE_ADVICE);
@@ -154,7 +202,7 @@ export function assessPriorities(rows: readonly Record<string, unknown>[], areaK
     const fireShare = hotspots == null ? 0 : fireWeight(hotspots, area);
     const weight = 1 - (1 - smokeWeight) * (1 - fireShare);
 
-    found.push({ regionId: String(row.region_id), name: String(row.name), level, population, reasons, facts, advice, weight });
+    found.push({ regionId: String(row.region_id), name: String(row.name), level, population, reasons, signals, context, facts, advice, weight });
   }
 
   found.sort((a, b) =>
@@ -165,6 +213,7 @@ export function assessPriorities(rows: readonly Record<string, unknown>[], areaK
 
   return {
     total: found.length,
+    levels: { siaga: found.filter(item => item.level === "siaga").length, waspada: found.filter(item => item.level === "waspada").length },
     items: found.slice(0, visible).map(({ weight: _weight, ...item }, index) => ({ ...item, position: index + 1, outOf: found.length })),
   };
 }
