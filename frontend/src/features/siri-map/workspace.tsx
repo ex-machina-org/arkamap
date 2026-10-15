@@ -16,6 +16,7 @@ import {
 import { MapDock } from "./map-dock";
 import { SidePanel } from "./side-panel";
 import { MapHeader } from "./map-header";
+import { MapTools } from "./map-tools";
 import { MapViewport, type CameraTarget } from "./map-viewport";
 import { MapIncidentCard } from "./map-incident-card";
 import { RegionCard } from "./region-card";
@@ -29,7 +30,9 @@ import type { FeatureCollection } from "geojson";
 import { useApi } from "@/hooks/use-api";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useSession } from "@/hooks/use-session";
+import { spring } from "@/lib/springs";
 import { apiHeaders } from "@/lib/api/connection";
+import { cx } from "@/utils/cx";
 import { geoJSON } from "@/lib/api/geojson";
 import { HOTSPOT_LIMIT, useSpatialData } from "./map-api";
 import { useIndonesiaMask, useRegionBoundary } from "@/hooks/use-region-boundary";
@@ -310,12 +313,17 @@ export function SiriMapWorkspace() {
       />
 
       <div className="relative flex min-h-0 min-w-0 flex-1 gap-3">
-        <main className="relative h-full min-w-0 flex-1 overflow-hidden rounded-xl border border-border-button-default bg-background-full shadow-2xs">
+        <main className="relative h-full min-w-0 flex-1 overflow-hidden rounded-2xl border border-border-button-default bg-background-full shadow-2xs">
           <MapHeader
             signedIn={Boolean(me)}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             searchRef={searchRef}
+          >
+            <AccountMenu />
+          </MapHeader>
+
+          <MapTools
             basemap={basemap}
             onBasemapChange={setBasemap}
             is3D={is3D}
@@ -324,24 +332,33 @@ export function SiriMapWorkspace() {
             onShowDataChange={setShowData}
             wind={wind}
             onWindChange={setWind}
-          >
-            <AccountMenu />
-          </MapHeader>
+            // Phones show the summary headline under the header, so the tools start below it.
+            className={cx("absolute right-3 top-15 z-20 transition-[top] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none",!isSidebarOpen && situation?.tiles[0] && "max-md:top-31")}
+          />
 
           {/* Phones open on the map, so the headline rides above it and opens the full summary. */}
+          <AnimatePresence initial={false}>
           {!isSidebarOpen && situation?.tiles[0] && (
-            <button
+            <motion.button
+              key="headline"
               type="button"
               onClick={() => setIsSidebarOpen(true)}
-              className="button-press-motion absolute inset-x-3 top-14 z-20 flex items-center gap-2 rounded-2lg bg-background-primary-default/95 px-3 py-2 text-left shadow-card outline-none backdrop-blur-md focus-visible:ring-2 focus-visible:ring-border-focus-ring md:hidden"
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6, transition: spring.moderate.exit }}
+              // Press feedback through motion: a CSS transform transition here would lag behind the entrance.
+              whileTap={{ scale: 0.98 }}
+              transition={spring.moderate}
+              className="absolute inset-x-3 top-14 z-20 flex items-center gap-2 rounded-2lg bg-background-primary-default/95 px-3 py-2 text-left shadow-card outline-none backdrop-blur-md focus-visible:ring-2 focus-visible:ring-border-focus-ring md:hidden"
             >
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-body-2-regular text-text-secondary">{situation.tiles[0].label}</span>
                 <span className="block truncate text-body-medium text-text-primary">{situation.tiles[0].value} · {situation.tiles[0].caption}</span>
               </span>
               <span className="shrink-0 text-body-2-medium text-text-secondary">Lihat</span>
-            </button>
+            </motion.button>
           )}
+          </AnimatePresence>
 
           {mapReady ? (
           <MapViewport
