@@ -42,7 +42,7 @@ export function ResponderRoutePanel({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={reduce ? { opacity: 0 } : { opacity: 0, y: 16, scale: 0.98 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
-      className="pointer-events-auto absolute bottom-3 left-3 z-30 flex w-[min(460px,calc(100%-1.5rem))] flex-col gap-2 rounded-xl border border-border-button-default bg-background-primary-default/95 p-3.5 shadow-dropdown backdrop-blur-md"
+      className="pointer-events-auto absolute bottom-3 left-3 z-30 flex w-[min(460px,calc(100%-1.5rem))] flex-col gap-3 rounded-2xl border border-border-button-default bg-background-primary-default/95 p-4 shadow-dropdown backdrop-blur-md"
     >
       {/* Header bar */}
       <div className="flex items-start justify-between gap-2 border-b border-border-button-default pb-2.5">
@@ -55,7 +55,7 @@ export function ResponderRoutePanel({
               <h2 className="text-body-semibold text-text-primary">
                 Jalur Akses & Evakuasi
               </h2>
-              <Badge color={plan.isLiveRoadNetwork ? "primary" : "neutral"} className="text-[10px]">
+              <Badge color={plan.isLiveRoadNetwork ? "primary" : "neutral"}>
                 {plan.isLiveRoadNetwork ? "Jalur Jalan (OSM)" : "Simulasi"}
               </Badge>
             </div>
@@ -90,7 +90,7 @@ export function ResponderRoutePanel({
       <div className="flex items-center justify-between rounded-lg border border-border-button-default bg-background-secondary-default px-2.5 py-1.5 text-caption-1-regular">
         <div className="min-w-0 flex-1 truncate">
           <span className="text-text-tertiary">Target Insiden: </span>
-          <span className="font-medium text-text-primary">
+          <span className="text-caption-1-medium text-text-primary">
             {plan.incidentTitle}
           </span>
         </div>
@@ -110,7 +110,7 @@ export function ResponderRoutePanel({
           variant={activeTab === "overview" ? "secondary" : "ghost"}
           size="xs"
           onClick={() => setActiveTab("overview")}
-          className={cx("flex-1", activeTab === "overview" && "font-semibold")}
+          className="flex-1"
         >
           Rute Intervensi
         </Button>
@@ -118,7 +118,7 @@ export function ResponderRoutePanel({
           variant={activeTab === "pois" ? "secondary" : "ghost"}
           size="xs"
           onClick={() => setActiveTab("pois")}
-          className={cx("flex-1", activeTab === "pois" && "font-semibold")}
+          className="flex-1"
         >
           Fasilitas Terdekat ({plan.tacticalPois.length})
         </Button>
@@ -132,9 +132,9 @@ export function ResponderRoutePanel({
               type="button"
               onClick={() => onLegChange("both")}
               className={cx(
-                "rounded py-1 transition-colors",
+                "rounded-md py-1 transition-colors",
                 activeLeg === "both"
-                  ? "bg-background-primary-default font-semibold text-text-primary shadow-2xs"
+                  ? "bg-background-primary-default text-caption-1-semibold text-text-primary shadow-2xs"
                   : "text-text-secondary hover:text-text-primary"
               )}
             >
@@ -144,9 +144,9 @@ export function ResponderRoutePanel({
               type="button"
               onClick={() => onLegChange("ingress")}
               className={cx(
-                "flex items-center justify-center gap-1 rounded py-1 transition-colors",
+                "flex items-center justify-center gap-1 rounded-md py-1 transition-colors",
                 activeLeg === "ingress"
-                  ? "bg-background-primary-default font-semibold text-text-primary shadow-2xs"
+                  ? "bg-background-primary-default text-caption-1-semibold text-text-primary shadow-2xs"
                   : "text-text-secondary hover:text-text-primary"
               )}
             >
@@ -157,9 +157,9 @@ export function ResponderRoutePanel({
               type="button"
               onClick={() => onLegChange("egress")}
               className={cx(
-                "flex items-center justify-center gap-1 rounded py-1 transition-colors",
+                "flex items-center justify-center gap-1 rounded-md py-1 transition-colors",
                 activeLeg === "egress"
-                  ? "bg-background-primary-default font-semibold text-text-primary shadow-2xs"
+                  ? "bg-background-primary-default text-caption-1-semibold text-text-primary shadow-2xs"
                   : "text-text-secondary hover:text-text-primary"
               )}
             >
@@ -170,7 +170,7 @@ export function ResponderRoutePanel({
 
           {/* Ingress Card */}
           {(activeLeg === "both" || activeLeg === "ingress") && (
-            <div className="rounded-lg border border-border-button-default bg-background-primary-default p-2.5 shadow-2xs">
+            <div className="rounded-2lg border border-border-button-default bg-background-primary-default p-3 shadow-2xs">
               <div className="flex items-center justify-between text-caption-1-semibold">
                 <span className="flex items-center gap-1.5 text-text-primary">
                   <span className="size-2.5 rounded-full bg-[#06b6d4]" />
@@ -208,7 +208,7 @@ export function ResponderRoutePanel({
 
           {/* Egress Card */}
           {(activeLeg === "both" || activeLeg === "egress") && (
-            <div className="rounded-lg border border-border-button-default bg-background-primary-default p-2.5 shadow-2xs">
+            <div className="rounded-2lg border border-border-button-default bg-background-primary-default p-3 shadow-2xs">
               <div className="flex items-center justify-between text-caption-1-semibold">
                 <span className="flex items-center gap-1.5 text-text-primary">
                   <span className="size-2.5 rounded-full bg-[#10b981]" />
@@ -276,14 +276,14 @@ export function ResponderRoutePanel({
             return (
               <div
                 key={poi.id}
-                className="flex items-center justify-between gap-2 rounded-lg border border-border-button-default bg-background-primary-default p-2 text-caption-1-regular hover:bg-background-secondary-default"
+                className="flex items-center justify-between gap-2 rounded-2lg border border-border-button-default bg-background-primary-default p-2 text-caption-1-regular hover:bg-background-secondary-default"
               >
                 <div className="flex min-w-0 items-center gap-2">
                   <span className={iconClass}>
                     <Icon className="size-4 shrink-0" aria-hidden="true" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-text-primary">
+                    <p className="truncate text-caption-1-medium text-text-primary">
                       {poi.name}
                     </p>
                     <p className="truncate text-text-tertiary">
