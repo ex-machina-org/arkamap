@@ -29,7 +29,8 @@ export const WIDGET_SIZES: Record<WidgetType, WidgetSize> = {
   "kpi-iot": { w: 3, h: 3, minW: 2, minH: 3 },
   ranking: CARD, map: CARD, impact: CARD, insight: CARD, score: CARD, history: CARD,
   trend: { w: 6, h: 7, minW: 4, minH: 6 }, panel: { w: 6, h: 8, minW: 4, minH: 6 },
-  indicators: { w: 12, h: 11, minW: 6, minH: 7 },
+  // One table page (8 rows) without a scrollbar; fewer rows leave room inside the card, not a hole below it.
+  indicators: { w: 12, h: 9, minW: 6, minH: 6 },
   sensor: { w: 4, h: 7, minW: 3, minH: 5 },
 };
 /** Width choices offered in a widget's settings, in grid columns. */

@@ -89,7 +89,7 @@ export function renderWidget(item: WidgetInstance, ctx: WidgetContext): ReactNod
       return <InsightTabs view={view} tabs={tabs.length ? tabs : ["alerts", "events"]} />;
     }
     case "score": return view.focus ? <ScoreCard regionId={view.focus.id} title={title} /> : unavailable(name, "Skor gabungan butuh wilayah profil.");
-    case "indicators": return region?.indicators.length ? <div className="h-full overflow-auto rounded-2xl"><IndicatorTable region={region} title={title} /></div>
+    case "indicators": return region?.indicators.length ? <div className="h-full overflow-auto rounded-2xl [&>section]:min-h-full"><IndicatorTable region={region} title={title} /></div>
       : unavailable(name, "Profil ini belum punya indikator wilayah.");
     case "history": {
       const series = view.history?.find(entry => entry.kind === kind);
@@ -98,7 +98,7 @@ export function renderWidget(item: WidgetInstance, ctx: WidgetContext): ReactNod
     case "sensor": {
       const sensor = findSensor(devices, deviceId, field);
       // ChartCard sizes to its content; the cell scrolls if the user makes it smaller.
-      return sensor ? <div className="h-full overflow-auto rounded-xl"><SensorWidget widget={sensor.widget} device={sensor.device} /></div>
+      return sensor ? <div className="h-full overflow-auto rounded-xl [&>section]:min-h-full"><SensorWidget widget={sensor.widget} device={sensor.device} /></div>
         : unavailable(name, "Perangkat atau field ini sudah tidak ada. Hapus widget ini lewat Atur Tampilan.");
     }
   }
