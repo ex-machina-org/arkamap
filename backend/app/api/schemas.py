@@ -53,6 +53,42 @@ class MetricPick(BaseModel):
     reason: str
 
 
+class StandardBand(BaseModel):
+    sampai: float | None = Field(description="batas atas kategori; null = kategori terakhir tanpa batas atas")
+    nama: str
+    tingkat: int = Field(description="0 baik, 1 sedang, 2 sensitif, 3 tidak sehat, 4 sangat tidak sehat, 5 berbahaya")
+
+
+class AirStandard(BaseModel):
+    batas: float | None = Field(None, description="baku mutu nasional")
+    batas_nama: str | None = None
+    pedoman: float | None = Field(None, description="pedoman WHO 2021")
+    pedoman_nama: str | None = None
+    kategori: list[StandardBand] | None = None
+    skala: str | None = None
+
+
+class AirStandards(BaseModel):
+    metrics: dict[str, AirStandard] = Field(description="per metrik; metrik tanpa batas resmi tidak ada")
+
+
+class PanelDef(BaseModel):
+    id: str
+    theme: str
+    title: str
+    metrics: list[str] = Field(description="metrik yang dibaca; panel tampil bila wilayah punya salah satunya")
+    description: str
+
+
+class PanelCatalog(BaseModel):
+    panels: list[PanelDef]
+
+
+class PanelPick(BaseModel):
+    id: str = Field(description="id panel dari katalog (app/panels.py), digambar frontend")
+    reason: str
+
+
 ModeId = Literal["protected", "responden", "plan"]
 
 
@@ -78,6 +114,7 @@ class ProfileOut(BaseModel):
     region_name: str | None = None
     metrics: list[MetricPick] = Field(description="metrik kita yang relevan, dipilih AI dari profil")
     metrics_by: Literal["ai", "rule"] | None = None
+    panels: list[PanelPick] = Field([], description="panel dashboard pilihan AI, urut dari terpenting")
     field: str | None = Field(None, description="template tampilan terdekat, dipilih AI dari penjelasan user")
     field_label: str | None = None
     fit: Literal["cocok", "sebagian", "tidak_cocok"] | None = Field(
@@ -1054,6 +1091,8 @@ class DashboardView(BaseModel):
     events: list[EventPanel]
     ranking: RankPanel
     alerts: AlertPanel
+    panels: list[PanelPick] = Field([], description=(
+        "panel dashboard yang dipasang, urut dari terpenting: pilihan AI yang datanya ada di wilayah profil"))
 
 
 class Dashboard(BaseModel):

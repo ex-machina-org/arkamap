@@ -18,9 +18,11 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
 
+from .. import panels
+from ..agent import standards
 from ..db import query
 from . import routes
-from .schemas import Catalog, ErrorResponse, IndicatorHistory, IndicatorTable, ObservationCollection
+from .schemas import AirStandards, Catalog, PanelCatalog, ErrorResponse, IndicatorHistory, IndicatorTable, ObservationCollection
 
 router = APIRouter()
 # An explicit description: FastAPI otherwise uses Python's phrase for 422, which
@@ -150,6 +152,19 @@ def indicator_table(
                         headers={"Content-Disposition": f'attachment; filename="indikator-{level}.csv"'})
     return {"level": level, "parent": parent, "columns": cols, "rows": flat,
             "total": rows[0]["total"] if rows else 0, "limit": limit, "offset": offset}
+
+
+@router.get("/standards", response_model=AirStandards)
+def air_standards() -> dict:
+    """Official limits per metric (PP 22/2021, WHO 2021, ISPU, US AQI): what "normal" is for
+    a value, so a card can say where today sits. Metrics without a limit are absent."""
+    return {"metrics": {m: standards.standard(m) for m in standards.STANDARDS}}
+
+
+@router.get("/panels", response_model=PanelCatalog)
+def panel_catalog() -> dict:
+    """Every dashboard panel (card or chart) region data can fill; the AI picks from these."""
+    return {"panels": panels.catalogue()}
 
 
 @router.get("/indicators/history", response_model=IndicatorHistory, responses={422: _INVALID})
