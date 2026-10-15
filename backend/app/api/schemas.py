@@ -1093,3 +1093,61 @@ class ModerationResult(BaseModel):
 class PasswordReset(BaseModel):
     user_id: int
     temporary_password: str = Field(description="HANYA ditampilkan sekali; berikan ke user lewat jalur pribadi")
+
+
+# ── responder routing ────────────────────────────────────────────────────
+class ResponderRouteIn(BaseModel):
+    origin: list[float] = Field(min_length=2, max_length=2, description="[lon, lat] asal armada (GPS atau posko)")
+    incident: list[float] = Field(min_length=2, max_length=2, description="[lon, lat] lokasi kejadian")
+    incident_id: str | None = None
+    incident_title: str | None = None
+
+
+class TacticalPoi(BaseModel):
+    id: str
+    name: str
+    type: Literal["hospital"]
+    coords: list[float] = Field(description="[lon, lat]")
+    distance_meters: int = Field(description="jarak garis lurus dari titik kejadian")
+    note: str | None = None
+
+
+class PoiRef(BaseModel):
+    name: str
+    type: Literal["hospital"]
+    coords: list[float]
+
+
+class RouteLegOut(BaseModel):
+    coordinates: list[list[float]] = Field(description="garis rute [[lon, lat], ...]")
+    distance_km: float
+    duration_minutes: int
+    safety_level: Literal["safe", "caution", "critical"] = Field(
+        description="safe = tidak melewati zona bahaya; caution = melewati peringatan cuaca atau rute tanpa "
+                    "penghindaran; critical = melewati buffer titik api")
+    summary: str
+    warnings: list[str]
+
+
+class EgressLegOut(RouteLegOut):
+    target_poi: PoiRef
+
+
+class WindOut(BaseModel):
+    speed_kmh: float
+    direction_deg: float = Field(description="arah datangnya angin (derajat, meteorologis)")
+    is_hazardous: bool = Field(description="angin cukup kencang untuk mempercepat api dan asap")
+    advice: str
+
+
+class HazardCollection(BaseModel):
+    type: Literal["FeatureCollection"] = "FeatureCollection"
+    features: list[dict[str, Any]]
+
+
+class ResponderRoute(BaseModel):
+    ingress: RouteLegOut
+    egress: EgressLegOut
+    pois: list[TacticalPoi]
+    hazard_polygons: HazardCollection
+    wind: WindOut | None = Field(None, description="angin terdekat dari kisi angin; null bila belum ada data")

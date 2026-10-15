@@ -15,6 +15,7 @@ from .api.clients import router as clients_router
 from .api.data import router as data_router
 from .api.isochrone import router as isochrone_router
 from .api.reports import router as reports_router
+from .api.responder import router as responder_router
 from .api.public import router as public_router
 from .api.routes import router
 from .api.users import purge_test_devices, router as users_router
@@ -138,6 +139,7 @@ app.include_router(agent_router, prefix="/api", tags=["agent"])
 app.include_router(buildings_router, prefix="/api", tags=["data"])
 app.include_router(reports_router, prefix="/api", tags=["reports"])
 app.include_router(isochrone_router, prefix="/api", tags=["data"])
+app.include_router(responder_router, prefix="/api", tags=["responder"])
 app.include_router(users_router, prefix="/api", tags=["users & iot"])
 app.include_router(public_router, prefix="/api", tags=["public"])
 app.include_router(clients_router, prefix="/api", tags=["clients (admin)"])
