@@ -33,7 +33,9 @@ function CustomisableDashboard({ data, view, refresh, actionSlot }: { data: DTO<
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [settingsId, setSettingsId] = useState<string>();
   const settingsItem = dashboard.items.find(item => item.id === settingsId);
-  const widgets = dashboard.items.map(item => ({ id: item.id, type: item.type, title: item.title ?? defaultTitle(item, ctx), node: renderWidget(item, ctx) }));
+  // Device numbers mean nothing without a device: hidden (not removed) until one is registered and the data reloads.
+  const shown = devices.length ? dashboard.items : dashboard.items.filter(item => item.type !== "kpi-iot");
+  const widgets = shown.map(item => ({ id: item.id, type: item.type, title: item.title ?? defaultTitle(item, ctx), node: renderWidget(item, ctx) }));
 
   const controls = <div className="flex flex-wrap items-center justify-end gap-2">
     {editing && dashboard.customised && <Button size="small" variant="ghost" leadingIcon={RiRefreshLine} onClick={dashboard.reset}>Kembalikan Bawaan</Button>}
