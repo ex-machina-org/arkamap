@@ -133,8 +133,9 @@ export function WindLayer({ grid, visible }: { grid: DTO<"WindGrid"> | undefined
         p.lat = nlat;
       }
       // A dark halo under a bright core keeps the trail readable over imagery, the street map and the orange hotspot pins alike.
-      context.lineWidth = 3.2;
-      context.strokeStyle = dark ? "rgba(0,12,24,0.45)" : "rgba(0,20,40,0.55)";
+      // Thin and light: a heavier halo struck dark lines through the numbers on the cluster circles beneath.
+      context.lineWidth = 2.6;
+      context.strokeStyle = dark ? "rgba(0,12,24,0.28)" : "rgba(0,20,40,0.34)";
       context.stroke(halo);
       context.lineWidth = 1.6;
       cores.forEach((path, band) => {
@@ -160,7 +161,8 @@ export function WindLayer({ grid, visible }: { grid: DTO<"WindGrid"> | undefined
     <canvas
       ref={canvasRef}
       aria-hidden
-      className="pointer-events-none absolute inset-0 z-[5]"
+      // The canvas has to sit over the GL map, so it is held below full strength to let the clusters read through.
+      className="pointer-events-none absolute inset-0 z-[5] opacity-75"
       style={{ display: visible && grid ? "block" : "none" }}
     />
   );
