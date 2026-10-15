@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { RiAlertLine, RiBroadcastLine, RiCheckboxCircleLine, RiDatabase2Line, RiExternalLinkLine, RiSearchLine } from "@remixicon/react";
+import { RiAlertLine, RiBroadcastLine, RiCheckboxCircleLine, RiDatabase2Line, RiExternalLinkLine, RiEyeLine, RiFlaskLine, RiSearchLine } from "@remixicon/react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/application/data-table/data-table";
 import { StatCards, type Stat } from "@/components/application/dashboard/stat-cards";
-import { Chip } from "@/components/base/badges/chip";
+import { Pill } from "./components/pill";
 import { Input } from "@/components/base/input/input";
 import { Select, SelectItem } from "@/components/base/select/select";
 import { apiList, type DTO } from "@/lib/api/client";
@@ -17,7 +17,7 @@ type Device = Omit<DTO<"DeviceOut">, "id"> & { id: string };
 type Health = "ok" | "failed" | "idle";
 
 const HEALTH_LABEL = { ok: "Normal", failed: "Gagal", idle: "Belum berjalan" } as const satisfies Record<Health, string>;
-const HEALTH_TONE = { ok: "lime", failed: "rose", idle: "neutral" } as const satisfies Record<Health, "lime" | "rose" | "neutral">;
+const HEALTH_DOT = { ok: "green", failed: "red", idle: "grey" } as const satisfies Record<Health, "green" | "red" | "grey">;
 
 const capitalize = (value: string) => value.charAt(0).toLocaleUpperCase("id-ID") + value.slice(1);
 
@@ -64,7 +64,9 @@ const SOURCE_COLUMNS: ColumnDef<Source>[] = [
   { accessorKey: "cadence", header: "Pembaruan", cell: ({ row }) => capitalize(row.original.cadence) },
   {
     accessorKey: "is_modelled", header: "Jenis",
-    cell: ({ row }) => <Chip variant="caption" color={row.original.is_modelled ? "purple" : "neutral"}>{row.original.is_modelled ? "Model" : "Observasi"}</Chip>,
+    cell: ({ row }) => row.original.is_modelled
+      ? <Pill icon={RiFlaskLine} iconClassName="text-purple-500">Model</Pill>
+      : <Pill icon={RiEyeLine} iconClassName="text-sky-500">Observasi</Pill>,
   },
   { accessorKey: "license", header: "Lisensi", cell: ({ row }) => <span className="block min-w-32 max-w-56">{row.original.license}</span> },
   {
@@ -77,7 +79,7 @@ const SOURCE_COLUMNS: ColumnDef<Source>[] = [
     accessorFn: source => HEALTH_LABEL[sourceHealth(source)],
     cell: ({ row }) => {
       const health = sourceHealth(row.original);
-      return <Chip variant="caption" color={HEALTH_TONE[health]}>{HEALTH_LABEL[health]}</Chip>;
+      return <Pill dot={HEALTH_DOT[health]} pulse={health === "ok"}>{HEALTH_LABEL[health]}</Pill>;
     },
   },
 ];
@@ -103,7 +105,7 @@ const DEVICE_COLUMNS: ColumnDef<Device>[] = [
     accessorFn: device => (isOnline(device.last_seen_at) ? "Online" : "Offline"),
     cell: ({ row }) => {
       const online = isOnline(row.original.last_seen_at);
-      return <Chip variant="caption" color={online ? "lime" : "rose"}>{online ? "Online" : "Offline"}</Chip>;
+      return <Pill dot={online ? "green" : "red"} pulse={online}>{online ? "Online" : "Offline"}</Pill>;
     },
   },
   {
