@@ -88,3 +88,24 @@ export function useDevice(id: number, pollMs?: number) {
   }, [id, pollMs, version]);
   return { device, error, loading, missing, updatedAt, refresh: () => setVersion(value => value + 1) };
 }
+
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
+/**
+ * Devices talk to the site's own domain, which proxies /api (HTTP ingest and the MQTT WebSocket)
+ * to the backend, so the backend's address is never shown. The backend fills these from its
+ * PUBLIC_URL; whatever that is, every URL, the MQTT address and each code example get this page's origin.
+ */
+export function viaFrontend(quickstart: DTO<"Quickstart">, here: Pick<Location, "origin" | "host" | "hostname"> = window.location): DTO<"Quickstart"> {
+  const from = new URL(quickstart.url);
+  // A device cannot reach the developer's localhost, so a local dev page keeps the backend's address.
+  if (from.host === here.host || LOCAL_HOSTS.has(here.hostname)) return quickstart;
+  // Origin first (http→https too), then host:port (wss://), then the bare hostname (MQTT host settings).
+  const swap = (text: string) => text.replaceAll(from.origin, here.origin).replaceAll(from.host, here.host).replaceAll(from.hostname, here.hostname);
+  return {
+    ...quickstart,
+    url: swap(quickstart.url),
+    mqtt: { ...quickstart.mqtt, url: swap(quickstart.mqtt.url) },
+    snippets: Object.fromEntries(Object.entries(quickstart.snippets).map(([id, code]) => [id, swap(code)])),
+  };
+}

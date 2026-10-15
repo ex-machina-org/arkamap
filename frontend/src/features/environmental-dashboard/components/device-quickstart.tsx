@@ -1,9 +1,10 @@
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { RiArrowDownSLine, RiCheckboxCircleLine, RiFileCopyLine } from "@remixicon/react";
 import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
 import type { DTO } from "@/lib/api/client";
+import { viaFrontend } from "../device-api";
 import { copyText } from "./device-helpers";
 import { Fact } from "./device-ui";
 
@@ -161,8 +162,9 @@ function Code({ quickstart }: { quickstart: DTO<"Quickstart"> }) {
  * Right after create/rotate `quickstart` carries the real key;
  * afterwards the backend returns `<API_KEY>` in its place.
  */
-export function DeviceQuickstart({ quickstart }: { quickstart: DTO<"Quickstart"> }) {
+export function DeviceQuickstart({ quickstart: fromBackend }: { quickstart: DTO<"Quickstart"> }) {
   const [view, setView] = useState<"guide" | "code">("guide");
+  const quickstart = useMemo(() => viaFrontend(fromBackend), [fromBackend]);
   return <div className="flex min-w-0 flex-col gap-5">
     <SegmentedControl aria-label="Panduan Pengiriman" className="self-start" selectedKeys={new Set([view])}
       onSelectionChange={keys => { const next = [...keys][0]; if (next === "guide" || next === "code") setView(next); }}>
