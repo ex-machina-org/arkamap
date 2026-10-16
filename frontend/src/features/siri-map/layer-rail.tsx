@@ -3,7 +3,11 @@ import { RiArrowDownSLine, RiCalculatorLine, RiMapPinLine, RiUserLocationLine } 
 import { Input } from "@/components/base/input/input";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
 import { cx } from "@/utils/cx";
-import { ASPECTS, ASPECT_ORDER, LEVELS, aspectOf, isModelledMetric, metricIcon, type Level, type MetricDef } from "./atlas";
+import { ASPECTS, ASPECT_ORDER, aspectOf, isModelledMetric, metricIcon, type MetricDef } from "./atlas";
+
+/** How far the map reaches: the profile's kab/kota, its province, or all of Indonesia. */
+export type Scope = "region" | "province" | "national";
+const SCOPE_LABELS: Record<Scope, string> = { region: "Kab/Kota", province: "Provinsi", national: "Indonesia" };
 
 export interface RegionHit {
   id: string;
@@ -17,13 +21,15 @@ const ROW = "button-press-motion flex w-full items-center gap-2.5 rounded-lg px-
  * Every metric the API publishes, grouped by aspect and searchable. It is built from `/metrics`, so a
  * metric added on the backend appears here without a frontend change.
  */
-export function LayerRail({ metrics, active, onPick, level, onLevelChange, regions, onPickRegion }: {
+export function LayerRail({ metrics, active, onPick, scope, scopes, onScopeChange, regions, onPickRegion }: {
   metrics: MetricDef[];
   /** "auto" follows the profile. */
   active: string;
   onPick: (metric: string) => void;
-  level: Level;
-  onLevelChange: (level: Level) => void;
+  scope: Scope;
+  /** Only as wide as the profile allows: a kab/kota profile gets all three, a national one just Indonesia. */
+  scopes: Scope[];
+  onScopeChange: (scope: Scope) => void;
   /** Every region of the coloured layer, so one can be found by name instead of hunted for on the map. */
   regions: RegionHit[];
   onPickRegion: (id: string) => void;
@@ -40,16 +46,16 @@ export function LayerRail({ metrics, active, onPick, level, onLevelChange, regio
       <Input label="Cari data atau wilayah" placeholder="Misal: hujan, PM2.5, Sleman" value={query} onChange={setQuery} />
 
       <div className="flex items-center justify-between gap-3">
-        <span className="text-body-2-regular text-text-secondary">Tingkat wilayah</span>
+        <span className="text-body-2-regular text-text-secondary">Cakupan peta</span>
         <SegmentedControl
-          aria-label="Tingkat wilayah"
-          selectedKeys={[level]}
+          aria-label="Cakupan peta"
+          selectedKeys={[scope]}
           onSelectionChange={(keys) => {
             const next = Array.from(keys)[0];
-            if (next === "provinsi" || next === "kabkota") onLevelChange(next);
+            if (scopes.includes(next as Scope)) onScopeChange(next as Scope);
           }}
         >
-          {(Object.keys(LEVELS) as Level[]).map(id => <SegmentedControlItem key={id} id={id} className="px-3 text-caption-1-medium">{LEVELS[id]}</SegmentedControlItem>)}
+          {scopes.map(id => <SegmentedControlItem key={id} id={id} className="px-3 text-caption-1-medium">{SCOPE_LABELS[id]}</SegmentedControlItem>)}
         </SegmentedControl>
       </div>
 

@@ -35,15 +35,15 @@ import { apiHeaders } from "@/lib/api/connection";
 import { cx } from "@/utils/cx";
 import { geoJSON } from "@/lib/api/geojson";
 import { HOTSPOT_LIMIT, useSpatialData } from "./map-api";
-import { useIndonesiaMask, useRegionBoundary } from "@/hooks/use-region-boundary";
+import { useIndonesiaMask, useProvinceFocus, useRegionBoundary } from "@/hooks/use-region-boundary";
 import { AccountMenu } from "@/components/application/auth/account-menu";
 import { JevAssistantPanel } from "@/components/application/jev-chat/jev-assistant-panel";
 import { PublicDataPanel } from "./public-data-panel";
-import { LayerRail } from "./layer-rail";
+import { LayerRail, type Scope } from "./layer-rail";
 import { RankPanel } from "./rank-panel";
 import { RegionDetail } from "./region-detail";
 import { useMapLayer } from "./use-map-layer";
-import { aspectOf, parentName, rampStopsFor, type Level } from "./atlas";
+import { aspectOf, parentName, rampStopsFor } from "./atlas";
 import { DataPicker } from "./data-picker";
 import { formatCoords } from "./format";
 import { HAZARDS, HAZARD_ORDER } from "./hazards";
@@ -78,6 +78,9 @@ function writeLastFocus(bbox: number[] | undefined) {
   }
 }
 
+// The profile's region bounds how far the map can widen: kab/kota → its province → Indonesia.
+const SCOPES: Record<string, Scope[]> = { kabkota: ["region", "province", "national"], provinsi: ["province", "national"] };
+
 const NATIONAL_VIEW: CameraTarget = { coords: [118, -2.5], zoom: 4.6, zoomMode: "exact" };
 // the same view as a different object, so MapCameraController flies there again
 const NATIONAL_AGAIN: CameraTarget = { ...NATIONAL_VIEW };
@@ -98,8 +101,16 @@ export function SiriMapWorkspace() {
   const { isFirstVisit, completeWelcome } = useFirstVisit();
   const { me, loading: sessionLoading } = useSession();
   const dashboard = useApi(me ? "/me/dashboard" : null, "Dashboard");
-  const view = dashboard.data?.view ?? undefined;
-  const focus = view?.focus;
+  const profileView = dashboard.data?.view ?? undefined;
+  const profileFocus = profileView?.focus;
+  const scopes = SCOPES[profileFocus?.level ?? ""] ?? ["national"];
+  const [scopeChoice, setScopeChoice] = useState<Scope>();
+  const scope = scopeChoice && scopes.includes(scopeChoice) ? scopeChoice : scopes[0];
+  const province = useProvinceFocus(scope === "province" && profileFocus?.level === "kabkota" ? profileFocus.parent_id : null);
+  // Until the province outline loads, the map stays on the kab/kota rather than flashing all of Indonesia.
+  const focus = scope === "national" ? undefined : scope === "province" ? province ?? profileFocus : profileFocus;
+  // Everything below reads the scoped view, so the ranking, colours and events all widen together.
+  const view = useMemo(() => profileView && { ...profileView, focus: focus ?? null }, [profileView, focus]);
   const boundary = useRegionBoundary(focus);
   const isRegional = focus?.level === "provinsi" || focus?.level === "kabkota";
   // The map opens on the profile's region, never on Indonesia first: the region seen last time in this browser
@@ -112,8 +123,8 @@ export function SiriMapWorkspace() {
   const startBounds = link.point ? undefined : isRegional ? focus.bbox : settled ? undefined : lastFocus;
   const mapReady = !signedIn || Boolean(lastFocus) || Boolean(link.point) || settled;
   useEffect(() => {
-    if (settled) writeLastFocus(isRegional ? focus.bbox : undefined);
-  }, [settled, isRegional, focus]);
+    if (settled) writeLastFocus(profileFocus?.level === "provinsi" || profileFocus?.level === "kabkota" ? profileFocus.bbox : undefined);
+  }, [settled, profileFocus]);
   const nationalMask = useIndonesiaMask(!isRegional);
   const { situation, loading: situationLoading, error: situationError, metricLabel, metrics } = useSituation(view, Boolean(me));
   // A signed-in view waits for its field's layers, so the 4,000 hotspots are not fetched twice.
@@ -122,7 +133,6 @@ export function SiriMapWorkspace() {
   const isDocked = useMediaQuery("(min-width: 1280px)");
   // "auto" follows the profile; anything else is a metric picked under "Jelajahi data", at `level`.
   const [metricChoice, setMetricChoice] = useState("auto");
-  const [level, setLevel] = useState<Level>("provinsi");
   const [showData, setShowData] = useState(true);
   const [wind, setWind] = useState(false);
   // `anchor` is the clicked point on the map; a pick from the list has none and opens beside the region's middle instead.
@@ -202,8 +212,9 @@ export function SiriMapWorkspace() {
   const choropleth = useMemo<ChoroplethSpec | null>(() => {
     if (metricChoice === "none") return null;
     if (metricChoice === "auto") return situation ? { ...situation.choropleth, label: situation.rank?.metricLabel ?? metricLabel(situation.choropleth.metric) } : null;
-    return { metric: metricChoice, label: metricLabel(metricChoice), level, parentId: null };
-  }, [metricChoice, situation, metricLabel, level]);
+    // A picked metric covers the same scope as the profile's own.
+    return { metric: metricChoice, label: metricLabel(metricChoice), level: situation?.choropleth.level ?? "provinsi", parentId: situation?.choropleth.parentId ?? null };
+  }, [metricChoice, situation, metricLabel]);
   const mapLayer = useMapLayer(choropleth);
   const regionList = useMemo(() => (mapLayer.layer?.features ?? []).map((feature) => ({
     id: feature.properties.region_id,
@@ -255,11 +266,11 @@ export function SiriMapWorkspace() {
     );
   }
 
-  function changeLevel(next: Level) {
-    // Region ids differ between levels.
-    setLevel(next);
+  function changeScope(next: Scope) {
+    // The picked region may lie outside the new scope, or be at another level.
+    setScopeChoice(next);
     setSelectedRegion(null);
-    if (metricChoice === "auto") setMetricChoice(situation?.choropleth.metric ?? "fire_risk");
+    setSelectedIncidentId(null);
   }
 
   // Open the linked alert's card once its incident (nearest within ~5 km) or region has loaded.
@@ -353,8 +364,9 @@ export function SiriMapWorkspace() {
                 active={metricChoice}
                 // A metric or a region is a final pick, so the picker steps aside to show the map; level and search keep it open.
                 onPick={(metric) => { setMetricChoice(metric); close(); }}
-                level={metricChoice === "auto" ? situation?.choropleth.level ?? "provinsi" : level}
-                onLevelChange={changeLevel}
+                scope={scope}
+                scopes={scopes}
+                onScopeChange={changeScope}
                 regions={regionList}
                 onPickRegion={(id) => { pickRegionById(id); close(); }}
               />
