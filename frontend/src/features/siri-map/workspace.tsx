@@ -21,6 +21,8 @@ import { MapViewport, type CameraTarget } from "./map-viewport";
 import { MapIncidentCard } from "./map-incident-card";
 import { RegionCard } from "./region-card";
 import { AnchoredCard } from "./anchored-card";
+import { DevicePins, MapDeviceCard } from "./map-devices";
+import { useLocatedDevices, type LocatedDevice } from "./use-located-devices";
 import { SituationPanel } from "./situation-panel";
 import { useSituation, type RankEntry } from "./situation";
 import type { ChoroplethSpec, RegionPick } from "./spatial-layers";
@@ -144,6 +146,8 @@ export function SiriMapWorkspace() {
 
   const incidents = spatial.incidents;
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
+  const devices = useLocatedDevices(Boolean(me));
+  const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
 
   const [camera, setCamera] = useState<CameraTarget>(() => link.point ? { coords: link.point, zoom: 9, zoomMode: "exact" } : NATIONAL_VIEW);
   const [introCamera] = useState(isFirstVisit && !link.point);
@@ -198,8 +202,14 @@ export function SiriMapWorkspace() {
     const counts = Object.fromEntries(HAZARD_ORDER.map((type) => [type, 0])) as Record<HazardType, number>;
     for (const incident of searchedIncidents) counts[incident.hazardType]++;
     counts.air_quality += badAirRegions;
+    // Devices are the account's own, not events: every placed device counts, online or not.
+    counts.iot_sensor += devices.length;
     return counts;
-  }, [searchedIncidents, spatial.loading, incidents.length, badAirRegions]);
+  }, [searchedIncidents, spatial.loading, incidents.length, badAirRegions, devices.length]);
+
+  // Their own chip in the dock filters them like the event types.
+  const shownDevices = activeHazard === "all" || activeHazard === "iot_sensor" ? devices : [];
+  const selectedDevice = shownDevices.find((device) => device.id === selectedDeviceId) ?? null;
 
   // A selection that the filters hide, or that disappeared on refresh, counts as no selection.
   const selectedIncident = useMemo(
@@ -216,6 +226,7 @@ export function SiriMapWorkspace() {
       } else if (e.key === "Escape" && !isTyping(e.target)) {
         setSelectedIncidentId(null);
         setSelectedRegion(null);
+        setSelectedDeviceId(null);
       }
     }
     window.addEventListener("keydown", handleKeyDown);
@@ -257,6 +268,7 @@ export function SiriMapWorkspace() {
 
   function selectRegion(entry: RankEntry, position: number, of: number, anchor: [number, number] | null = null) {
     setSelectedIncidentId(null);
+    setSelectedDeviceId(null);
     setSelectedRegion({ entry, position, of, anchor });
     if (!isDocked) setIsSidebarOpen(false);
   }
@@ -334,9 +346,17 @@ export function SiriMapWorkspace() {
 
   function handleSelectIncident(incident: SpatialIncident) {
     setSelectedRegion(null);
+    setSelectedDeviceId(null);
     setSelectedIncidentId(incident.id);
     setCamera({ coords: incident.coords, zoom: FOCUS_ZOOM, zoomMode: "atLeast" });
     // An overlay panel would cover the map the user just asked to see.
+    if (!isDocked) setIsSidebarOpen(false);
+  }
+
+  function handleSelectDevice(device: LocatedDevice) {
+    setSelectedRegion(null);
+    setSelectedIncidentId(null);
+    setSelectedDeviceId(device.id);
     if (!isDocked) setIsSidebarOpen(false);
   }
 
@@ -482,6 +502,8 @@ export function SiriMapWorkspace() {
               />
             )}
 
+            <DevicePins devices={shownDevices} selectedId={selectedDevice?.id} onSelect={handleSelectDevice} />
+
             {/* Cards open beside what was picked and follow it while the map moves. */}
             <AnimatePresence>
               {selectedIncident && (
@@ -499,7 +521,12 @@ export function SiriMapWorkspace() {
                   />
                 </AnchoredCard>
               )}
-              {!selectedIncident && selectedRegion && (
+              {!selectedIncident && selectedDevice && (
+                <AnchoredCard key="device-card" anchor={[selectedDevice.lon, selectedDevice.lat]}>
+                  <MapDeviceCard device={selectedDevice} onClose={() => setSelectedDeviceId(null)} />
+                </AnchoredCard>
+              )}
+              {!selectedIncident && !selectedDevice && selectedRegion && (
                 <AnchoredCard key="region-card" anchor={regionAnchor}>
                   <RegionCard
                     entry={selectedRegion.entry}
