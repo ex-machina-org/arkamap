@@ -6,52 +6,53 @@
 
 <p align="center"><strong>Intelijen Lingkungan untuk Indonesia</strong></p>
 
-<table>
-  <tr>
-    <td width="55%" valign="middle">
-      <h3>Peta, Sensor, dan AI dalam Satu Platform</h3>
-      <p>Pantau kondisi lingkungan, bandingkan risiko wilayah, dan baca pengukuran lapangan bersama Kodama.</p>
-      <p>
-        <a href="https://arkamap.winatra.app/"><img src="https://img.shields.io/badge/Website-Buka_Arkamap-00875F?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Website: Buka Arkamap" /></a><br />
-        <a href="https://www.youtube.com/watch?v=8o3MS5inVMY"><img src="https://img.shields.io/badge/YouTube-Tonton_Demo-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="YouTube: Tonton Demo" /></a>
-      </p>
-      <p><sub>Ex Machina · JOINTS UGM 2026 · <a href="LICENSE">MIT License</a></sub></p>
-    </td>
-    <td width="45%" align="center" valign="middle">
-      <a href="https://www.youtube.com/watch?v=8o3MS5inVMY"><img src="https://i.ytimg.com/vi/8o3MS5inVMY/hqdefault.jpg" alt="Putar Video Demo Arkamap di YouTube" width="360" /></a>
-      <p><a href="https://www.youtube.com/watch?v=8o3MS5inVMY"><strong>Lihat Arkamap Beraksi</strong></a></p>
-    </td>
-  </tr>
-</table>
+<p align="center">
+  <img src="https://img.shields.io/badge/React-19-20232A?style=flat-square&logo=react&logoColor=61DAFB" alt="React 19" />
+  <img src="https://img.shields.io/badge/MapLibre_GL-396CB2?style=flat-square&logo=maplibre&logoColor=white" alt="MapLibre GL" />
+  <img src="https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI" />
+  <img src="https://img.shields.io/badge/PostGIS-3.4-336791?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL 16 dan PostGIS 3.4" />
+  <img src="https://img.shields.io/badge/MQTT-Mosquitto-3C5280?style=flat-square&logo=eclipsemosquitto&logoColor=white" alt="MQTT Mosquitto" />
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-lightgrey?style=flat-square" alt="MIT License" /></a>
+</p>
+
+<p align="center">Peta, sensor, dan AI dalam satu platform. Pantau kondisi lingkungan, bandingkan risiko antarwilayah,<br />dan baca pengukuran lapangan bersama Kodama.</p>
+
+<p align="center">
+  <a href="https://arkamap.winatra.app/"><img src="https://img.shields.io/badge/Website-Buka_Arkamap-00875F?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Website: Buka Arkamap" /></a>
+  <a href="https://www.youtube.com/watch?v=8o3MS5inVMY"><img src="https://img.shields.io/badge/YouTube-Tonton_Demo-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="YouTube: Tonton Demo" /></a>
+</p>
+
+<p align="center"><sub>Ex Machina · JOINTS UGM 2026</sub></p>
 
 <p align="center">
   <a href="#tentang-arkamap">Tentang</a> ·
   <a href="#fitur-utama">Fitur</a> ·
-  <a href="#arsitektur-sistem">Arsitektur</a> ·
-  <a href="#memulai-cepat">Memulai</a> ·
+  <a href="#arsitektur">Arsitektur</a> ·
+  <a href="#memulai">Memulai</a> ·
   <a href="#integrasi-sensor-iot-byod">Integrasi IoT</a> ·
-  <a href="#tim-ex-machina">Tim</a> ·
-  <a href="#dokumentasi-dan-referensi">Dokumentasi</a>
+  <a href="#pengembangan">Pengembangan</a> ·
+  <a href="#dokumentasi">Dokumentasi</a> ·
+  <a href="#tim-ex-machina">Tim</a>
 </p>
 
 ## Tentang Arkamap
 
-**Arkamap menghubungkan data lingkungan Indonesia dalam satu ruang kerja berbasis peta.** Data publik dan sensor lapangan dapat dibaca bersama untuk memahami kondisi wilayah, menelusuri kejadian, dan mendukung perencanaan.
+Arkamap menghubungkan data lingkungan Indonesia dalam satu ruang kerja berbasis peta. Data publik dan sensor lapangan dibaca bersama untuk memahami kondisi wilayah, menelusuri kejadian, dan mendukung perencanaan.
 
 | Fokus | Di Arkamap |
 | :--- | :--- |
-| Pantauan Wilayah | Peta interaktif dengan titik panas, gempa, peringatan cuaca, dan indikator lingkungan. |
-| Data Lapangan | Telemetri sensor milik pengguna melalui integrasi IoT dan Bring Your Own Device (BYOD). |
+| Pantauan wilayah | Peta interaktif berisi titik panas, gempa, peringatan cuaca, dan indikator lingkungan. |
+| Data lapangan | Telemetri sensor milik pengguna melalui integrasi IoT dan Bring Your Own Device (BYOD). |
 | Analisis | Dashboard, tren historis, dan perbandingan indikator antarwilayah. |
-| Asisten AI | Kodama membantu membaca data melalui percakapan dengan konteks wilayah dan sumber. |
-| Sumber Publik | NASA FIRMS, BMKG, Open-Meteo, dan OpenStreetMap. |
-| Akses | Peta publik tanpa akun; profil, dashboard, dan perangkat pribadi setelah masuk. |
+| Asisten AI | Kodama membantu membaca data melalui percakapan, lengkap dengan konteks wilayah dan sumber. |
+| Sumber publik | NASA FIRMS, BMKG, Open-Meteo, dan OpenStreetMap. |
+| Akses | Peta publik tanpa akun. Profil, dashboard, dan perangkat pribadi tersedia setelah masuk. |
 
 ## Fitur Utama
 
 ### Peta Geospasial
 
-Baca kejadian dan indikator lingkungan pada peta Indonesia, dalam tema terang maupun gelap.
+Kejadian dan indikator lingkungan di seluruh Indonesia, dalam tema terang maupun gelap.
 
 <p align="center">
   <a href="docs/assets/screenshots/peta-geospasial.png"><img src="docs/assets/screenshots/peta-geospasial.png" alt="Peta Arkamap dalam tema terang dan gelap dengan rincian wilayah, titik panas, indikator lingkungan, dan aliran angin" width="100%" /></a>
@@ -59,14 +60,14 @@ Baca kejadian dan indikator lingkungan pada peta Indonesia, dalam tema terang ma
 
 | Kemampuan | Detail |
 | :--- | :--- |
-| Pantauan Kejadian | Titik panas NASA FIRMS, gempa BMKG, peringatan cuaca, dan kejadian bencana. |
-| Perbandingan Wilayah | Layer choropleth dan peringkat indikator cuaca, kualitas udara, serta lingkungan. |
-| Konteks Spasial | Aliran angin, bangunan 3D pada zoom dekat, dan rincian kejadian langsung dari peta. |
-| Sensor Lapangan | Pin perangkat berkoordinat milik pengguna setelah masuk. |
+| Pantauan kejadian | Titik panas NASA FIRMS, gempa BMKG, peringatan cuaca, dan kejadian bencana. |
+| Perbandingan wilayah | Layer choropleth dan peringkat indikator cuaca, kualitas udara, serta lingkungan. |
+| Konteks spasial | Aliran angin, bangunan 3D pada zoom dekat, dan rincian kejadian langsung dari peta. |
+| Sensor lapangan | Pin perangkat berkoordinat milik pengguna setelah masuk. |
 
 ### Dashboard Pemantauan
 
-Ringkasan wilayah, tren kejadian, dan kondisi perangkat sesuai profil aktif pengguna.
+Ringkasan wilayah, tren kejadian, dan kondisi perangkat sesuai profil aktif.
 
 <p align="center">
   <a href="docs/assets/screenshots/dashboard.png"><img src="docs/assets/screenshots/dashboard.png" alt="Dashboard Arkamap untuk profil perencanaan DI Yogyakarta dengan ringkasan kejadian, status sensor, grafik titik panas, dan peringkat wilayah" width="100%" /></a>
@@ -74,10 +75,10 @@ Ringkasan wilayah, tren kejadian, dan kondisi perangkat sesuai profil aktif peng
 
 | Kemampuan | Detail |
 | :--- | :--- |
-| Ringkasan Wilayah | Titik panas, bencana, peringatan aktif, dan jumlah perangkat IoT. |
-| Tren dan Prioritas | Grafik kejadian bulanan dan peringkat indikator wilayah. |
-| Kesehatan Sensor | Perangkat aktif, field yang terbaca, dan kiriman data yang ditolak. |
-| Profil Pemantauan | Hingga tiga profil dengan wilayah dan fokus perlindungan, respons, atau perencanaan. |
+| Ringkasan wilayah | Titik panas, bencana, peringatan aktif, dan jumlah perangkat IoT. |
+| Tren dan prioritas | Grafik kejadian bulanan dan peringkat indikator wilayah. |
+| Kesehatan sensor | Perangkat aktif, field yang terbaca, dan kiriman data yang ditolak. |
+| Profil pemantauan | Hingga tiga profil, masing-masing dengan wilayah dan fokus perlindungan, respons, atau perencanaan. |
 
 ### Perangkat IoT dan BYOD
 
@@ -89,10 +90,10 @@ Hubungkan sensor sendiri, kirim pengukuran, dan kelola riwayatnya dari halaman p
 
 | Kemampuan | Detail |
 | :--- | :--- |
-| Integrasi Perangkat | REST API dan MQTT dengan API key tersendiri untuk setiap perangkat. |
-| Panduan Koneksi | Contoh cURL, Python, dan ESP32 yang dapat disalin dari antarmuka. |
-| Pengelolaan Sensor | Pencarian dan filter berdasarkan status, jenis, serta pemilik. |
-| Riwayat Pengukuran | Tabel data berversi saat struktur kiriman berubah, serta widget per perangkat. |
+| Integrasi perangkat | REST API dan MQTT, dengan API key tersendiri untuk setiap perangkat. |
+| Panduan koneksi | Contoh cURL, Python, dan ESP32 yang siap disalin dari antarmuka. |
+| Pengelolaan sensor | Pencarian dan filter berdasarkan status, jenis, serta pemilik. |
+| Riwayat pengukuran | Tabel data berversi saat struktur kiriman berubah, serta widget per perangkat. |
 
 ### Kodama, Asisten AI Lingkungan
 
@@ -100,125 +101,114 @@ Tanyakan kondisi wilayah, kejadian lingkungan, atau perangkat yang dipantau mela
 
 | Kemampuan | Detail |
 | :--- | :--- |
-| Konteks Data | Menggunakan data yang tersedia di backend dan menyertakan referensi sumber. |
-| Respons Bertahap | Jawaban mengalir langsung di antarmuka percakapan. |
-| Penyedia Model | Gemini, OpenRouter, dan DeepSeek. |
-| Mode Cadangan | Jawaban berbasis template ketika kunci LLM belum tersedia. |
-| Modul Teknis | Sebagian modul dan kontrak API masih menggunakan nama Jev. |
+| Konteks data | Menjawab dari data yang tersedia di backend dan menyertakan referensi sumber. |
+| Respons bertahap | Jawaban mengalir langsung di antarmuka percakapan. |
+| Penyedia model | Gemini, OpenRouter, dan DeepSeek. |
+| Mode cadangan | Jawaban berbasis template ketika kunci LLM belum tersedia. |
 
-> Angka pada screenshot mengikuti sesi pengambilan gambar. Periksa sumber, periode, serta label observasi, prakiraan, atau model saat membaca data. Skor turunan Arkamap merupakan alat bantu analisis, bukan peringatan resmi.
+> [!NOTE]
+> Angka pada screenshot mengikuti sesi pengambilan gambar. Saat membaca data, periksa sumber, periode, serta label observasi, prakiraan, atau model. Skor turunan Arkamap adalah alat bantu analisis, bukan peringatan resmi.
 
----
-
-## Arsitektur Sistem
+## Arsitektur
 
 Frontend menyajikan peta dan dashboard. Backend menangani analisis spasial, agen AI, serta ingest data publik dan sensor. PostGIS menyimpan data geospasial, sedangkan Mosquitto menerima telemetri melalui MQTT.
 
 ```mermaid
 flowchart TD
-    subgraph Klien ["Frontend & Perangkat Pengguna"]
-        UI["Web App (React 19 + MapLibre GL)"]
-        SensorHTTP["Sensor IoT (HTTP Client)"]
-        SensorMQTT["Sensor IoT (MQTT Client)"]
+    subgraph Klien ["Klien"]
+        UI["Web App<br/>React 19 + MapLibre GL"]
+        SensorHTTP["Sensor IoT<br/>HTTP"]
+        SensorMQTT["Sensor IoT<br/>MQTT"]
     end
 
-    subgraph Gerbang ["API & Proksi"]
-        Proxy["Proxy /api (Vite dev / Caddy produksi)"]
-        Broker["Broker Mosquitto (:1883)"]
+    subgraph Gerbang ["Gerbang"]
+        Proxy["Proxy /api<br/>Vite dev / Caddy produksi"]
+        Broker["Mosquitto :1883"]
     end
 
-    subgraph Inti ["Backend Services (FastAPI)"]
-        API["FastAPI App (:8000)"]
-        Bridge["MQTT Bridge Worker"]
-        JevEngine["Kodama / Jev Agent (LangChain)"]
+    subgraph Inti ["Backend (FastAPI)"]
+        API["API :8000"]
+        Bridge["MQTT Bridge"]
+        Agent["Agen Kodama<br/>LangChain"]
     end
 
-    subgraph Data ["Data Storage & Pipeline"]
-        DB[("PostgreSQL 16 + PostGIS 3.4")]
-        SeedWorker["Seed Worker (Public Ingest)"]
+    subgraph Data ["Data"]
+        DB[("PostgreSQL 16<br/>PostGIS 3.4")]
+        Seed["Seed Worker"]
     end
 
-    subgraph Eksternal ["Sumber Data Publik"]
-        FIRMS["NASA FIRMS (Titik Api)"]
-        BMKG["BMKG (Gempa & Cuaca)"]
-        OpenMeteo["Open-Meteo (AQI & Iklim)"]
-        OSM["OpenStreetMap (Geometri & Bangunan)"]
+    subgraph Eksternal ["Sumber Eksternal"]
+        FIRMS["NASA FIRMS"]
+        BMKG["BMKG"]
+        OpenMeteo["Open-Meteo"]
+        OSM["OpenStreetMap"]
         LLMs["Gemini / OpenRouter / DeepSeek"]
     end
 
-    %% Koneksi
-    UI -->|"/api (same-origin)"| Proxy
+    UI -->|"/api, same-origin"| Proxy
     Proxy --> API
-    SensorHTTP -->|"/api/ingest (API Key)"| API
-    SensorMQTT -->|"Publish telemetry"| Broker
+    SensorHTTP -->|"/api/ingest + API key"| API
+    SensorMQTT -->|"publish telemetri"| Broker
     Broker --> Bridge
     Bridge --> DB
 
     API --> DB
-    API <--> JevEngine
-    JevEngine -.-> LLMs
+    API <--> Agent
+    Agent -.-> LLMs
 
-    SeedWorker --> DB
-    FIRMS --> SeedWorker
-    BMKG --> SeedWorker
-    OpenMeteo --> SeedWorker
-    OSM --> SeedWorker
+    FIRMS --> Seed
+    BMKG --> Seed
+    OpenMeteo --> Seed
+    OSM --> Seed
+    Seed --> DB
 ```
 
 > [!NOTE]
-> Browser mengakses `/api` melalui origin frontend. Vite saat pengembangan dan Caddy saat produksi meneruskan permintaan ke backend serta menambahkan application key di sisi server. Token pengguna disimpan di `sessionStorage`; setiap perangkat IoT memakai API key tersendiri. Detail akses ada di [kontrak API](docs/API_CONTRACT.md#autentikasi).
+> Browser mengakses `/api` melalui origin frontend. Vite saat pengembangan dan Caddy saat produksi meneruskan permintaan ke backend sekaligus menambahkan application key di sisi server. Token pengguna disimpan di `sessionStorage`, dan setiap perangkat IoT memakai API key tersendiri. Detailnya ada di [kontrak API](docs/API_CONTRACT.md#autentikasi).
 
----
-
-## Struktur Repositori
+### Struktur Repositori
 
 ```text
 arkamap/
-├── frontend/                # Antarmuka web (React 19, TypeScript, Vite, Tailwind v4, MapLibre GL)
-│   ├── src/                 # Komponen UI, peta interaktif, panel analitik, dan chat Kodama
-│   ├── public/              # Aset brand, ikon visual, dan sprite peta
-│   └── scripts/             # Pengecekan batas arsitektur & generator tipe OpenAPI
-├── backend/                 # API Server & Komputasi Spasial (FastAPI, PostGIS, LangChain)
-│   ├── app/                 # Modul API, ingestion data publik, logika IoT, & agen Jev
-│   ├── seed.py              # Skrip unduh dataset publik awal (FIRMS, BMKG, Open-Meteo)
-│   └── seed_iot_demo.py     # Demo generator untuk akun pengujian dan data telemetri IoT
-├── docs/                    # Kontrak API, standar desain UI, & panduan integrasi
-│   ├── API_CONTRACT.md      # Rangkuman endpoint dan skema payload per modul
-│   ├── frontend/            # Arsitektur UI, katalog komponen, dan checklist UX
-│   ├── backend/             # Spesifikasi infrastruktur, IoT, dan panduan API
-│   └── assets/              # Aset visual dan banner repositori
-├── mosquitto/               # Konfigurasi broker MQTT (otentikasi dinamis per-perangkat)
-├── scripts/                 # Otomasi setup database lokal tanpa kontainer (PowerShell)
-├── docker-compose.yml       # Orkestrasi kontainer terpadu (API, DB, Broker, Bridge, Seed)
-└── CONTRIBUTING.md          # Panduan kontribusi, alur pull request, dan standar kode
+├── frontend/             React 19, TypeScript, Vite, Tailwind v4, MapLibre GL
+│   ├── src/              Komponen UI, peta, panel analitik, dan chat Kodama
+│   ├── public/           Aset brand, ikon, dan sprite peta
+│   └── scripts/          Cek batas arsitektur dan generator tipe OpenAPI
+├── backend/              FastAPI, PostGIS, LangChain
+│   ├── app/              Modul API, ingest data publik, IoT, dan agen
+│   ├── seed.py           Unduh dataset publik awal
+│   └── seed_iot_demo.py  Akun uji dan telemetri IoT contoh
+├── docs/                 Kontrak API, panduan backend, frontend, dan integrasi
+├── mosquitto/            Konfigurasi broker MQTT dengan autentikasi per perangkat
+├── scripts/              Setup database lokal tanpa kontainer (PowerShell)
+├── docker-compose.yml    Web, API, database, broker, bridge, dan seed
+└── CONTRIBUTING.md       Alur kerja, pull request, dan standar kode
 ```
 
-> [!TIP]
-> Kontrak API (`docs/backend/openapi.json`) diekspor langsung dari kode FastAPI backend. Tipe data TypeScript frontend di-*generate* secara deterministik dari kontrak tersebut, dan sistem CI akan menolak pull request apabila ada ketidaksesuaian kontrak antara backend dan frontend.
+Kontrak `docs/backend/openapi.json` diekspor dari kode FastAPI, lalu tipe TypeScript frontend dibangkitkan dari kontrak tersebut. CI menolak pull request bila keduanya tidak sinkron.
 
----
-
-## Memulai Cepat
+## Memulai
 
 ### Prasyarat
 
-- **Docker** dengan **Compose v2**
-- **Node.js** versi `22.12+` atau `24`
+- Docker dengan Compose v2
+- Node.js 22.12 atau lebih baru, hanya untuk dev server frontend (CI memakai Node 24)
 
 ### 1. Jalankan dengan Docker
 
-Jalankan seluruh service (Database PostGIS, Mosquitto Broker, API, MQTT Bridge, Seed Data, dan aplikasi web) dengan satu perintah:
+Dari root repositori, nyalakan database, broker, API, MQTT bridge, seed, dan aplikasi web sekaligus:
 
 ```bash
-# Dari root repositori
 docker compose up --build -d
 ```
 
-Lalu buka [http://localhost:8080](http://localhost:8080). Service `web` menyajikan build frontend dan meneruskan `/api` (termasuk MQTT WebSocket `ws://localhost:8080/api/mqtt`) ke backend di alamat yang sama, seperti di VPS. Untuk database kosong tanpa mengunduh data publik, lewati `seed`: `docker compose up --build -d web` (db, broker, dan API ikut naik sebagai dependensi).
+Buka [localhost:8080](http://localhost:8080). Service `web` menyajikan build frontend dan meneruskan `/api`, termasuk MQTT WebSocket `ws://localhost:8080/api/mqtt`, ke backend di alamat yang sama, seperti di server produksi.
 
-### 2. Jalankan Frontend Dev Server (opsional)
+Untuk database kosong tanpa mengunduh data publik, lewati `seed` dengan `docker compose up --build -d web`. Database, broker, dan API ikut menyala sebagai dependensi.
 
-Untuk mengubah tampilan dengan hot reload, jalankan dev server di terminal baru:
+### 2. Jalankan dev server frontend (opsional)
+
+Untuk mengubah tampilan dengan hot reload:
 
 ```bash
 cd frontend
@@ -226,69 +216,68 @@ npm ci
 ARKAMAP_API_TARGET=http://127.0.0.1:8000 npm run dev
 ```
 
-*(Catatan: Anda juga dapat mendefinisikan `ARKAMAP_API_TARGET=http://127.0.0.1:8000` di dalam file `frontend/.env.local`).*
+`ARKAMAP_API_TARGET` juga bisa ditulis di `frontend/.env.local`.
 
----
+### Alamat service
 
-### Port dan Endpoint Service
-
-| Service | Alamat URL / Port | Keterangan |
+| Service | Alamat | Keterangan |
 | :--- | :--- | :--- |
-| **Aplikasi Web (Docker)** | [http://localhost:8080](http://localhost:8080) | Peta geospasial, dashboard, dan chat Kodama; build frontend + `/api` di satu alamat (service `web`) |
-| **Aplikasi Web (dev server)** | [http://127.0.0.1:5174](http://127.0.0.1:5174) | `npm run dev` dengan hot reload |
-| **Dokumentasi API (Swagger)** | [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) | OpenAPI interactive explorer & testing endpoint |
-| **MQTT Broker (Mosquitto)** | `localhost:1883` | Saluran ingest sensor IoT (User: `dev<id>`, Password: API key) |
-| **Evaluator agen internal** | [http://127.0.0.1:8001](http://127.0.0.1:8001) | Chainlit UI untuk observabilitas agen (`--profile chat`) |
+| Aplikasi web | [localhost:8080](http://localhost:8080) | Build frontend dan `/api` di satu alamat (service `web`) |
+| Dev server | [127.0.0.1:5174](http://127.0.0.1:5174) | `npm run dev` dengan hot reload |
+| Dokumentasi API | [127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) | Swagger UI untuk menjelajah dan mencoba endpoint |
+| Broker MQTT | `localhost:1883` | Ingest sensor dengan user `dev<id>` dan password API key perangkat |
+| Evaluator agen | [127.0.0.1:8001](http://127.0.0.1:8001) | Chainlit UI internal, hanya dengan `--profile chat` |
 
----
+### Data contoh
 
-### Data Contoh dan Telemetri Demo
+Saat kontainer pertama kali menyala dengan database kosong, service `seed` mengunduh dataset publik di latar belakang. Aplikasi sudah bisa dipakai selama proses ini berjalan.
 
-1. **Unduh Data Publik Pertama Kali:** Service `seed` akan otomatis mengunduh dataset nasional pada peluncuran pertama kontainer ke dalam database PostGIS yang kosong. Aplikasi sudah langsung dapat digunakan selama proses ini berlangsung di latar belakang.
-2. **Akun & Perangkat Uji IoT:** Untuk mencoba dashboard multi-versi sensor seketika tanpa alat fisik:
-   ```bash
-   docker compose exec api python seed_iot_demo.py
-   ```
-   Skrip menyiapkan akun `uji.versi@arkamap.local`, perangkat contoh, dan riwayat pengukuran cuaca serta kualitas udara melalui jalur ingest. Kata sandi akun baru dicetak saat pembuatan. Menjalankannya kembali mengganti perangkat contoh beserta datanya.
-3. **Mencoba agen melalui antarmuka internal:**
-   ```bash
-   docker compose --profile chat up chat
-   # Buka http://127.0.0.1:8001 pada peramban Anda
-   ```
+Untuk mencoba dashboard sensor tanpa alat fisik, siapkan akun dan perangkat contoh:
 
----
+```bash
+docker compose exec api python seed_iot_demo.py
+```
+
+Skrip ini membuat akun `uji.versi@arkamap.local`, perangkat contoh, dan riwayat pengukuran cuaca serta kualitas udara melalui jalur ingest. Kata sandi dicetak saat akun dibuat. Menjalankannya ulang akan mengganti perangkat contoh beserta datanya.
+
+Untuk mencoba agen lewat antarmuka internal:
+
+```bash
+docker compose --profile chat up chat
+```
 
 ## Integrasi Sensor IoT (BYOD)
 
-Daftarkan sensor lingkungan milik pengguna, komunitas, atau institusi, lalu kirim pengukuran menggunakan API key perangkat. Panduan pada halaman perangkat menyediakan URL, payload, dan contoh kode sesuai konfigurasinya.
+Daftarkan sensor milik pengguna, komunitas, atau institusi, lalu kirim pengukuran dengan API key perangkat. Halaman perangkat menyediakan URL, payload, dan contoh kode sesuai konfigurasinya.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Pengguna as Pengguna / Operator
-    participant UI as Arkamap Web UI
-    participant API as FastAPI Backend
-    participant Mosq as MQTT Broker (:1883)
-    participant Device as Sensor Fisik (ESP32 / Python)
+    actor User as Pengguna
+    participant UI as Arkamap Web
+    participant API as FastAPI
+    participant Broker as Mosquitto
+    participant Device as Sensor (ESP32 / Python)
 
-    Pengguna->>UI: Daftarkan Perangkat Baru
+    User->>UI: Daftarkan perangkat
     UI->>API: POST /api/me/devices
-    API->>Mosq: Daftarkan kredensial broker
-    API-->>UI: Kembalikan API Key (sekali tampil)
-    UI-->>Pengguna: Salin kode contoh (cURL / Python / Arduino)
+    API->>Broker: Daftarkan kredensial broker
+    API-->>UI: API key (ditampilkan sekali)
+    UI-->>User: Contoh kode cURL / Python / ESP32
 
-    alt Pengiriman via REST HTTP
-        Device->>API: POST /api/ingest (Header: X-API-Key)
-        API->>API: Validasi & Deteksi Auto-Schema
-    else Pengiriman via MQTT
-        Device->>Mosq: Connect (dev{id} + API Key) & Publish JSON
-        Mosq->>API: Mqtt-Bridge meneruskan data ke pipeline
+    alt REST
+        Device->>API: POST /api/ingest (X-API-Key)
+        API->>API: Validasi dan deteksi skema
+    else MQTT
+        Device->>Broker: Connect dev{id} + API key, publish JSON
+        Broker->>API: MQTT bridge meneruskan ke pipeline ingest
     end
-    UI->>API: Ambil riwayat pembacaan
-    API-->>UI: Data untuk tabel dan widget
+
+    UI->>API: Ambil riwayat pengukuran
+    API-->>UI: Data tabel dan widget
 ```
 
-### Contoh Pengiriman Telemetri melalui cURL
+Contoh pengiriman lewat REST:
 
 ```bash
 curl -X POST "http://127.0.0.1:8000/api/ingest" \
@@ -306,45 +295,49 @@ curl -X POST "http://127.0.0.1:8000/api/ingest" \
   }'
 ```
 
-Ganti `<DEVICE_API_KEY>` dan `<WAKTU_UKUR_ISO_8601>` dengan kunci perangkat dan waktu pengukuran aktual. Field baru pada nama tabel yang sama membentuk versi tabel baru. Lihat [aturan kirim data sensor](docs/API_CONTRACT.md#kirim-data-sensor) untuk format, batas kiriman, dan validasi.
+Ganti `<DEVICE_API_KEY>` dan `<WAKTU_UKUR_ISO_8601>` dengan kunci perangkat dan waktu pengukuran sebenarnya. Field baru pada nama tabel yang sama membentuk versi tabel baru. Format, batas kiriman, dan aturan validasi ada di [aturan kirim data sensor](docs/API_CONTRACT.md#kirim-data-sensor).
 
----
+## Asisten AI
 
-## Konfigurasi Asisten AI
-
-Untuk mengaktifkan model bahasa Kodama, sediakan kunci penyedia pada `.env` di root repositori:
+Kodama aktif penuh setelah kunci penyedia LLM diisi di `.env` pada root repositori:
 
 ```env
 GEMINI_API_KEY="your-gemini-api-key"
-# Penyedia alternatif:
+# Alternatif:
 # OPENROUTER_API_KEY="your-openrouter-key"
 # DEEPSEEK_API_KEY="your-deepseek-key"
 ```
 
-Coba pertanyaan seperti *Bagaimana tren titik panas di Kalimantan Barat tiga hari terakhir?* atau *Apa peringatan cuaca BMKG yang tersedia untuk wilayah saya?* Jawaban mengikuti data yang tersedia di backend. Tanpa kunci LLM, backend menggunakan jawaban cadangan berbasis template.
+Contoh pertanyaan:
 
----
+- Bagaimana tren titik panas di Kalimantan Barat tiga hari terakhir?
+- Apa peringatan cuaca BMKG yang berlaku untuk wilayah saya?
 
-## Pengembangan Lokal
+Jawaban mengikuti data yang tersedia di backend. Tanpa kunci LLM, backend memakai jawaban cadangan berbasis template. Sebagian modul dan kontrak API masih memakai nama lama agen ini, Jev.
 
-### Frontend dengan Hosted API
+## Pengembangan
 
-Bila ingin mengembangkan antarmuka tanpa menyalakan backend lokal, buat file `frontend/.env.hosted.local`:
+### Frontend dengan API hosted
+
+Untuk mengerjakan antarmuka tanpa backend lokal, buat `frontend/.env.hosted.local`:
 
 ```env
 ARKAMAP_API_TARGET=https://api.arkamap.example.com
 ARKAMAP_API_KEY=your-app-key
 ```
 
-Lalu jalankan server dari direktori `frontend/`:
+Lalu dari `frontend/`:
 
 ```bash
 npm run dev:hosted
 ```
 
-### Backend tanpa Docker di Windows PowerShell
+<details>
+<summary><strong>Backend tanpa Docker (Windows PowerShell)</strong></summary>
 
-Dibutuhkan Python 3.13 dan PostgreSQL 14+ dengan ekstensi PostGIS:
+<br />
+
+Butuh Python 3.12 dan PostgreSQL 14+ dengan ekstensi PostGIS.
 
 ```powershell
 python -m venv .venv
@@ -353,49 +346,50 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/init-local.ps1
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir backend --env-file .env.local --port 8000
 ```
 
----
+</details>
 
-## Pengujian dan Kualitas Kode
+### Pengujian
 
-Jalankan pemeriksaan berikut sesuai bagian yang diubah. Hasil dan batas validasi integrasi dicatat di [dokumen validasi](docs/integration/VALIDATION.md).
+Jalankan pemeriksaan sesuai bagian yang diubah. Hasil dan batas validasi integrasi dicatat di [dokumen validasi](docs/integration/VALIDATION.md).
 
 ```bash
-# 1. Menjalankan rangkaian uji Backend (dari root repositori)
-python backend/test_iot.py && python backend/test_agent.py && python backend/test_bmkg.py
+# Backend, dari backend/
+python test_iot.py
+python test_agent.py
+python test_bmkg.py
+python test_fire.py
+python test_paths.py
+python test_responder.py
 
-# 2. Menjalankan pemeriksaan kualitas Frontend (dari direktori frontend/)
-npm run check          # Oxlint linter, TypeScript check, arsitektur boundary, & katalog UI
-npm run build          # Verifikasi kesiapan produksi bundle Vite
-npm run test:api       # Uji konektivitas klien API dan streaming Jev
-npm run api:check      # Validasi kesesuaian kontrak OpenAPI backend & tipe TypeScript frontend
+# Frontend, dari frontend/
+npm run check       # lint, typecheck, batas arsitektur, dan katalog UI
+npm run build       # build produksi
+npm run test:api    # klien API dan streaming agen
+npm run api:check   # kesesuaian kontrak OpenAPI dengan tipe TypeScript
 ```
 
----
+### Variabel lingkungan
 
-## Variabel Lingkungan (.env)
-
-| Variabel | Default (Compose Evaluasi) | Deskripsi / Penggunaan Produksi |
+| Variabel | Default Compose | Kegunaan |
 | :--- | :--- | :--- |
-| `POSTGRES_PASSWORD` | `arkamap` | Kata sandi user database `arkamap` (wajib diubah untuk rilis publik) |
-| `JWT_SECRET` | `local-demo-secret-change-me` | Secret key penandatanganan token otentikasi JWT |
-| `MQTT_BRIDGE_PASSWORD` | `dev-bridge-password` | Kata sandi internal komunikasi antara broker Mosquitto & bridge |
-| `GEMINI_API_KEY` | *(kosong)* | Kunci API Google Gemini untuk mengaktifkan LLM asisten Jev |
-| `OPENROUTER_API_KEY` | *(kosong)* | Kunci API penyedia OpenRouter (alternatif LLM Jev) |
-| `DEEPSEEK_API_KEY` | *(kosong)* | Kunci API penyedia DeepSeek (alternatif LLM Jev) |
-| `CORS_ORIGINS` | `http://localhost:8080` | Daftar origin yang diizinkan untuk panggilan lintas domain |
+| `POSTGRES_PASSWORD` | `arkamap` | Kata sandi user database `arkamap`. Wajib diganti untuk rilis publik. |
+| `JWT_SECRET` | `local-demo-secret-change-me` | Kunci penandatanganan token JWT. |
+| `MQTT_BRIDGE_PASSWORD` | `dev-bridge-password` | Kata sandi internal antara broker dan bridge. |
+| `GEMINI_API_KEY` | kosong | Kunci Google Gemini untuk Kodama. |
+| `OPENROUTER_API_KEY` | kosong | Kunci OpenRouter, penyedia alternatif. |
+| `DEEPSEEK_API_KEY` | kosong | Kunci DeepSeek, penyedia alternatif. |
+| `CORS_ORIGINS` | `http://localhost:8080` | Origin yang diizinkan untuk panggilan lintas domain. |
 
----
-
-## Batasan dan Catatan Rilis
+### Batasan saat ini
 
 | Area | Catatan |
 | :--- | :--- |
-| Data Publik | Data diambil melalui service seed dan penjadwal backend. Kesegaran data mengikuti sumber; layer peta membutuhkan internet. |
-| Sesi Pengguna | Token berada di sessionStorage per tab. Sesi bertahan saat refresh; tab baru memerlukan autentikasi ulang. |
-| Metadata Perangkat | Identitas, kategori, dan koordinat tersimpan di backend. Beberapa isian tambahan pada UI masih memakai nilai standar. |
-| Modul Preview | Simulator, Forensik, dan Disposisi Tugas masih berstatus Preview. |
+| Data publik | Diambil oleh service seed dan penjadwal backend. Kesegaran data mengikuti sumber, dan layer peta membutuhkan internet. |
+| Sesi pengguna | Token disimpan di `sessionStorage` per tab. Sesi bertahan saat refresh, tetapi tab baru perlu masuk ulang. |
+| Metadata perangkat | Identitas, kategori, dan koordinat tersimpan di backend. Beberapa isian tambahan di UI masih memakai nilai standar. |
+| Modul preview | Simulator, Forensik, dan Disposisi Tugas masih berstatus preview. |
 
-## Dokumentasi dan Referensi
+## Dokumentasi
 
 | Area | Panduan |
 | :--- | :--- |
@@ -404,20 +398,18 @@ npm run api:check      # Validasi kesesuaian kontrak OpenAPI backend & tipe Type
 | Backend | [API](docs/backend/API.md) · [Akun dan IoT](docs/backend/IOT.md) · [Pemetaan Endpoint](docs/backend/FRONTEND.md) · [Visualisasi dan Agen](docs/backend/VIZ.md) · [Infrastruktur](docs/backend/Infra.md) |
 | Frontend | [Overview](docs/frontend/README.md) · [Arsitektur](docs/frontend/ARCHITECTURE.md) · [Design System](docs/frontend/DESIGN-SYSTEM.md) · [Komponen](docs/frontend/COMPONENTS.md) · [Checklist UI](docs/frontend/UI-CHECKLIST.md) |
 | Kontribusi | [Design Guidelines](DESIGN.md) · [Panduan Kontribusi](CONTRIBUTING.md) |
-| Pemeriksaan CI | [Frontend](https://github.com/ex-machina-org/arkamap/actions/workflows/frontend.yml) · [Integrasi dan Backend](https://github.com/ex-machina-org/arkamap/actions/workflows/integration.yml) |
-
----
+| CI | [Frontend](https://github.com/ex-machina-org/arkamap/actions/workflows/frontend.yml) · [Integrasi dan Backend](https://github.com/ex-machina-org/arkamap/actions/workflows/integration.yml) |
 
 ## Tim Ex Machina
 
-Arkamap dikembangkan oleh **Ex Machina** untuk **JOINTS UGM 2026**.
+Arkamap dikembangkan oleh Ex Machina untuk JOINTS UGM 2026.
 
-| Anggota | Role | Fokus di Arkamap |
+| Anggota | Peran | Fokus |
 | :--- | :--- | :--- |
-| [Mahar](https://github.com/spirinity) | PM, Lead, FE Engineer | Arah produk, pengalaman pengguna, frontend, dan integrasi antarmuka. |
-| [Yusma](https://github.com/yusmanata) | ML Engineer | Analisis lingkungan, scoring, dan evaluasi hasil model. |
-| [Dicha](https://github.com/user312982) | Backend Engineer | Backend, API, orkestrasi agen AI, dan integrasi data. |
-| [Marsa](https://github.com/Amertaa) | IoT Engineer | Sensor, gateway IoT, dan integrasi pengukuran lapangan. |
+| [Mahardika Arka](https://github.com/spirinity) | PM, Lead, FE Engineer | Arah produk, pengalaman pengguna, frontend, dan integrasi antarmuka. |
+| [Raditya Yusma Nata](https://github.com/yusmanata) | ML Engineer | Analisis lingkungan, scoring, dan evaluasi model. |
+| [Dicha Wijaya Kusuma](https://github.com/user312982) | Backend Engineer | Backend, API, orkestrasi agen AI, dan integrasi data. |
+| [Marsa Naufal](https://github.com/Amertaa) | IoT Engineer | Sensor, gateway IoT, dan integrasi pengukuran lapangan. |
 
 ## Lisensi
 
