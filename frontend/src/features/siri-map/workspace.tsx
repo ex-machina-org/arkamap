@@ -186,10 +186,13 @@ export function SiriMapWorkspace() {
   // The dock counts what the search leaves, before the hazard filter, so every chip says what picking it would show.
   const aqiLimit = useApi("/standards", "AirStandards").data?.metrics[AQI_METRIC]?.batas;
   const aqiLayer = useMapLayer(situation ? { metric: AQI_METRIC, label: "", level: situation.choropleth.level, parentId: situation.choropleth.parentId } : null);
-  const badAirRegions = useMemo(() => aqiLimit == null ? 0 : (aqiLayer.layer?.features ?? []).filter(({ properties }) =>
-    // A kab/kota scope still loads its whole province, so only its own region counts.
-    (focus?.level !== "kabkota" || properties.region_id === focus.id) && properties.value != null && properties.value > aqiLimit).length,
-  [aqiLayer.layer, aqiLimit, focus]);
+  const badAirLayer = useMemo(() => aqiLimit == null || !aqiLayer.layer ? undefined : {
+    ...aqiLayer.layer,
+    features: aqiLayer.layer.features.filter(({ properties }) =>
+      // A kab/kota scope still loads its whole province, so only its own region counts.
+      (focus?.level !== "kabkota" || properties.region_id === focus.id) && properties.value != null && properties.value > aqiLimit),
+  }, [aqiLayer.layer, aqiLimit, focus]);
+  const badAirRegions = badAirLayer?.features.length ?? 0;
   const hazardCounts = useMemo(() => {
     if (spatial.loading && incidents.length === 0) return null;
     const counts = Object.fromEntries(HAZARD_ORDER.map((type) => [type, 0])) as Record<HazardType, number>;
@@ -226,6 +229,8 @@ export function SiriMapWorkspace() {
     return { metric: metricChoice, label: metricLabel(metricChoice), level: situation?.choropleth.level ?? "provinsi", parentId: situation?.choropleth.parentId ?? null };
   }, [metricChoice, situation, metricLabel]);
   const mapLayer = useMapLayer(choropleth);
+  // Picking the air chip leaves only the regions it counted on the map and in the ranking.
+  const shownLayer = activeHazard === "air_quality" && badAirLayer ? badAirLayer : mapLayer.layer;
   const regionList = useMemo(() => (mapLayer.layer?.features ?? []).map((feature) => ({
     id: feature.properties.region_id,
     name: feature.properties.name,
@@ -447,7 +452,7 @@ export function SiriMapWorkspace() {
             basemap={basemap}
             warnings={spatial.warnings}
             choropleth={choropleth}
-            layer={mapLayer.layer}
+            layer={shownLayer}
             layerError={mapLayer.error}
             showData={showData}
             wind={wind}
@@ -569,7 +574,7 @@ export function SiriMapWorkspace() {
             />
           }
           explore={<PublicDataPanel />}
-          ranking={<RankPanel layer={mapLayer.layer} label={choropleth?.label} selectedRegionId={selectedRegion?.entry.regionId ?? null} onSelect={pickRegionById} />}
+          ranking={<RankPanel layer={shownLayer} label={choropleth?.label} selectedRegionId={selectedRegion?.entry.regionId ?? null} onSelect={pickRegionById} />}
           detail={selectedRegion && (
             <RegionDetail
               key={selectedRegion.entry.regionId}
