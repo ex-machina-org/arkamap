@@ -24,6 +24,7 @@ from .db import apply_schema, close_pool, init_pool
 from .clients import require_app_key
 from .config import CORS_ORIGINS
 from .ingest.buildings_prewarm import run_forever as run_buildings_forever, start_background as start_buildings_background
+from .ingest.evac_sites import start_background as start_evac_sites_background
 from .ingest import bmkg
 from .ingest.runner import run_all, seed_registry
 from .iot.layout import retry_rule_layouts
@@ -87,6 +88,8 @@ async def lifespan(app: FastAPI):
     # through _CITIES (see buildings_prewarm.py) until every tile in every
     # listed city is done, then the thread exits.
     start_buildings_background()
+    # Evacuation sites for /responder/route: a province at a time, Yogyakarta first, weekly after that.
+    start_evac_sites_background()
 
     yield
 
