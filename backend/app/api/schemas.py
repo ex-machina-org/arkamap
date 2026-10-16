@@ -1188,6 +1188,15 @@ class HazardCollection(BaseModel):
     features: list[dict[str, Any]]
 
 
+class EvacuationRoute(BaseModel):
+    fire: bool = Field(description="true = alert terakhir alat 'bahaya' berkategori kebakaran: rute menghindari api dan "
+                                   "sektor searah angin (hazard_type smoke_plume); false = jalan terbaik ke titik kumpul terdekat")
+    route: EgressLegOut
+    pois: list[TacticalPoi] = Field(description="titik kumpul dan tempat penampungan di sekitar alat")
+    hazard_polygons: HazardCollection
+    wind: WindOut | None = Field(None, description="angin di lokasi alat; hanya untuk kebakaran")
+
+
 class ResponderRoute(BaseModel):
     ingress: RouteLegOut
     egress: EgressLegOut

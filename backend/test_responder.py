@@ -10,7 +10,7 @@ sys.path.insert(0, ".")
 from fastapi import HTTPException
 
 from app.api import responder as rr
-from app.api.schemas import ResponderRoute, ResponderRouteIn
+from app.api.schemas import EvacuationRoute, ResponderRoute, ResponderRouteIn
 from app.db import apply_schema, conn, init_pool
 from app.ingest.buildings_prewarm import _ensure_tables
 
@@ -40,6 +40,13 @@ assert rr.compass(225) == "Barat Daya"
 assert rr.is_downwind([116.8, -1.2], [116.9, -1.2], 270)
 assert not rr.is_downwind([116.8, -1.2], [116.7, -1.2], 270)
 assert not rr.is_downwind([116.8, -1.2], [116.9, -1.2], None)
+# a device's fire: a sector downwind (wind from the west -> east), 0.2-2 km out, closed ring
+assert rr.plume_zone([116.8, -1.2], None) is None
+plume = rr.plume_zone([116.8, -1.2], 270)
+ring = plume["geometry"]["coordinates"][0]
+assert ring[0] == ring[-1] and all(rr.is_downwind([116.8, -1.2], p, 270) for p in ring)
+assert all(190 < rr.meters([116.8, -1.2], p) < 2010 for p in ring)
+assert plume["perimeter_m"] < rr.MAX_EXCLUDE_PERIMETER_M
 
 # ── against PostGIS ──────────────────────────────────────────────────────
 init_pool(); apply_schema(); _ensure_tables()
@@ -160,6 +167,30 @@ try:
         raise AssertionError("expected 502")
     except HTTPException as exc:
         assert exc.status_code == 502
+
+    # evacuation from a device that reports a fire: around it and out of its downwind sector, to a
+    # point that is not downwind (the south-east assembly field is); the eastward line crosses the plume
+    calls.clear()
+    rr._valhalla = valhalla
+    out = EvacuationRoute(**rr.evacuate(INCIDENT, True)).model_dump()
+    kinds = [f["properties"]["hazard_type"] for f in out["hazard_polygons"]["features"]]
+    assert out["fire"] and kinds[:2] == ["fire_buffer", "smoke_plume"], kinds
+    assert calls[0] >= 1, calls                                          # the plume went to the router
+    target = out["route"]["target_poi"]
+    assert target["type"] == "safe_point" and not rr.is_downwind(INCIDENT, target["coords"], 270), target
+    assert out["wind"] and "angin" in out["route"]["summary"], out["route"]["summary"]
+    rr._valhalla, rr._osrm = lambda s, e, rings: None, straight
+    east = rr.destination(INCIDENT, 90, 3_000)
+    leg = rr.route_leg(INCIDENT, east, [rr.plume_zone(INCIDENT, 270)])
+    assert leg["safety_level"] == "critical" and any("searah angin" in w for w in leg["warnings"]), leg
+
+    # any other device: the best road to the nearest assembly point, no wind involved
+    rr._valhalla = valhalla
+    out = EvacuationRoute(**rr.evacuate(INCIDENT, False)).model_dump()
+    assert not out["fire"] and out["wind"] is None
+    assert out["route"]["target_poi"] == {"name": "Lapangan Desa", "type": "shelter", "coords": FIELD}, out["route"]
+    assert "titik kumpul Lapangan Desa" in out["route"]["summary"]
+    assert "smoke_plume" not in {f["properties"]["hazard_type"] for f in out["hazard_polygons"]["features"]}
 
     try:
         rr.responder_route(ResponderRouteIn(origin=[150.0, -1.0], incident=INCIDENT))
