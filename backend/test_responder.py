@@ -191,6 +191,7 @@ try:
     assert not out["fire"] and out["wind"] is None
     assert out["route"]["target_poi"] == {"name": "Lapangan Desa", "type": "shelter", "coords": FIELD}, out["route"]
     assert "titik kumpul Lapangan Desa" in out["route"]["summary"]
+    assert [p["type"] for p in out["pois"]][:3] == ["hospital"] * 3 and out["pois"][-1]["type"] == "shelter", out["pois"]
     assert "smoke_plume" not in {f["properties"]["hazard_type"] for f in out["hazard_polygons"]["features"]}
 
     try:

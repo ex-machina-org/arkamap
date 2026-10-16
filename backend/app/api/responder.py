@@ -525,5 +525,6 @@ def evacuate(point: list[float], fire: bool) -> dict:
     else:
         route["summary"] = (f"Evakuasi ke titik kumpul {target['name']}." if sites else
                             f"Belum ada titik kumpul tercatat dalam {SHELTER_RADIUS_M // 1000} km; arahkan ke {target['name']}.")
-    return {"fire": fire, "route": route, "pois": _pois((("shelter", sites),)),
+    # the nearest care is listed too, for anyone hurt on the way out
+    return {"fire": fire, "route": route, "pois": _pois((("hospital", hospitals(point)[:5]), ("shelter", sites))),
             "hazard_polygons": _hazard_fc(zones), "wind": wind}
