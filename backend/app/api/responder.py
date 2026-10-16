@@ -32,7 +32,7 @@ HAZARD_RADIUS_M = 15_000      # hazards around the incident worth routing around
 HOSPITAL_RADIUS_M = 30_000
 SHELTER_RADIUS_M = 5_000      # evacuees walk or are driven a short way to a shelter
 # Tagged amenity=clinic in OSM but no place to take a casualty.
-NOT_CARE = re.compile(r"laborator|apotek|optik|farmasi", re.I)
+NOT_CARE = re.compile(r"laborator|apot[ei]k|optik|farmasi|pharmacy", re.I)
 # Valhalla refuses a request whose exclusion rings add up to more than this
 # perimeter (its default service limit), so the nearest hazards go first.
 MAX_EXCLUDE_PERIMETER_M = 10_000

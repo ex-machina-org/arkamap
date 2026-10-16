@@ -77,6 +77,9 @@ with conn() as c, c.cursor() as cur:
                 f" (990002,'kesehatan','hospital','RS Timur','hospital',900,{square(*EAST_H)}),"
                 f" (990003,'kesehatan','yes','Klinik Barat','clinic',200,{square(*WEST_C)}),"
                 f" (990004,'kesehatan','yes','Laboratorium Klinik Timur','clinic',200,{square(*LAB)})")
+    # a pharmacy mistagged as a hospital, right at the incident: never the evacuation target
+    cur.execute("INSERT INTO evac_site (osm_id, kind, name, note, fetched_at, geom) VALUES ('test/5','hospital',"
+                "'condong catur apotik','Rumah sakit',now(),ST_SetSRID(ST_MakePoint(%s,%s),4326))", INCIDENT)
     # evac_site: the west hospital again (stored by both tables, listed once), a large mosque,
     # a school inside the fire, and an official assembly point that outranks the nearer mosque
     for osm_id, kind, name, note, (lon, lat) in (
