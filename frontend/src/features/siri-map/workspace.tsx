@@ -81,6 +81,9 @@ function writeLastFocus(bbox: number[] | undefined) {
 // The profile's region bounds how far the map can widen: kab/kota → its province → Indonesia.
 const SCOPES: Record<string, Scope[]> = { kabkota: ["region", "province", "national"], provinsi: ["province", "national"] };
 
+// Air quality has no point feed; its chip counts the regions in scope above the US AQI "Sedang" limit from /standards.
+const AQI_METRIC = "aqi_forecast_max";
+
 const NATIONAL_VIEW: CameraTarget = { coords: [118, -2.5], zoom: 4.6, zoomMode: "exact" };
 // the same view as a different object, so MapCameraController flies there again
 const NATIONAL_AGAIN: CameraTarget = { ...NATIONAL_VIEW };
@@ -181,12 +184,19 @@ export function SiriMapWorkspace() {
   );
 
   // The dock counts what the search leaves, before the hazard filter, so every chip says what picking it would show.
+  const aqiLimit = useApi("/standards", "AirStandards").data?.metrics[AQI_METRIC]?.batas;
+  const aqiLayer = useMapLayer(situation ? { metric: AQI_METRIC, label: "", level: situation.choropleth.level, parentId: situation.choropleth.parentId } : null);
+  const badAirRegions = useMemo(() => aqiLimit == null ? 0 : (aqiLayer.layer?.features ?? []).filter(({ properties }) =>
+    // A kab/kota scope still loads its whole province, so only its own region counts.
+    (focus?.level !== "kabkota" || properties.region_id === focus.id) && properties.value != null && properties.value > aqiLimit).length,
+  [aqiLayer.layer, aqiLimit, focus]);
   const hazardCounts = useMemo(() => {
     if (spatial.loading && incidents.length === 0) return null;
     const counts = Object.fromEntries(HAZARD_ORDER.map((type) => [type, 0])) as Record<HazardType, number>;
     for (const incident of searchedIncidents) counts[incident.hazardType]++;
+    counts.air_quality += badAirRegions;
     return counts;
-  }, [searchedIncidents, spatial.loading, incidents.length]);
+  }, [searchedIncidents, spatial.loading, incidents.length, badAirRegions]);
 
   // A selection that the filters hide, or that disappeared on refresh, counts as no selection.
   const selectedIncident = useMemo(
@@ -327,6 +337,9 @@ export function SiriMapWorkspace() {
 
   function handleSelectHazard(hazard: HazardType | "all") {
     setActiveHazard(hazard);
+    // Its count is regions, not pins, so the chip shows them by colouring the map with AQI.
+    if (hazard === "air_quality") setMetricChoice(AQI_METRIC);
+    else if (metricChoice === AQI_METRIC) setMetricChoice("auto");
   }
 
   async function handleCopyGeoJSON(incident: SpatialIncident) {

@@ -45,7 +45,7 @@ function FilterChip({ label, title, icon: Icon, count, pressed, color, onClick }
       <button
         type="button"
         aria-pressed={pressed}
-        aria-label={count == null ? title : `${title}, ${integer.format(count)} kejadian`}
+        aria-label={count == null ? title : `${title}: ${integer.format(count)}`}
         onClick={onClick}
         style={pressed && color ? ({ backgroundColor: color } as CSSProperties) : undefined}
         className={cx(

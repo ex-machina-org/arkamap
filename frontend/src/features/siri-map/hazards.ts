@@ -24,7 +24,7 @@ interface HazardMeta {
 export const HAZARDS: Record<HazardType, HazardMeta> = {
   hotspot: { label: "Titik panas", filterLabel: "Karhutla dan titik panas", icon: RiFireLine, color: "#f97316" },
   flood: { label: "Banjir", filterLabel: "Banjir", icon: RiWaterPercentLine, color: "#3b82f6" },
-  air_quality: { label: "Kualitas udara", filterLabel: "Kualitas udara", icon: RiWindyLine, color: "#06b6d4" },
+  air_quality: { label: "Kualitas udara", filterLabel: "Wilayah dengan AQI di atas kategori Sedang", icon: RiWindyLine, color: "#06b6d4" },
   iot_sensor: { label: "Sensor lapangan", filterLabel: "Sensor lapangan", icon: RiBroadcastLine, color: "#10b981" },
   seismic: { label: "Gempa", filterLabel: "Gempa bumi", icon: RiFocus3Line, color: "#f43f5e" },
   disaster: { label: "Bencana", filterLabel: "Bencana lain", icon: RiAlarmWarningLine, color: "#64748b" },
