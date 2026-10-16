@@ -50,7 +50,7 @@ export function ResponderRouteLayers({
       )}
 
       {/* Ingress Route Line (Approach to Incident) */}
-      {showIngress && (
+      {showIngress && plan.ingressRoute && (
         <MapGeoJSON
           id="responder-ingress-line"
           data={legToGeoJson(plan.ingressRoute.coordinates)}
@@ -78,7 +78,7 @@ export function ResponderRouteLayers({
       )}
 
       {/* Origin Marker (Responder Starting Point) */}
-      <MapMarker
+      {plan.ingressRoute && <MapMarker
         longitude={plan.originCoords[0]}
         latitude={plan.originCoords[1]}
       >
@@ -95,7 +95,7 @@ export function ResponderRouteLayers({
             </span>
           </div>
         </MarkerContent>
-      </MapMarker>
+      </MapMarker>}
 
       {/* Tactical POI Markers */}
       {plan.tacticalPois.map((poi) => {
@@ -143,7 +143,7 @@ export function ResponderRouteLayers({
               <RiMapPinLine className="size-4" aria-hidden="true" />
             </span>
             <span className="mt-1 rounded bg-background-primary-default/95 px-1.5 py-0.5 text-caption-2-medium text-status-rose-text shadow-2xs">
-              Titik Insiden Operasi
+              {plan.source === "device" ? plan.incidentTitle : "Titik Insiden Operasi"}
             </span>
           </div>
         </MarkerContent>

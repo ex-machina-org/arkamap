@@ -243,6 +243,8 @@ interface MapViewportProps {
   /** Everything outside Indonesia; dims the world around the country when no regional boundary applies. */
   nationalMask?: Feature<MultiPolygon>;
   status: DockStatus;
+  /** The route panel holds the bottom-left corner, so the legend steps aside. */
+  routePanelOpen?: boolean;
 }
 
 export function MapViewport({
@@ -269,6 +271,7 @@ export function MapViewport({
   boundary,
   nationalMask,
   status,
+  routePanelOpen,
 }: MapViewportProps) {
   // Opening straight on the region skips both the national view and its intro flight.
   const framed = startBounds?.length === 4;
@@ -313,7 +316,7 @@ export function MapViewport({
         <MapBoundsController region={framed ? startBounds : undefined} />
         <MapCameraController target={camera} pitch={is3D ? 48 : 0} intro={intro} framed={framed} />
 
-        <SpatialLayers warnings={warnings} choropleth={choropleth} layer={layer} layerError={layerError} showData={showData} basemap={basemap} wind={wind} selectedRegionId={selectedRegionId} onSelectRegion={onSelectRegion} onRegionCenter={onRegionCenter} buildings={is3D} events={events} focus={focus} boundary={boundary} nationalMask={nationalMask} status={status} />
+        <SpatialLayers warnings={warnings} choropleth={choropleth} layer={layer} layerError={layerError} showData={showData} basemap={basemap} wind={wind} selectedRegionId={selectedRegionId} onSelectRegion={onSelectRegion} onRegionCenter={onRegionCenter} buildings={is3D} events={events} focus={focus} boundary={boundary} nationalMask={nationalMask} status={status} routePanelOpen={routePanelOpen} />
         <MapControls position="bottom-right" showCompass showFullscreen showZoom className="right-3" />
         <FoldedAttribution />
 

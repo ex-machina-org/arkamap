@@ -233,3 +233,19 @@ req = object()
 assert users.start_test_device(req, {"id": 1})["device"] == {"id": 9} and seen["request"] is req
 users.query, users.execute, users.create_device, users._own_device, users._public = saved
 print("test device ok")
+
+# evacuation from a device: its own alert decides fire or not; no location, no route
+from fastapi import HTTPException
+saved = users._own_device, users.query_one, users.responder.evacuate
+users.responder.evacuate = lambda point, fire: {"point": point, "fire": fire}
+users.query_one = lambda sql, args: {"fire": True}
+users._own_device = lambda u, i: {"lat": -7.7, "lon": 110.4}
+assert users.device_evacuation(5, {"id": 1}) == {"point": [110.4, -7.7], "fire": True}
+users._own_device = lambda u, i: {"lat": None, "lon": None}
+try:
+    users.device_evacuation(5, {"id": 1})
+    raise AssertionError("expected 400")
+except HTTPException as exc:
+    assert exc.status_code == 400
+users._own_device, users.query_one, users.responder.evacuate = saved
+print("evacuation endpoint ok")

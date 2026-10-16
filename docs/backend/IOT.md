@@ -82,6 +82,7 @@ Bidang (pemadam, pertanian, kesehatan, ...) tetap dipilih AI dari penjelasan use
 | `PATCH /me/devices/{id}` | `{name?, category?, location?}` | `DeviceOut` |
 | `DELETE /me/devices/{id}` | – | 204; perangkat dan semua datanya dihapus |
 | `POST /me/devices/{id}/key` | – | `{api_key, key_prefix, quickstart}`; key lama langsung tidak berlaku |
+| `POST /me/devices/{id}/evacuation` | – | `EvacuationRoute`: rute evakuasi dari lokasi alat (400 bila alat belum punya lokasi); lihat [API_CONTRACT.md](../API_CONTRACT.md) |
 | `GET /me/devices/{id}/quickstart` | – | `Quickstart`: contoh siap tempel, dengan `<API_KEY>` di tempat key |
 | `GET /me/devices/{id}/readings` | `?stream=&version=&field=&hours=24&limit=500&before=` | `Readings`, terbaru dulu; `next_before` untuk halaman berikutnya. `version` = `Stream.versions[].id`; `field` = key widget `<nama>/<field>` |
 | `POST /me/devices/{id}/readings/delete` | `{ids?, stream_id?, since?, until?}` (minimal satu) | `{deleted}`; tidak bisa dibatalkan |

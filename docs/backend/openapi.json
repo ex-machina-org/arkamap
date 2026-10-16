@@ -1868,6 +1868,48 @@
         "title": "ErrorResponse",
         "type": "object"
       },
+      "EvacuationRoute": {
+        "properties": {
+          "fire": {
+            "description": "true = alert terakhir alat 'bahaya' berkategori kebakaran: rute menghindari api dan sektor searah angin (hazard_type smoke_plume); false = jalan terbaik ke titik kumpul terdekat",
+            "title": "Fire",
+            "type": "boolean"
+          },
+          "hazard_polygons": {
+            "$ref": "#/components/schemas/HazardCollection"
+          },
+          "pois": {
+            "description": "lima faskes terdekat, lalu titik kumpul dan tempat penampungan di sekitar alat",
+            "items": {
+              "$ref": "#/components/schemas/TacticalPoi"
+            },
+            "title": "Pois",
+            "type": "array"
+          },
+          "route": {
+            "$ref": "#/components/schemas/EgressLegOut"
+          },
+          "wind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WindOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "angin di lokasi alat; hanya untuk kebakaran"
+          }
+        },
+        "required": [
+          "fire",
+          "route",
+          "pois",
+          "hazard_polygons"
+        ],
+        "title": "EvacuationRoute",
+        "type": "object"
+      },
       "EventHistory": {
         "properties": {
           "bucket": {
@@ -10237,6 +10279,87 @@
           }
         ],
         "summary": "Update Device",
+        "tags": [
+          "users & iot"
+        ]
+      }
+    },
+    "/api/me/devices/{device_id}/evacuation": {
+      "post": {
+        "description": "Evacuation route from where the device stands. Its own data decides the kind: a fire it\nreports (latest alert \"bahaya\", kategori kebakaran) is routed around, away from where the wind\ncarries it; otherwise the best road to the nearest assembly point.",
+        "operationId": "device_evacuation_api_me_devices__device_id__evacuation_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "device_id",
+            "required": true,
+            "schema": {
+              "title": "Device Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvacuationRoute"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Device Evacuation",
         "tags": [
           "users & iot"
         ]

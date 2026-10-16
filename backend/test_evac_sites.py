@@ -35,9 +35,14 @@ elements = [
     {"type": "way", "id": 2, "center": {"lat": -7.8, "lon": 110.4}, "bounds": box(20), "tags": mosque},
     {"type": "node", "id": 3, "lat": -7.7, "lon": 110.3, "tags": {"amenity": "hospital", "name": "RS"}},
     {"type": "relation", "id": 4, "tags": {"amenity": "hospital"}},        # no centre: skipped
+    # what Overpass really sends for `out center bb`: bounds, no center; placed at the middle of its box
+    {"type": "way", "id": 5, "bounds": box(100), "tags": {"leisure": "pitch", "name": "Alun-alun"}},
 ]
-assert [(s["osm_id"], s["kind"], s["area_m2"] is None) for s in sites_from(elements)] == [
-    ("way/1", "worship", False), ("node/3", "hospital", True)]
+sites = sites_from(elements)
+assert [(s["osm_id"], s["kind"], s["area_m2"] is None) for s in sites] == [
+    ("way/1", "worship", False), ("node/3", "hospital", True), ("way/5", "field", False)]
+b = box(100)
+assert (sites[-1]["lat"], sites[-1]["lon"]) == ((b["minlat"] + b["maxlat"]) / 2, (b["minlon"] + b["maxlon"]) / 2)
 
 assert tiles(110.0, -8.2, 110.85, -7.5) == [(110.0, -8.2, 110.85, -7.5)]  # DIY fits one tile
 assert len(tiles(105.0, -8.0, 108.5, -6.0)) == 4 * 2                     # West Java: 4 x 2

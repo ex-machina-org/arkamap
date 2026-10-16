@@ -54,6 +54,7 @@ import {
   ResponderDialog,
   ResponderRouteLayers,
   ResponderRoutePanel,
+  calculateDeviceEvacuation,
   calculateResponderRoute,
   type TacticalPlan,
 } from "./responder-route";
@@ -360,6 +361,20 @@ export function SiriMapWorkspace() {
     if (!isDocked) setIsSidebarOpen(false);
   }
 
+  async function handleDeviceEvacuation(device: LocatedDevice) {
+    const pending = toast.loading("Menghitung rute evakuasi…");
+    try {
+      const plan = await calculateDeviceEvacuation(device);
+      setTacticalPlan(plan);
+      setTacticalLeg("both");
+      setSelectedDeviceId(null);
+      setCamera({ coords: plan.incidentCoords, zoom: 13, zoomMode: "atLeast" });
+      toast.success("Rute evakuasi berhasil dihitung", { id: pending, description: plan.egressRoute.summary });
+    } catch (cause) {
+      toast.error("Rute evakuasi gagal dihitung", { id: pending, description: cause instanceof Error ? cause.message : "Coba lagi nanti." });
+    }
+  }
+
   function handleSelectHazard(hazard: HazardType | "all") {
     setActiveHazard(hazard);
     // Its count is regions, not pins, so the chip shows them by colouring the map with AQI.
@@ -483,6 +498,7 @@ export function SiriMapWorkspace() {
             startBounds={startBounds}
             boundary={boundary}
             nationalMask={nationalMask}
+            routePanelOpen={Boolean(tacticalPlan)}
             status={{
               loading: spatial.loading,
               degraded: spatial.errors.length > 0,
@@ -523,7 +539,7 @@ export function SiriMapWorkspace() {
               )}
               {!selectedIncident && selectedDevice && (
                 <AnchoredCard key="device-card" anchor={[selectedDevice.lon, selectedDevice.lat]}>
-                  <MapDeviceCard device={selectedDevice} onClose={() => setSelectedDeviceId(null)} />
+                  <MapDeviceCard device={selectedDevice} onClose={() => setSelectedDeviceId(null)} onEvacuate={handleDeviceEvacuation} />
                 </AnchoredCard>
               )}
               {!selectedIncident && !selectedDevice && selectedRegion && (

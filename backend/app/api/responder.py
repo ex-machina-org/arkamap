@@ -47,6 +47,12 @@ EXIT_DISTANCE_M = 3_000       # no hospital to go to: how far out the fallback s
 # perimeter (its default service limit), so the nearest hazards go first.
 MAX_EXCLUDE_PERIMETER_M = 10_000
 HAZARDOUS_WIND_KMH = 25       # strong enough to push fire and smoke noticeably
+# A fire reported by a device: where its flames and smoke go, a sector downwind of it. It starts
+# just beside the device so the evacuation can still leave from there.
+# ponytail: fixed sector; a spread model (fuel, slope, wind speed) would size it per fire.
+PLUME_START_M, PLUME_END_M, PLUME_HALF_DEG = 200, 2_000, 30
+
+ENTER_FIRE = "Ujung jalur berada di dalam zona titik panas; masuk dengan perlengkapan pelindung."
 
 COMPASS = ["Utara", "Timur Laut", "Timur", "Tenggara", "Selatan", "Barat Daya", "Barat", "Barat Laut"]
 
@@ -216,6 +222,9 @@ def route_leg(start: list[float], end: list[float], zones: list[dict]) -> dict:
     if "fire_buffer" in hit:
         level = "critical"
         warnings.append(f"Rute melewati radius {FIRE_BUFFER_M} m titik panas 24 jam terakhir.")
+    elif "smoke_plume" in hit:
+        level = "critical"
+        warnings.append("Rute melewati arah rambatan api dan asap (searah angin dari alat).")
     elif hit:
         level = "caution"
         warnings.append("Rute melewati wilayah peringatan cuaca BMKG yang masih berlaku.")
@@ -225,7 +234,7 @@ def route_leg(start: list[float], end: list[float], zones: list[dict]) -> dict:
             warnings.append("Jalur tidak melewati zona titik panas maupun peringatan cuaca aktif."
                             if avoid else "Tidak ada zona bahaya aktif di sekitar jalur.")
     if len(avoid) < len(zones) and any(z["kind"] == "fire_buffer" for z in zones if z not in avoid):
-        warnings.append("Ujung jalur berada di dalam zona titik panas; masuk dengan perlengkapan pelindung.")
+        warnings.append(ENTER_FIRE)
     return {"coordinates": coords, "distance_km": distance_km, "duration_minutes": minutes,
             "safety_level": level, "warnings": warnings}
 
@@ -311,17 +320,40 @@ def pick_hospital(incident: list[float], options: list[dict], zones: list[dict],
     return next((h for h in safe if h["amenity"] == "hospital"), None) or (safe or options)[0]
 
 
-def incident_zone(incident: list[float], hazard_type: str | None) -> dict | None:
-    """The routed incident's own reach as a hazard zone, so evacuation leaves it."""
-    radius = INCIDENT_ZONE_M.get(hazard_type or "")
-    if not radius:
-        return None
+def _circle(point: list[float], radius: int, kind: str) -> dict:
     row = query_one(
         "SELECT ST_AsGeoJSON(g, 6) AS gj, ST_Perimeter(g::geography) AS perimeter_m FROM ("
         " SELECT ST_Buffer(ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography, %s, 16)::geometry AS g) b",
-        (incident[0], incident[1], radius),
+        (point[0], point[1], radius),
     )
-    return {"kind": "incident_zone", "geometry": json.loads(row["gj"]), "perimeter_m": row["perimeter_m"], "radius_m": radius}
+    return {"kind": kind, "geometry": json.loads(row["gj"]), "perimeter_m": row["perimeter_m"], "radius_m": radius}
+
+
+def incident_zone(incident: list[float], hazard_type: str | None) -> dict | None:
+    """The routed incident's own reach as a hazard zone, so evacuation leaves it."""
+    radius = INCIDENT_ZONE_M.get(hazard_type or "")
+    return _circle(incident, radius, "incident_zone") if radius else None
+
+
+def meters(a: list[float], b: list[float]) -> float:
+    """Great-circle distance between two [lon, lat] points."""
+    lon1, lat1, lon2, lat2 = map(math.radians, (a[0], a[1], b[0], b[1]))
+    h = math.sin((lat2 - lat1) / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin((lon2 - lon1) / 2) ** 2
+    return 2 * 6_371_000 * math.asin(math.sqrt(h))
+
+
+def plume_zone(origin: list[float], wind_from: float | None) -> dict | None:
+    """Where a fire at `origin` sends flames and smoke: a sector downwind, PLUME_START_M to
+    PLUME_END_M out and PLUME_HALF_DEG either side. None without a wind reading."""
+    if wind_from is None:
+        return None
+    toward = (wind_from + 180) % 360
+    sides = range(-PLUME_HALF_DEG, PLUME_HALF_DEG + 1, 10)
+    ring = ([destination(origin, toward + a, PLUME_START_M) for a in sides]
+            + [destination(origin, toward + a, PLUME_END_M) for a in reversed(sides)])
+    ring.append(ring[0])
+    return {"kind": "smoke_plume", "geometry": {"type": "Polygon", "coordinates": [ring]},
+            "perimeter_m": sum(meters(a, b) for a, b in zip(ring, ring[1:]))}
 
 
 def destination(start: list[float], bearing_deg: float, meters: float) -> list[float]:
@@ -442,14 +474,57 @@ def responder_route(body: ResponderRouteIn) -> dict:
             if is_downwind(incident, target["coords"], wind_from) else
             "Tujuan evakuasi berada di sisi berlawanan dari hembusan asap (upwind).")
 
-    pois = [{"id": h["id"], "name": _label(h), "type": kind, "coords": h["coords"],
+    pois = _pois((("hospital", options[:5] + ([major] if major and major not in options[:5] else [])),
+                  ("shelter", sites)))   # the target always shows, even when five nearer clinics fill the list
+    return {"ingress": ingress, "egress": egress, "pois": pois, "hazard_polygons": _hazard_fc(zones), "wind": wind}
+
+
+def _pois(groups) -> list[dict]:
+    return [{"id": h["id"], "name": _label(h), "type": kind, "coords": h["coords"],
              "distance_meters": h["distance_meters"], "note": _note(h)}
-            # the target always shows, even when five nearer clinics fill the list
-            for kind, group in (("hospital", options[:5] + ([major] if major and major not in options[:5] else [])),
-                                ("shelter", sites)) for h in group]
-    hazard_fc = {"type": "FeatureCollection", "features": [
+            for kind, group in groups for h in group]
+
+
+def _hazard_fc(zones: list[dict]) -> dict:
+    return {"type": "FeatureCollection", "features": [
         {"type": "Feature", "geometry": z["geometry"],
          "properties": {"hazard_type": z["kind"], **({"radius_meters": FIRE_BUFFER_M} if z["kind"] == "fire_buffer" else {}),
                         **({"radius_meters": z["radius_m"]} if "radius_m" in z else {})}}
         for z in zones]}
-    return {"ingress": ingress, "egress": egress, "pois": pois, "hazard_polygons": hazard_fc, "wind": wind}
+
+
+def evacuate(point: list[float], fire: bool) -> dict:
+    """Out from a point (an IoT device) on foot or by car, with no responders coming in.
+    A fire: around the fire and out of its downwind sector, to an assembly point or open field
+    that is not downwind, else a safe point away from the hazards. Anything else: the best road
+    to the nearest assembly point (official ones first). Satellite fires and BMKG warnings
+    around the point are avoided either way."""
+    zones = hazards(point)
+    wind = wind_at(point) if fire else None
+    wind_from = wind and wind["direction_deg"]
+    if fire:
+        plume = plume_zone(point, wind_from)
+        zones = [_circle(point, FIRE_BUFFER_M, "fire_buffer"), *([plume] if plume else []), *zones]
+    sites = shelters(point, zones)
+    if fire:
+        target = safe_exit(point, zones, wind_from, sites)
+    elif sites:
+        target = {"name": _label(sites[0]), "type": "shelter", "coords": sites[0]["coords"]}
+    else:
+        target = safe_exit(point, zones, None, [])
+    route = route_leg(point, target["coords"], zones)
+    route["target_poi"] = target
+    if fire:
+        # the device sits in its own fire: nobody goes in, people get out
+        route["warnings"] = [w for w in route["warnings"] if w != ENTER_FIRE]
+        route["warnings"].insert(0, "Alat berada di zona api; segera keluar mengikuti jalur ini.")
+        route["summary"] = (f"Kebakaran terdeteksi alat: evakuasi menjauhi api dan arah angin ke {target['name']}."
+                            if wind else f"Kebakaran terdeteksi alat: evakuasi menjauhi api ke {target['name']}.")
+        if not wind:
+            route["warnings"].append("Arah angin belum diketahui; perhatikan ke mana asap bergerak.")
+    else:
+        route["summary"] = (f"Evakuasi ke titik kumpul {target['name']}." if sites else
+                            f"Belum ada titik kumpul tercatat dalam {SHELTER_RADIUS_M // 1000} km; arahkan ke {target['name']}.")
+    # the nearest care is listed too, for anyone hurt on the way out
+    return {"fire": fire, "route": route, "pois": _pois((("hospital", hospitals(point)[:5]), ("shelter", sites))),
+            "hazard_polygons": _hazard_fc(zones), "wind": wind}
