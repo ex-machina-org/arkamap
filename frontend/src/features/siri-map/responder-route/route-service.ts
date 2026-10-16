@@ -35,7 +35,7 @@ export async function calculateResponderRoute(req: TacticalRouteRequest): Promis
     originCoords: req.originCoords,
     originLabel: req.originLabel ?? "Pos Armada Penolong",
     ingressRoute: leg("ingress", "Jalur Akses Masuk Regu Penolong", data.ingress),
-    egressRoute: leg("egress", `Koridor Evakuasi ➔ ${data.egress.target_poi.name}`, data.egress),
+    egressRoute: leg("egress", `Evakuasi ke ${data.egress.target_poi.name}`, data.egress),
     tacticalPois: data.pois.map((p) => ({
       id: p.id,
       name: p.name,
