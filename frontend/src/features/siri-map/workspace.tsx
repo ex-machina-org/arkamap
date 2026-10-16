@@ -148,7 +148,6 @@ export function SiriMapWorkspace() {
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
   const devices = useLocatedDevices(Boolean(me));
   const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
-  const selectedDevice = devices.find((device) => device.id === selectedDeviceId) ?? null;
 
   const [camera, setCamera] = useState<CameraTarget>(() => link.point ? { coords: link.point, zoom: 9, zoomMode: "exact" } : NATIONAL_VIEW);
   const [introCamera] = useState(isFirstVisit && !link.point);
@@ -203,8 +202,14 @@ export function SiriMapWorkspace() {
     const counts = Object.fromEntries(HAZARD_ORDER.map((type) => [type, 0])) as Record<HazardType, number>;
     for (const incident of searchedIncidents) counts[incident.hazardType]++;
     counts.air_quality += badAirRegions;
+    // Devices are the account's own, not events: every placed device counts, online or not.
+    counts.iot_sensor += devices.length;
     return counts;
-  }, [searchedIncidents, spatial.loading, incidents.length, badAirRegions]);
+  }, [searchedIncidents, spatial.loading, incidents.length, badAirRegions, devices.length]);
+
+  // Their own chip in the dock filters them like the event types.
+  const shownDevices = activeHazard === "all" || activeHazard === "iot_sensor" ? devices : [];
+  const selectedDevice = shownDevices.find((device) => device.id === selectedDeviceId) ?? null;
 
   // A selection that the filters hide, or that disappeared on refresh, counts as no selection.
   const selectedIncident = useMemo(
@@ -497,7 +502,7 @@ export function SiriMapWorkspace() {
               />
             )}
 
-            <DevicePins devices={devices} selectedId={selectedDevice?.id} onSelect={handleSelectDevice} />
+            <DevicePins devices={shownDevices} selectedId={selectedDevice?.id} onSelect={handleSelectDevice} />
 
             {/* Cards open beside what was picked and follow it while the map moves. */}
             <AnimatePresence>
