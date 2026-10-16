@@ -1140,6 +1140,8 @@ class ResponderRouteIn(BaseModel):
     incident: list[float] = Field(min_length=2, max_length=2, description="[lon, lat] lokasi kejadian")
     incident_id: str | None = None
     incident_title: str | None = None
+    hazard_type: Literal["hotspot", "flood", "air_quality", "seismic", "iot_sensor", "disaster"] | None = Field(
+        None, description="jenis kejadian; banjir, gempa, dan bencana lain menjadi zona bahaya yang dijauhi koridor evakuasi")
 
 
 class TacticalPoi(BaseModel):
@@ -1154,7 +1156,8 @@ class TacticalPoi(BaseModel):
 
 class PoiRef(BaseModel):
     name: str
-    type: Literal["hospital"]
+    type: Literal["hospital", "shelter", "safe_point"] = Field(
+        description="hospital: rumah sakit umum besar; shelter: titik kumpul atau lapangan; safe_point: titik aman menjauhi bahaya")
     coords: list[float]
 
 

@@ -57,6 +57,7 @@ def cleanup(cur):
     cur.execute("DELETE FROM observation WHERE metric = 'hotspot' AND attrs->>'test' = 'responder'")
     cur.execute(f"DELETE FROM building WHERE osm_id IN {TEST_IDS}")
     cur.execute("DELETE FROM evac_site WHERE osm_id LIKE 'test/%'")
+    cur.execute("DELETE FROM region WHERE id = 'test.kab'")
     cur.execute("DELETE FROM wind_grid WHERE lon = 116.86 AND lat = -1.24")
 
 
@@ -87,6 +88,9 @@ with conn() as c, c.cursor() as cur:
             ("test/3", "school", "SD Dekat Api", "Sekolah", SCHOOL), ("test/4", "assembly", "Lapangan Desa", "Titik kumpul", FIELD)):
         cur.execute("INSERT INTO evac_site (osm_id, kind, name, note, fetched_at, geom)"
                     " VALUES (%s,%s,%s,%s,now(),ST_SetSRID(ST_MakePoint(%s,%s),4326))", (osm_id, kind, name, note, lon, lat))
+    # land around the incident, so a fallback safe point is not put at sea
+    cur.execute("INSERT INTO region (id, name, level, geom) VALUES ('test.kab','Uji','kabkota',"
+                "ST_Multi(ST_MakeEnvelope(116.70,-1.40,117.00,-1.10,4326)))")
     # wind from the west: smoke drifts east, so the nearer east hospital is downwind
     cur.execute("INSERT INTO wind_grid (lon, lat, direction, speed, observed_at) VALUES (116.86,-1.24,270,30,%s)", (now,))
 
@@ -118,6 +122,32 @@ try:
     assert [p["note"] for p in out["pois"][-2:]] == ["Titik kumpul", "Masjid"]
     assert out["wind"]["is_hazardous"] and "Timur" in out["wind"]["advice"]
     assert {f["properties"]["hazard_type"] for f in out["hazard_polygons"]["features"]} == {"fire_buffer"}
+
+    assert out["egress"]["target_poi"]["type"] == "hospital"
+
+    # what counts as a hospital evacuees can be sent to
+    major = lambda name, area=None: rr.is_major({"amenity": "hospital", "name": name, "area_m2": area})
+    assert major("RSUP Dr. Sardjito") and major("RSUD Sleman") and major("Rumah Sakit Siloam", 12_000)
+    assert not major("RS THT Dr. Pomo", 3_000) and not major("RS Khusus Bedah Soedirman", 9_000)
+    assert not major("RSIA Bunda", 8_000) and not major("Rumah Sakit Mata Dr. Yap", 6_000)
+    assert not major("RS Pratama", 900) and not major(None)
+
+    # no general hospital: RS Timur is small, so evacuees head for a safe point away from the
+    # fires, never downwind (east); the south-east assembly field is downwind and skipped
+    real = rr.hospitals
+    rr.hospitals = lambda incident: [h for h in real(incident) if h["name"] != "RSUD Barat"]
+    out = ResponderRoute(**rr.responder_route(ResponderRouteIn(origin=ORIGIN, incident=INCIDENT))).model_dump()
+    target = out["egress"]["target_poi"]
+    assert target["type"] == "safe_point" and target["name"].startswith("Titik aman 3 km"), target
+    assert not rr.is_downwind(INCIDENT, target["coords"], 270), target
+    assert "rumah sakit umum besar" in out["egress"]["summary"], out["egress"]["summary"]
+    assert any("faskes terdekat" in w for w in out["egress"]["warnings"])
+    rr.hospitals = real
+
+    # a flood: its own reach becomes a zone the corridor leaves
+    out = ResponderRoute(**rr.responder_route(ResponderRouteIn(origin=ORIGIN, incident=INCIDENT, hazard_type="flood"))).model_dump()
+    drawn = [f["properties"] for f in out["hazard_polygons"]["features"]]
+    assert {"hazard_type": "incident_zone", "radius_meters": 1500} in drawn, drawn
 
     # Valhalla down: OSRM's straight answer crosses the blocking fire and is labelled critical
     rr._valhalla, rr._osrm = lambda s, e, rings: None, straight

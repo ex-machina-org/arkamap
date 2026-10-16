@@ -33,6 +33,16 @@ HOSPITAL_RADIUS_M = 30_000
 SHELTER_RADIUS_M = 5_000      # evacuees walk or are driven a short way to a shelter
 # Tagged amenity=clinic in OSM but no place to take a casualty.
 NOT_CARE = re.compile(r"laborator|apot[ei]k|optik|farmasi|pharmacy", re.I)
+# Evacuees go to a general hospital big enough to take them, never an eye, ENT or maternity
+# hospital. ponytail: name patterns plus footprint; OSM's healthcare:speciality would be firmer.
+SPECIALTY = re.compile(r"khusus|\bRSKI?A?\b|\bRSIA\b|\bRSB\b|ibu (dan|&) anak|bersalin|\bTHT\b|\bmata\b|gigi|jiwa"
+                       r"|bedah|kanker|onkologi|\bparu\b|ortopedi|kulit|jantung|\bginjal\b", re.I)
+GENERAL = re.compile(r"\bRSU[DP]?\b|rumah sakit umum|\bRS umum\b", re.I)
+MAJOR_HOSPITAL_M2 = 5_000
+# The routed incident's own reach when it is not a fire (fires already bring their hotspot buffers).
+# ponytail: fixed radii per kind; a flood or quake footprint from the source would replace them.
+INCIDENT_ZONE_M = {"flood": 1_500, "seismic": 2_000, "disaster": 1_000}
+EXIT_DISTANCE_M = 3_000       # no hospital to go to: how far out the fallback safe point lies
 # Valhalla refuses a request whose exclusion rings add up to more than this
 # perimeter (its default service limit), so the nearest hazards go first.
 MAX_EXCLUDE_PERIMETER_M = 10_000
@@ -227,7 +237,7 @@ def _nearby(incident: list[float], amenities: list[str], radius: int, limit: int
         return []
     rows = query(
         """
-        SELECT osm_id, name, amenity, ST_X(ST_Centroid(geom)) AS lon, ST_Y(ST_Centroid(geom)) AS lat,
+        SELECT osm_id, name, amenity, area_m2, ST_X(ST_Centroid(geom)) AS lon, ST_Y(ST_Centroid(geom)) AS lat,
                ST_Distance(geom::geography, ST_SetSRID(ST_MakePoint(%(lon)s, %(lat)s), 4326)::geography) AS dist
         FROM building
         WHERE amenity = ANY(%(amenities)s)
@@ -237,7 +247,8 @@ def _nearby(incident: list[float], amenities: list[str], radius: int, limit: int
         {"lon": incident[0], "lat": incident[1], "r": radius, "amenities": amenities, "limit": limit},
     )
     return [{"id": f"osm-way-{r['osm_id']}", "name": r["name"], "amenity": r["amenity"],
-             "coords": [round(r["lon"], 6), round(r["lat"], 6)], "distance_meters": round(r["dist"])}
+             "coords": [round(r["lon"], 6), round(r["lat"], 6)], "distance_meters": round(r["dist"]),
+             "area_m2": r["area_m2"]}
             for r in rows]
 
 
@@ -248,7 +259,7 @@ def _evac_sites(incident: list[float], kinds: list[str], radius: int, limit: int
         return []
     rows = query(
         """
-        SELECT osm_id, kind, name, note, ST_X(geom) AS lon, ST_Y(geom) AS lat,
+        SELECT osm_id, kind, name, note, area_m2, ST_X(geom) AS lon, ST_Y(geom) AS lat,
                ST_Distance(geom::geography, ST_SetSRID(ST_MakePoint(%(lon)s, %(lat)s), 4326)::geography) AS dist
         FROM evac_site
         WHERE kind = ANY(%(kinds)s)
@@ -259,19 +270,27 @@ def _evac_sites(incident: list[float], kinds: list[str], radius: int, limit: int
     )
     return [{"id": f"osm-{r['osm_id'].replace('/', '-')}", "name": r["name"],
              "amenity": "hospital" if r["kind"] == "hospital" else r["kind"], "note": r["note"],
-             "coords": [round(r["lon"], 6), round(r["lat"], 6)], "distance_meters": round(r["dist"])}
+             "coords": [round(r["lon"], 6), round(r["lat"], 6)], "distance_meters": round(r["dist"]),
+             "area_m2": r["area_m2"]}
             for r in rows]
 
 
 def hospitals(incident: list[float]) -> list[dict]:
-    """Hospitals near the incident, nearest first, from the stored sites and the city
+    """Hospitals and clinics near the incident, nearest first, from the stored sites and the city
     footprints (which also hold clinics). Labs and pharmacies tagged as clinics are left out.
     Read from the database only: a live Overpass call here outlasted the frontend's wait."""
     found: dict[str, dict] = {}
-    for h in _evac_sites(incident, ["hospital"], HOSPITAL_RADIUS_M, 12) + _nearby(incident, ["hospital", "clinic"], HOSPITAL_RADIUS_M, 12):
+    for h in _evac_sites(incident, ["hospital"], HOSPITAL_RADIUS_M, 40) + _nearby(incident, ["hospital", "clinic"], HOSPITAL_RADIUS_M, 40):
         found.setdefault(h["name"] or h["id"], h)   # the same hospital can sit in both tables
     care = [h for h in found.values() if not NOT_CARE.search(h["name"] or "")]
-    return sorted(care, key=lambda h: h["distance_meters"])[:8]
+    return sorted(care, key=lambda h: h["distance_meters"])
+
+
+def is_major(h: dict) -> bool:
+    """A general hospital that can take evacuees: not a specialty one, and large or named as general."""
+    name = h["name"] or ""
+    return (h["amenity"] == "hospital" and not SPECIALTY.search(name)
+            and ((h.get("area_m2") or 0) >= MAJOR_HOSPITAL_M2 or bool(GENERAL.search(name))))
 
 
 def shelters(incident: list[float], zones: list[dict]) -> list[dict]:
@@ -292,6 +311,63 @@ def pick_hospital(incident: list[float], options: list[dict], zones: list[dict],
     return next((h for h in safe if h["amenity"] == "hospital"), None) or (safe or options)[0]
 
 
+def incident_zone(incident: list[float], hazard_type: str | None) -> dict | None:
+    """The routed incident's own reach as a hazard zone, so evacuation leaves it."""
+    radius = INCIDENT_ZONE_M.get(hazard_type or "")
+    if not radius:
+        return None
+    row = query_one(
+        "SELECT ST_AsGeoJSON(g, 6) AS gj, ST_Perimeter(g::geography) AS perimeter_m FROM ("
+        " SELECT ST_Buffer(ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography, %s, 16)::geometry AS g) b",
+        (incident[0], incident[1], radius),
+    )
+    return {"kind": "incident_zone", "geometry": json.loads(row["gj"]), "perimeter_m": row["perimeter_m"], "radius_m": radius}
+
+
+def destination(start: list[float], bearing_deg: float, meters: float) -> list[float]:
+    """The point `meters` from `start` along `bearing_deg` on a sphere."""
+    lat1, lon1, brg, d = math.radians(start[1]), math.radians(start[0]), math.radians(bearing_deg), meters / 6_371_000
+    lat2 = math.asin(math.sin(lat1) * math.cos(d) + math.cos(lat1) * math.sin(d) * math.cos(brg))
+    lon2 = lon1 + math.atan2(math.sin(brg) * math.sin(d) * math.cos(lat1), math.cos(d) - math.sin(lat1) * math.sin(lat2))
+    return [round(math.degrees(lon2), 6), round(math.degrees(lat2), 6)]
+
+
+def safe_exit(incident: list[float], zones: list[dict], wind_from: float | None, sites: list[dict]) -> dict:
+    """Where to send evacuees when no general hospital is safe: an assembly point or open field on
+    the safe side, else a point EXIT_DISTANCE_M out on land, as far from every hazard as the eight
+    compass headings allow and never downwind (where smoke and fire travel)."""
+    for site in sites:   # assembly points lead, then nearest
+        if site["amenity"] in ("assembly", "field") and not is_downwind(incident, site["coords"], wind_from):
+            return {"name": _label(site), "type": "shelter", "coords": site["coords"]}
+    shapes = json.dumps({"type": "GeometryCollection", "geometries": [z["geometry"] for z in zones]})
+    best, best_score = None, -math.inf
+    for heading in range(0, 360, 45):
+        point = destination(incident, heading, EXIT_DISTANCE_M)
+        if is_downwind(incident, point, wind_from):
+            continue
+        row = query_one(
+            "SELECT EXISTS (SELECT 1 FROM region WHERE level = 'kabkota' AND ST_Intersects(geom, p)) AS land,"
+            " CASE WHEN %(n)s > 0 THEN ST_Distance(ST_GeomFromGeoJSON(%(z)s)::geography, p::geography) END AS clear"
+            " FROM (SELECT ST_SetSRID(ST_MakePoint(%(lon)s, %(lat)s), 4326) AS p) q",
+            {"z": shapes, "n": len(zones), "lon": point[0], "lat": point[1]},
+        )
+        if not row["land"]:
+            continue
+        # farthest from the hazards; with none to flee, straight upwind (or north) wins
+        upwind = 180 - abs((heading - (wind_from or 0) + 180) % 360 - 180)
+        score = (row["clear"] if row["clear"] is not None else 0) + upwind
+        if score > best_score:
+            best, best_score = (heading, point), score
+    if best is None:
+        # all at sea (a small island) or all downwind: the nearest shelter of any kind, else straight upwind
+        if sites:
+            return {"name": _label(sites[0]), "type": "shelter", "coords": sites[0]["coords"]}
+        heading = wind_from or 0
+        best = (heading, destination(incident, heading, EXIT_DISTANCE_M))
+    heading, point = best
+    return {"name": f"Titik aman {EXIT_DISTANCE_M // 1000} km ke arah {compass(heading)}", "type": "safe_point", "coords": point}
+
+
 def wind_at(point: list[float]) -> dict | None:
     row = query_one(
         "SELECT direction, speed FROM wind_grid"
@@ -309,7 +385,11 @@ def wind_at(point: list[float]) -> dict | None:
 
 
 def _note(h: dict) -> str:
-    return h.get("note") or ("Klinik" if h["amenity"] == "clinic" else "Rumah sakit")
+    if h.get("note") and h["amenity"] != "hospital":
+        return h["note"]
+    if h["amenity"] == "clinic":
+        return "Klinik"
+    return "Rumah sakit umum" if is_major(h) else "Rumah sakit (kecil/khusus)"
 
 
 def _label(h: dict) -> str:
@@ -318,22 +398,24 @@ def _label(h: dict) -> str:
 
 # ── endpoint ─────────────────────────────────────────────────────────────
 @router.post("/responder/route", response_model=ResponderRoute,
-             responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}, 502: {"model": ErrorResponse}})
+             responses={400: {"model": ErrorResponse}, 502: {"model": ErrorResponse}})
 def responder_route(body: ResponderRouteIn) -> dict:
-    """Ingress from the responder's position to the incident, and an evacuation corridor
-    from the incident to the nearest hospital outside the hazards and upwind of the
-    smoke, with the hazards and the wind used to choose them."""
+    """Ingress from the responder's position to the incident, and an evacuation corridor from
+    the incident to the nearest general hospital outside the hazards and upwind of the smoke;
+    with none, to an assembly point or a safe point away from the hazards. The incident's own
+    reach (a flood, a quake) counts as a hazard, so evacuation leaves it for any kind of event."""
     origin, incident = body.origin, body.incident
     if not (_in_indonesia(origin) and _in_indonesia(incident)):
         raise HTTPException(400, "koordinat asal atau kejadian di luar Indonesia")
 
     zones = hazards(incident)
+    own = incident_zone(incident, body.hazard_type)
+    if own:
+        zones = [own, *zones]
     wind = wind_at(incident)
+    wind_from = wind and wind["direction_deg"]
     options = hospitals(incident)
-    if not options:
-        raise HTTPException(404, f"belum ada data rumah sakit atau klinik dalam {HOSPITAL_RADIUS_M // 1000} km dari kejadian;"
-                                 " titik evakuasi wilayah ini mungkin belum selesai diambil")
-    target = pick_hospital(incident, options, zones, wind and wind["direction_deg"])
+    sites = shelters(incident, zones)
 
     ingress = route_leg(origin, incident, zones)
     ingress["summary"] = {
@@ -342,23 +424,32 @@ def responder_route(body: ResponderRouteIn) -> dict:
         "critical": "Akses armada masuk melewati zona titik panas; pertimbangkan jalur lain.",
     }[ingress["safety_level"]]
 
+    major = next((h for h in options if is_major(h) and _safe(incident, h, zones, wind_from)), None)
+    target = ({"name": _label(major), "type": "hospital", "coords": major["coords"]} if major
+              else safe_exit(incident, zones, wind_from, sites))
     egress = route_leg(incident, target["coords"], zones)
-    name = _label(target)
-    egress["summary"] = f"Koridor evakuasi warga menuju {name}."
-    egress["target_poi"] = {"name": name, "type": "hospital", "coords": target["coords"]}
+    egress["target_poi"] = target
+    if major:
+        egress["summary"] = f"Koridor evakuasi warga menuju {target['name']}."
+    else:
+        egress["summary"] = (f"Tidak ada rumah sakit umum besar di sisi aman dalam {HOSPITAL_RADIUS_M // 1000} km;"
+                             f" warga diarahkan menjauhi bahaya ke {target['name']}.")
+        if options:
+            egress["warnings"].append("Korban luka tetap dirujuk ke faskes terdekat di daftar tempat tujuan.")
     if wind:
         egress["warnings"].append(
-            "Faskes tujuan searah hembusan asap; tidak ada faskes lain di sisi aman."
-            if is_downwind(incident, target["coords"], wind["direction_deg"]) else
-            "Faskes tujuan berada di sisi berlawanan dari hembusan asap (upwind).")
+            "Tujuan evakuasi searah hembusan asap; tidak ada tujuan lain di sisi aman."
+            if is_downwind(incident, target["coords"], wind_from) else
+            "Tujuan evakuasi berada di sisi berlawanan dari hembusan asap (upwind).")
 
     pois = [{"id": h["id"], "name": _label(h), "type": kind, "coords": h["coords"],
              "distance_meters": h["distance_meters"], "note": _note(h)}
             # the target always shows, even when five nearer clinics fill the list
-            for kind, group in (("hospital", options[:5] + ([target] if target not in options[:5] else [])),
-                                ("shelter", shelters(incident, zones))) for h in group]
+            for kind, group in (("hospital", options[:5] + ([major] if major and major not in options[:5] else [])),
+                                ("shelter", sites)) for h in group]
     hazard_fc = {"type": "FeatureCollection", "features": [
         {"type": "Feature", "geometry": z["geometry"],
-         "properties": {"hazard_type": z["kind"], **({"radius_meters": FIRE_BUFFER_M} if z["kind"] == "fire_buffer" else {})}}
+         "properties": {"hazard_type": z["kind"], **({"radius_meters": FIRE_BUFFER_M} if z["kind"] == "fire_buffer" else {}),
+                        **({"radius_meters": z["radius_m"]} if "radius_m" in z else {})}}
         for z in zones]}
     return {"ingress": ingress, "egress": egress, "pois": pois, "hazard_polygons": hazard_fc, "wind": wind}
