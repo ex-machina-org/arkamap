@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { RiArrowRightLine, RiCloseLine, RiSignalTowerFill } from "@remixicon/react";
+import { RiArrowRightLine, RiCloseLine, RiRouteLine, RiSignalTowerFill } from "@remixicon/react";
 import { Button } from "@/components/base/buttons/button";
 import { StatusDot } from "@/components/base/badges/status-dot";
 import { MapMarker, MarkerContent } from "@/components/ui/map";
@@ -81,7 +81,12 @@ function latestValues(device: LocatedDevice, reading: DTO<"Reading">) {
     });
 }
 
-export function MapDeviceCard({ device, onClose }: { device: LocatedDevice; onClose: () => void }) {
+export function MapDeviceCard({ device, onClose, onEvacuate }: {
+  device: LocatedDevice; onClose: () => void;
+  /** Resolves once the route is on the map; the card stays busy until then. */
+  onEvacuate: (device: LocatedDevice) => Promise<void>;
+}) {
+  const [routing, setRouting] = useState(false);
   const reduce = useReducedMotion();
   // Kept with the device it belongs to, so switching pins shows "loading" instead of the previous device's values.
   const [loaded, setLoaded] = useState<{ id: number; reading: DTO<"Reading"> | null }>();
@@ -156,9 +161,20 @@ export function MapDeviceCard({ device, onClose }: { device: LocatedDevice; onCl
         ))}
       </dl>
 
-      <Button variant="primary" size="small" trailingIcon={RiArrowRightLine} onClick={() => goTo(`/devices/${device.id}`)}>
-        Buka detail alat
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant="primary"
+          size="small"
+          leadingIcon={RiRouteLine}
+          disabled={routing}
+          onClick={() => { setRouting(true); void onEvacuate(device).finally(() => setRouting(false)); }}
+        >
+          {routing ? "Menghitung…" : "Rute evakuasi"}
+        </Button>
+        <Button variant="secondary" size="small" trailingIcon={RiArrowRightLine} onClick={() => goTo(`/devices/${device.id}`)}>
+          Buka detail alat
+        </Button>
+      </div>
     </motion.section>
   );
 }
