@@ -43,6 +43,7 @@ log = logging.getLogger(__name__)
 MAX_BYTES = 16_384        # one reading; sensors send numbers, not files
 MAX_FIELDS = 100
 MAX_DEPTH = 4
+EARLIEST = datetime(2020, 1, 1, tzinfo=timezone.utc)
 MAX_NAMES = 10            # data tables per device: a typo in "nama" must not make dozens
 DEFAULT_NAME = "default"  # transition: readings sent without "nama"
 MIN_INTERVAL_S = 1.0      # per device; kept in-process, per worker/bridge
@@ -109,6 +110,8 @@ def parse_time(v) -> datetime:
         raise Rejected('"waktu" harus ISO 8601 (mis. 2026-10-01T08:00:00+07:00) atau detik Unix') from None
     if t > datetime.now(timezone.utc) + timedelta(minutes=10):
         raise Rejected('"waktu" ada di masa depan; cek jam perangkat')
+    if t < EARLIEST:   # a device that sends before NTP sync says 1970
+        raise Rejected('"waktu" sebelum 2020: jam perangkat belum sinkron (NTP)')
     return t
 
 

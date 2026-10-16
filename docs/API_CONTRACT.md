@@ -181,7 +181,7 @@ Payload sama untuk kedua jalur:
 ```
 
 - `nama` adalah nama tabel data. Perbandingannya tidak membedakan huruf besar/kecil dan spasi (`"Cuaca Luar"` = `cuaca_luar`). Wajarnya satu perangkat memakai satu nama. Maksimal **10 nama per perangkat**; nama ke-11 ditolak dengan 400.
-- `waktu` adalah waktu ukur dari sensor, dalam ISO 8601 (tanpa zona dianggap WIB) atau detik Unix. Waktu di masa depan ditolak.
+- `waktu` adalah waktu ukur dari sensor, dalam ISO 8601 (tanpa zona dianggap WIB) atau detik Unix. Waktu di masa depan ditolak, begitu juga waktu sebelum 2020 (jam perangkat belum sinkron).
 - `data` boleh berisi angka, teks, boolean, atau list. Objek bersarang diratakan menjadi `baterai.volt`.
 - Field baru pada nama yang sama membuat **versi baru** tabel itu.
 - Kiriman yang sama persis dengan `waktu` yang sama (atau dalam 1 detik bila tanpa waktu) dihitung sebagai kiriman ulang: respons tetap 202 dengan `duplicate: true`, dan data tidak disimpan dua kali.

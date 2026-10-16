@@ -490,11 +490,11 @@ def get_test_device(user: dict = Depends(current_user)) -> dict | None:
 
 
 @router.post("/me/test-device", status_code=201, response_model=DeviceCreated, responses={401: {"model": ErrorResponse}})
-def start_test_device(user: dict = Depends(current_user)) -> dict:
+def start_test_device(request: Request, user: dict = Depends(current_user)) -> dict:
     """A fresh sandbox: the previous test device and everything it received go, a new key comes."""
     for old in query("SELECT id FROM device WHERE user_id = %s AND test_expires_at IS NOT NULL", (user["id"],)):
         delete_device(old["id"], user)
-    created = create_device(DeviceIn(name="Alat Uji"), user)
+    created = create_device(DeviceIn(name="Alat Uji"), request, user)
     device_id = created["device"]["id"]
     execute("UPDATE device SET test_expires_at = now() + make_interval(hours => %s) WHERE id = %s",
             (TEST_TTL_HOURS, device_id))

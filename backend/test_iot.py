@@ -159,13 +159,13 @@ assert set(CATEGORIES) >= set(cases.values())
 assert majority(["cuaca", "cuaca", "perangkat", "lokasi"]) == "cuaca"      # housekeeping doesn't win
 assert majority(["perangkat", "lainnya"]) == "perangkat" and majority([]) == "lainnya"
 
-# "waktu": ISO (no zone = WIB) or Unix s/ms; future is refused
+# "waktu": ISO (no zone = WIB) or Unix s/ms; future and pre-2020 (clock not synced) are refused
 from app.iot.ingest import parse_message, digest
 _, meta = parse_message({"waktu": "2026-01-01T07:00:00", "data": {"a": 1}})
 assert meta["waktu"].isoformat() == "2026-01-01T07:00:00+07:00"
 assert parse_message({"waktu": 1767225600, "data": {"a": 1}})[1]["waktu"] == \
        parse_message({"waktu": 1767225600000, "data": {"a": 1}})[1]["waktu"]
-for bad in ("kemarin", True, "2999-01-01T00:00:00Z"):
+for bad in ("kemarin", True, "2999-01-01T00:00:00Z", 0, "1970-01-01T07:00:05+07:00"):
     try:
         parse_message({"waktu": bad, "data": {"a": 1}})
         raise AssertionError(bad)
@@ -221,3 +221,15 @@ r = rule_reading("tim SAR", "plan")
 assert r["mode"] == "plan" and r["mode_by"] == "user"
 assert rule_reading("anggota damkar")["mode"] == "protected" and rule_reading("anggota damkar")["mode_by"] == "rule"
 print("modes ok")
+
+# test device: built through create_device with the caller's request (the quickstart domain comes from it)
+from app.api import users
+seen = {}
+saved = users.query, users.execute, users.create_device, users._own_device, users._public
+users.query, users.execute = (lambda *a: []), (lambda *a: None)
+users.create_device = lambda body, request, user: seen.update(request=request) or {"device": {"id": 9}}
+users._own_device, users._public = (lambda u, i: {"id": i}), (lambda d: d)
+req = object()
+assert users.start_test_device(req, {"id": 1})["device"] == {"id": 9} and seen["request"] is req
+users.query, users.execute, users.create_device, users._own_device, users._public = saved
+print("test device ok")

@@ -138,7 +138,7 @@ Template sama untuk semua protokol; tiga bagian wajib:
 ```
 
 - **`nama` (wajib)**: nama tabel data. Data beda jenis beri nama beda; data yang sama selalu dengan nama yang sama.
-- **`waktu` (wajib)**: waktu ukur dari sensor, ISO 8601 (tanpa zona dianggap WIB) atau detik/milidetik Unix. Waktu lebih dari 10 menit di masa depan ditolak.
+- **`waktu` (wajib)**: waktu ukur dari sensor, ISO 8601 (tanpa zona dianggap WIB) atau detik/milidetik Unix. Waktu lebih dari 10 menit di masa depan ditolak, begitu juga waktu sebelum 2020 (tanda jam perangkat belum sinkron lewat NTP, mis. ESP32 yang mengirim 1970).
 - **`data` (wajib, isinya bebas)**: nama field, jumlah, dan tipe apa saja. Objek bersarang diratakan (`tanah.nitrogen`).
 - `kategori` (opsional) hanya petunjuk bila nama field tidak jelas; tanpa itu, `nama` dipakai sebagai petunjuk.
 - `alert` (opsional): penilaian alat sendiri atas kiriman ini, `"aman"` atau `"bahaya"`, atau `{"status": "bahaya", "pesan": "Asap terdeteksi", "kategori": "kebakaran"}` (pesan maks. 200 karakter). `kategori` opsional: `kebakaran`, `cuaca`, `gempa`, `bencana`, atau `panas` menaruh alert di kategori itu (tetap berlabel Alat IoT); kosong atau `"none"` = alert alat umum, nilai lain ditolak. Hanya status terakhir per alat dan `nama` yang disimpan (`GET /me/alerts`) dan tampil sebagai kartu di halaman Pemantauan & Peringatan; hanya `bahaya` yang memunculkan notifikasi. Nilai lain ditolak 400. Respons ingest memuat `alert` bila dikirim.
@@ -178,10 +178,13 @@ c = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, transport="websockets")
 c.ws_set_options(path="/api/mqtt", headers={"X-API-Key": API_KEY})
 c.tls_set()
 c.username_pw_set("dev42", API_KEY)
+c.on_connect = lambda c, u, f, reason, p: print("login MQTT:", reason)  # Not authorized = username/key salah
 c.connect(DOMAIN, 443, keepalive=60)
 c.loop_start()
-c.publish("ingest/dev42", json.dumps({"nama": "sawah", "waktu": "2026-10-01T08:00:00+07:00",
-                                      "data": {"suhu": 29.4}}), qos=1).wait_for_publish()
+pesan = c.publish("ingest/dev42", json.dumps({"nama": "sawah", "waktu": "2026-10-01T08:00:00+07:00",
+                                              "data": {"suhu": 29.4}}), qos=1)
+pesan.wait_for_publish(10)   # tanpa batas waktu, login yang ditolak membuat program menunggu selamanya
+print("terkirim" if pesan.is_published() else "tidak terkirim; cek login MQTT")
 ```
 
 Aturan broker:
