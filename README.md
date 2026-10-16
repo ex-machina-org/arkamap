@@ -187,16 +187,18 @@ arkamap/
 
 ### 1. Menjalankan Seluruh Ekosistem dengan Docker
 
-Jalankan seluruh service backend (Database PostGIS, Mosquitto Broker, API, MQTT Bridge, dan Seed Data) dengan satu perintah:
+Jalankan seluruh service (Database PostGIS, Mosquitto Broker, API, MQTT Bridge, Seed Data, dan aplikasi web) dengan satu perintah:
 
 ```bash
 # Dari root repositori
 docker compose up --build -d
 ```
 
-### 2. Menjalankan Frontend Development Server
+Lalu buka [http://localhost:8080](http://localhost:8080). Service `web` menyajikan build frontend dan meneruskan `/api` (termasuk MQTT WebSocket `ws://localhost:8080/api/mqtt`) ke backend di alamat yang sama, seperti di VPS. Untuk database kosong tanpa mengunduh data publik, lewati `seed`: `docker compose up --build -d web` (db, broker, dan API ikut naik sebagai dependensi).
 
-Buka terminal baru untuk memasang dependensi dan menyalakan server frontend:
+### 2. Menjalankan Frontend Development Server (opsional)
+
+Untuk mengubah tampilan dengan hot reload, jalankan dev server di terminal baru:
 
 ```bash
 cd frontend
@@ -212,7 +214,8 @@ ARKAMAP_API_TARGET=http://127.0.0.1:8000 npm run dev
 
 | Service | Alamat URL / Port | Keterangan |
 | :--- | :--- | :--- |
-| **Aplikasi Web (Frontend)** | [http://127.0.0.1:5174](http://127.0.0.1:5174) | Portal utama peta geospasial, dashboard, & chat Jev |
+| **Aplikasi Web (Docker)** | [http://localhost:8080](http://localhost:8080) | Build frontend + `/api` di satu alamat (service `web`) |
+| **Aplikasi Web (dev server)** | [http://127.0.0.1:5174](http://127.0.0.1:5174) | `npm run dev` dengan hot reload |
 | **Dokumentasi API (Swagger)** | [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) | OpenAPI interactive explorer & testing endpoint |
 | **MQTT Broker (Mosquitto)** | `localhost:1883` | Saluran ingest sensor IoT (User: `dev<id>`, Password: API key) |
 | **Jev AI Internal Evaluator** | [http://127.0.0.1:8001](http://127.0.0.1:8001) | Chainlit UI untuk observabilitas agen (`--profile chat`) |
