@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { RiArrowRightLine, RiCloseLine, RiSensorLine } from "@remixicon/react";
+import { RiArrowRightLine, RiCloseLine, RiSignalTowerFill } from "@remixicon/react";
 import { Button } from "@/components/base/buttons/button";
 import { StatusDot } from "@/components/base/badges/status-dot";
 import { MapMarker, MarkerContent } from "@/components/ui/map";
@@ -46,7 +46,7 @@ export function DevicePins({ devices, selectedId, onSelect }: {
                 selected && "scale-110",
               )}
             >
-              <RiSensorLine className="size-4" aria-hidden="true" />
+              <RiSignalTowerFill className="size-4" aria-hidden="true" />
             </span>
             <span
               className={cx(
@@ -104,8 +104,6 @@ export function MapDeviceCard({ device, onClose }: { device: LocatedDevice; onCl
     ["Koordinat (lintang, bujur)", formatCoords([device.lon, device.lat])],
     ["Visibilitas", device.community_status === "approved" ? "Komunitas" : "Privat"],
   ];
-  // The owner's only feedback when sends go wrong, especially over MQTT.
-  const problem = device.last_error ?? device.last_warning;
 
   return (
     <motion.section
@@ -117,7 +115,7 @@ export function MapDeviceCard({ device, onClose }: { device: LocatedDevice; onCl
     >
       <header className="flex items-start gap-3">
         <span style={{ backgroundColor: PIN_COLOR }} className="grid size-9 shrink-0 place-items-center rounded-2lg text-text-white">
-          <RiSensorLine className="size-5" aria-hidden="true" />
+          <RiSignalTowerFill className="size-5" aria-hidden="true" />
         </span>
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-title-3-medium text-text-primary">{device.name}</h3>
@@ -148,8 +146,6 @@ export function MapDeviceCard({ device, onClose }: { device: LocatedDevice; onCl
           <p className="mt-2 text-caption-1-regular text-text-tertiary">+{values.length - VALUES_SHOWN} nilai lain di halaman alat</p>
         )}
       </div>
-
-      {problem && <p role="status" className="rounded-2lg bg-status-rose-background px-3 py-2 text-caption-1-regular text-status-rose-text">{problem}</p>}
 
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 px-1 text-body-2-regular">
         {facts.map(([term, value]) => (
