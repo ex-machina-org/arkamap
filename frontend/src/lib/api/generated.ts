@@ -35,6 +35,7 @@ export interface components {
     "DisasterProps": { "alertlevel"?: "Green" | "Orange" | "Red" | null; "current"?: boolean | null; "magnitude_unit"?: string | null; "name"?: string | null; "observed_at": string; "source_id": "gdacs" | "nasa_eonet"; "type": "volcano" | "earthquake" | "flood" | "wildfire" | "cyclone" | "drought" | "landslide" | "other"; "until"?: string | null; "url"?: string | null; "value"?: number | null; };
     "EgressLegOut": { "coordinates": Array<Array<number>>; "distance_km": number; "duration_minutes": number; "safety_level": "safe" | "caution" | "critical"; "summary": string; "target_poi": components["schemas"]["PoiRef"]; "warnings": Array<string>; };
     "ErrorResponse": { "detail": string; };
+    "EvacuationRoute": { "fire": boolean; "hazard_polygons": components["schemas"]["HazardCollection"]; "pois": Array<components["schemas"]["TacticalPoi"]>; "route": components["schemas"]["EgressLegOut"]; "wind"?: components["schemas"]["WindOut"] | null; };
     "EventHistory": { "bucket": "day" | "week"; "buckets": Array<components["schemas"]["HistoryBucket"]>; "metric": "quake" | "hotspot" | "disaster"; };
     "EventPanel": { "count": number; "days": number; "kind": "quake" | "hotspot" | "disaster"; "max_value"?: number | null; "top": Array<Record<string, unknown>>; };
     "EventSummary": { "count": number; "max_value"?: number | null; };
