@@ -37,12 +37,14 @@ export interface WindContext {
 
 export interface TacticalPlan {
   id: string;
+  /** device: people evacuate from where an IoT device stands, so there is no ingress. */
+  source: "incident" | "device";
   incidentId: string;
   incidentTitle: string;
   incidentCoords: [number, number];
   originCoords: [number, number];
   originLabel: string;
-  ingressRoute: RouteLeg;
+  ingressRoute: RouteLeg | null;
   egressRoute: RouteLeg;
   tacticalPois: TacticalPOI[];
   hazardPolygons: FeatureCollection<Polygon>;

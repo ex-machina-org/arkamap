@@ -94,7 +94,7 @@ export function ResponderRoutePanel({ plan, activeLeg, onLegChange, onFocusCoord
           <RiRouteLine className="size-5" aria-hidden="true" />
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="text-title-3-medium text-text-primary">Rute taktis & evakuasi</h2>
+          <h2 className="text-title-3-medium text-text-primary">{plan.source === "device" ? "Rute evakuasi dari alat" : "Rute taktis & evakuasi"}</h2>
           <p className="truncate text-body-2-regular text-text-secondary">{plan.incidentTitle}</p>
         </div>
         <Button variant="ghost" size="xs" iconOnly leadingIcon={RiCloseLine} aria-label="Tutup rute taktis" onClick={onClose} />
@@ -116,7 +116,7 @@ export function ResponderRoutePanel({ plan, activeLeg, onLegChange, onFocusCoord
       <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1 [scrollbar-width:thin]">
         {tab === "routes" ? (
           <div className="flex flex-col gap-2">
-            <LegCard leg={plan.ingressRoute} title={`Akses masuk dari ${plan.originLabel}`} pressed={activeLeg === "ingress"} onPress={() => toggle("ingress")} />
+            {plan.ingressRoute && <LegCard leg={plan.ingressRoute} title={`Akses masuk dari ${plan.originLabel}`} pressed={activeLeg === "ingress"} onPress={() => toggle("ingress")} />}
             <LegCard leg={plan.egressRoute} title={plan.egressRoute.label} pressed={activeLeg === "egress"} onPress={() => toggle("egress")} />
             {plan.windContext && (
               <p className="flex items-start gap-2 px-1 pt-1 text-body-2-regular text-text-secondary">
@@ -157,8 +157,8 @@ export function ResponderRoutePanel({ plan, activeLeg, onLegChange, onFocusCoord
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Button variant="secondary" size="small" leadingIcon={RiMapPinLine} onClick={onChangeOrigin}>Ganti asal</Button>
-        <Button variant="ghost" size="small" leadingIcon={RiFocus3Line} onClick={() => onFocusCoords(plan.incidentCoords)}>Fokus ke kejadian</Button>
+        {plan.ingressRoute && <Button variant="secondary" size="small" leadingIcon={RiMapPinLine} onClick={onChangeOrigin}>Ganti asal</Button>}
+        <Button variant="ghost" size="small" leadingIcon={RiFocus3Line} onClick={() => onFocusCoords(plan.incidentCoords)}>{plan.source === "device" ? "Fokus ke alat" : "Fokus ke kejadian"}</Button>
       </div>
     </motion.aside>
   );
