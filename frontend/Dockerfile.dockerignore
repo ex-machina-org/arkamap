@@ -1,0 +1,8 @@
+# Context is the repository root; send only what frontend/Dockerfile copies.
+*
+!frontend/
+!docs/backend/openapi.json
+frontend/node_modules
+frontend/dist
+# local keys (e.g. .env.hosted.local) never go into an image
+frontend/.env*
