@@ -15,23 +15,14 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-lightgrey?style=flat-square" alt="MIT License" /></a>
 </p>
 
-<table>
-  <tr>
-    <td width="55%" valign="middle">
-      <h3>Peta, Sensor, dan AI dalam Satu Platform</h3>
-      <p>Pantau kondisi lingkungan, bandingkan risiko antarwilayah, dan baca pengukuran lapangan bersama Kodama.</p>
-      <p>
-        <a href="https://arkamap.winatra.app/"><img src="https://img.shields.io/badge/Website-Buka_Arkamap-00875F?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Website: Buka Arkamap" /></a><br />
-        <a href="https://www.youtube.com/watch?v=8o3MS5inVMY"><img src="https://img.shields.io/badge/YouTube-Tonton_Demo-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="YouTube: Tonton Demo" /></a>
-      </p>
-      <p><sub>Ex Machina · JOINTS UGM 2026 · <a href="LICENSE">MIT License</a></sub></p>
-    </td>
-    <td width="45%" align="center" valign="middle">
-      <a href="https://www.youtube.com/watch?v=8o3MS5inVMY"><img src="https://i.ytimg.com/vi/8o3MS5inVMY/hqdefault.jpg" alt="Putar video demo Arkamap di YouTube" width="360" /></a>
-      <p><a href="https://www.youtube.com/watch?v=8o3MS5inVMY"><strong>Video Demo Arkamap</strong></a></p>
-    </td>
-  </tr>
-</table>
+<p align="center">Peta, sensor, dan AI dalam satu platform. Pantau kondisi lingkungan, bandingkan risiko antarwilayah,<br />dan baca pengukuran lapangan bersama Kodama.</p>
+
+<p align="center">
+  <a href="https://arkamap.winatra.app/"><img src="https://img.shields.io/badge/Website-Buka_Arkamap-00875F?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Website: Buka Arkamap" /></a>
+  <a href="https://www.youtube.com/watch?v=8o3MS5inVMY"><img src="https://img.shields.io/badge/YouTube-Tonton_Demo-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="YouTube: Tonton Demo" /></a>
+</p>
+
+<p align="center"><sub>Ex Machina · JOINTS UGM 2026</sub></p>
 
 <p align="center">
   <a href="#tentang-arkamap">Tentang</a> ·
