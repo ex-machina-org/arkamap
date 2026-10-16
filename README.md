@@ -1,32 +1,28 @@
 <p align="center">
-  <img src="docs/assets/banner.png" alt="Arkamap, intelijen lingkungan untuk Indonesia" width="100%" />
+  <img src="docs/assets/banner.png" alt="Arkamap, Intelijen Lingkungan untuk Indonesia" width="100%" />
 </p>
 
 <h1 align="center">Arkamap</h1>
 
-<p align="center">
-  <strong>Baca kondisi lingkungan. Pahami risiko wilayah. Tentukan langkah berikutnya.</strong>
-</p>
+<p align="center"><strong>Intelijen Lingkungan untuk Indonesia</strong></p>
 
-<p align="center">
-  Platform intelijen lingkungan dan geospasial Indonesia yang menghubungkan data publik,<br />
-  sensor IoT, dan asisten AI dalam satu ruang kerja berbasis peta.
-</p>
-
-<p align="center">
-  <a href="https://arkamap.winatra.app/"><img src="https://img.shields.io/badge/Buka_Arkamap-00875F?style=for-the-badge" alt="Buka website Arkamap" /></a>
-  <a href="https://www.youtube.com/watch?v=8o3MS5inVMY"><img src="https://img.shields.io/badge/Tonton_Demo-21262D?style=for-the-badge" alt="Tonton video demo Arkamap di YouTube" /></a>
-</p>
-
-<p align="center">
-  <a href="https://github.com/ex-machina-org/arkamap/actions/workflows/frontend.yml"><img src="https://img.shields.io/github/actions/workflow/status/ex-machina-org/arkamap/frontend.yml?branch=main&label=Frontend%20CI&style=flat-square" alt="Frontend CI" /></a>
-  <a href="https://github.com/ex-machina-org/arkamap/actions/workflows/integration.yml"><img src="https://img.shields.io/github/actions/workflow/status/ex-machina-org/arkamap/integration.yml?branch=main&label=Integration%20CI&style=flat-square" alt="Integration CI" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-64748B?style=flat-square" alt="Lisensi MIT" /></a>
-</p>
-
-<p align="center">
-  Dikembangkan oleh <strong>Ex Machina</strong> untuk <strong>JOINTS UGM 2026</strong>.
-</p>
+<table>
+  <tr>
+    <td width="55%" valign="middle">
+      <h3>Peta, Sensor, dan AI dalam Satu Platform</h3>
+      <p>Pantau kondisi lingkungan, bandingkan risiko wilayah, dan baca pengukuran lapangan bersama Kodama.</p>
+      <p>
+        <a href="https://arkamap.winatra.app/"><img src="https://img.shields.io/badge/Website-Buka_Arkamap-00875F?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Website: Buka Arkamap" /></a><br />
+        <a href="https://www.youtube.com/watch?v=8o3MS5inVMY"><img src="https://img.shields.io/badge/YouTube-Tonton_Demo-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="YouTube: Tonton Demo" /></a>
+      </p>
+      <p><sub>Ex Machina · JOINTS UGM 2026 · <a href="LICENSE">MIT License</a></sub></p>
+    </td>
+    <td width="45%" align="center" valign="middle">
+      <a href="https://www.youtube.com/watch?v=8o3MS5inVMY"><img src="https://i.ytimg.com/vi/8o3MS5inVMY/hqdefault.jpg" alt="Putar Video Demo Arkamap di YouTube" width="360" /></a>
+      <p><a href="https://www.youtube.com/watch?v=8o3MS5inVMY"><strong>Lihat Arkamap Beraksi</strong></a></p>
+    </td>
+  </tr>
+</table>
 
 <p align="center">
   <a href="#tentang-arkamap">Tentang</a> ·
@@ -34,70 +30,87 @@
   <a href="#arsitektur-sistem">Arsitektur</a> ·
   <a href="#memulai-cepat">Memulai</a> ·
   <a href="#integrasi-sensor-iot-byod">Integrasi IoT</a> ·
-  <a href="#pengujian-dan-kualitas-kode">Pengujian</a> ·
+  <a href="#tim-ex-machina">Tim</a> ·
   <a href="#dokumentasi-dan-referensi">Dokumentasi</a>
 </p>
 
 ## Tentang Arkamap
 
-Data lingkungan tersebar di banyak sumber. Untuk memahami kondisi satu wilayah, pengguna perlu membaca titik panas satelit, peringatan cuaca, kualitas udara, dan pengukuran lapangan dalam konteks yang sama.
+**Arkamap menghubungkan data lingkungan Indonesia dalam satu ruang kerja berbasis peta.** Data publik dan sensor lapangan dapat dibaca bersama untuk memahami kondisi wilayah, menelusuri kejadian, dan mendukung perencanaan.
 
-**Arkamap menyatukan informasi tersebut di atas peta Indonesia.** Pengguna dapat menjelajahi data publik tanpa akun, membandingkan indikator antarwilayah, lalu membuka dashboard sesuai kebutuhan pemantauan. Sensor milik pengguna menambahkan pengukuran lokal melalui integrasi Bring Your Own Device (BYOD).
+| Fokus | Di Arkamap |
+| :--- | :--- |
+| Pantauan Wilayah | Peta interaktif dengan titik panas, gempa, peringatan cuaca, dan indikator lingkungan. |
+| Data Lapangan | Telemetri sensor milik pengguna melalui integrasi IoT dan Bring Your Own Device (BYOD). |
+| Analisis | Dashboard, tren historis, dan perbandingan indikator antarwilayah. |
+| Asisten AI | Kodama membantu membaca data melalui percakapan dengan konteks wilayah dan sumber. |
+| Sumber Publik | NASA FIRMS, BMKG, Open-Meteo, dan OpenStreetMap. |
+| Akses | Peta publik tanpa akun; profil, dashboard, dan perangkat pribadi setelah masuk. |
 
-Asisten AI **Kodama** membantu pengguna membaca data dan menelusuri kondisi wilayah melalui percakapan. Platform ini memadukan sumber seperti NASA FIRMS, BMKG, Open-Meteo, dan OpenStreetMap dengan analisis spasial di backend.
+## Fitur Utama
 
-## Fitur utama
+### Peta Geospasial
 
-### Peta geospasial untuk membaca kondisi wilayah
-
-Jelajahi kejadian dan indikator lingkungan dalam satu tampilan. Pilih wilayah untuk membaca rinciannya, bandingkan indikator melalui warna peta, dan gunakan tema terang atau gelap sesuai kebutuhan.
-
-<p align="center">
-  <a href="docs/assets/screenshots/peta-geospasial.png"><img src="docs/assets/screenshots/peta-geospasial.png" alt="Peta Arkamap dalam tema terang dan gelap, menampilkan rincian wilayah, titik panas, indikator lingkungan, dan aliran angin" width="100%" /></a>
-</p>
-
-- Pantau titik panas NASA FIRMS, gempa BMKG, peringatan cuaca, dan kejadian bencana.
-- Bandingkan indikator cuaca, kualitas udara, dan lingkungan melalui layer choropleth serta peringkat wilayah.
-- Baca arah angin, lihat bangunan 3D pada tingkat zoom dekat, dan buka detail kejadian langsung dari peta.
-- Akses peta publik tanpa akun; perangkat pengguna yang memiliki koordinat juga dapat ditampilkan setelah masuk.
-
-### Dashboard yang mengikuti kebutuhan pemantauan
-
-Baca ringkasan wilayah, tren kejadian, dan kondisi perangkat dari satu halaman. Profil aktif menentukan fokus dashboard untuk perlindungan, respons lapangan, atau perencanaan.
+Baca kejadian dan indikator lingkungan pada peta Indonesia, dalam tema terang maupun gelap.
 
 <p align="center">
-  <a href="docs/assets/screenshots/dashboard.png"><img src="docs/assets/screenshots/dashboard.png" alt="Dashboard Arkamap untuk profil perencanaan DI Yogyakarta, dengan ringkasan kejadian, status sensor, grafik titik panas, dan peringkat wilayah" width="100%" /></a>
+  <a href="docs/assets/screenshots/peta-geospasial.png"><img src="docs/assets/screenshots/peta-geospasial.png" alt="Peta Arkamap dalam tema terang dan gelap dengan rincian wilayah, titik panas, indikator lingkungan, dan aliran angin" width="100%" /></a>
 </p>
 
-- Lihat ringkasan titik panas, bencana, peringatan aktif, dan perangkat IoT.
-- Telusuri tren bulanan dan peringkat indikator untuk menentukan wilayah yang perlu perhatian.
-- Pantau perangkat yang aktif mengirim, field sensor yang terbaca, dan kiriman data yang ditolak.
-- Kelola hingga tiga profil dengan wilayah dan kebutuhan pemantauan masing-masing.
+| Kemampuan | Detail |
+| :--- | :--- |
+| Pantauan Kejadian | Titik panas NASA FIRMS, gempa BMKG, peringatan cuaca, dan kejadian bencana. |
+| Perbandingan Wilayah | Layer choropleth dan peringkat indikator cuaca, kualitas udara, serta lingkungan. |
+| Konteks Spasial | Aliran angin, bangunan 3D pada zoom dekat, dan rincian kejadian langsung dari peta. |
+| Sensor Lapangan | Pin perangkat berkoordinat milik pengguna setelah masuk. |
 
-### Sensor lapangan melalui IoT dan BYOD
+### Dashboard Pemantauan
 
-Hubungkan sensor milik sendiri dan kelola hasil pengukurannya di Arkamap. Setiap perangkat memiliki API key tersendiri serta panduan pengiriman data yang dapat disalin dari antarmuka.
+Ringkasan wilayah, tren kejadian, dan kondisi perangkat sesuai profil aktif pengguna.
 
 <p align="center">
-  <a href="docs/assets/screenshots/iot-byod.png"><img src="docs/assets/screenshots/iot-byod.png" alt="Halaman perangkat IoT dan BYOD Arkamap dengan ringkasan status, filter perangkat, lokasi, dan daftar sensor milik akun" width="100%" /></a>
+  <a href="docs/assets/screenshots/dashboard.png"><img src="docs/assets/screenshots/dashboard.png" alt="Dashboard Arkamap untuk profil perencanaan DI Yogyakarta dengan ringkasan kejadian, status sensor, grafik titik panas, dan peringkat wilayah" width="100%" /></a>
 </p>
 
-- Kirim telemetri melalui REST API atau MQTT, dengan contoh cURL, Python, dan ESP32.
-- Cari dan saring perangkat berdasarkan status, jenis, serta pemiliknya.
-- Simpan field sensor dalam tabel data berversi ketika struktur kiriman berubah.
-- Baca riwayat pengukuran dan susun widget pemantauan untuk tiap perangkat.
+| Kemampuan | Detail |
+| :--- | :--- |
+| Ringkasan Wilayah | Titik panas, bencana, peringatan aktif, dan jumlah perangkat IoT. |
+| Tren dan Prioritas | Grafik kejadian bulanan dan peringkat indikator wilayah. |
+| Kesehatan Sensor | Perangkat aktif, field yang terbaca, dan kiriman data yang ditolak. |
+| Profil Pemantauan | Hingga tiga profil dengan wilayah dan fokus perlindungan, respons, atau perencanaan. |
 
-### Kodama, asisten AI dengan konteks data Arkamap
+### Perangkat IoT dan BYOD
 
-Ajukan pertanyaan tentang kondisi wilayah, kejadian lingkungan, atau perangkat yang dipantau. Kodama menggunakan data yang tersedia melalui backend untuk menyusun jawaban bertahap dan menyertakan referensi sumber.
+Hubungkan sensor sendiri, kirim pengukuran, dan kelola riwayatnya dari halaman perangkat.
 
-Dukungan model mencakup Gemini, OpenRouter, dan DeepSeek. Tanpa kunci LLM, backend menyediakan jawaban cadangan berbasis template; kemampuan analisisnya mengikuti mode yang tersedia. Detail teknis agen masih menggunakan nama Jev pada sebagian modul dan kontrak API.
+<p align="center">
+  <a href="docs/assets/screenshots/iot-byod.png"><img src="docs/assets/screenshots/iot-byod.png" alt="Halaman perangkat IoT dan BYOD Arkamap dengan ringkasan status, filter perangkat, lokasi, dan daftar sensor" width="100%" /></a>
+</p>
 
-> **Membaca data dengan tepat:** angka pada screenshot menggambarkan sesi pengambilan gambar. Data observasi, prakiraan, dan indikator hasil model memiliki makna berbeda; periksa sumber, periode, dan labelnya. Skor turunan Arkamap merupakan alat bantu analisis, bukan peringatan resmi.
+| Kemampuan | Detail |
+| :--- | :--- |
+| Integrasi Perangkat | REST API dan MQTT dengan API key tersendiri untuk setiap perangkat. |
+| Panduan Koneksi | Contoh cURL, Python, dan ESP32 yang dapat disalin dari antarmuka. |
+| Pengelolaan Sensor | Pencarian dan filter berdasarkan status, jenis, serta pemilik. |
+| Riwayat Pengukuran | Tabel data berversi saat struktur kiriman berubah, serta widget per perangkat. |
+
+### Kodama, Asisten AI Lingkungan
+
+Tanyakan kondisi wilayah, kejadian lingkungan, atau perangkat yang dipantau melalui percakapan.
+
+| Kemampuan | Detail |
+| :--- | :--- |
+| Konteks Data | Menggunakan data yang tersedia di backend dan menyertakan referensi sumber. |
+| Respons Bertahap | Jawaban mengalir langsung di antarmuka percakapan. |
+| Penyedia Model | Gemini, OpenRouter, dan DeepSeek. |
+| Mode Cadangan | Jawaban berbasis template ketika kunci LLM belum tersedia. |
+| Modul Teknis | Sebagian modul dan kontrak API masih menggunakan nama Jev. |
+
+> Angka pada screenshot mengikuti sesi pengambilan gambar. Periksa sumber, periode, serta label observasi, prakiraan, atau model saat membaca data. Skor turunan Arkamap merupakan alat bantu analisis, bukan peringatan resmi.
 
 ---
 
-## Arsitektur sistem
+## Arsitektur Sistem
 
 Frontend menyajikan peta dan dashboard. Backend menangani analisis spasial, agen AI, serta ingest data publik dan sensor. PostGIS menyimpan data geospasial, sedangkan Mosquitto menerima telemetri melalui MQTT.
 
@@ -157,7 +170,7 @@ flowchart TD
 
 ---
 
-## Struktur repositori
+## Struktur Repositori
 
 ```text
 arkamap/
@@ -185,14 +198,14 @@ arkamap/
 
 ---
 
-## Memulai cepat
+## Memulai Cepat
 
 ### Prasyarat
 
 - **Docker** dengan **Compose v2**
 - **Node.js** versi `22.12+` atau `24`
 
-### 1. Jalankan backend dengan Docker
+### 1. Jalankan Backend dengan Docker
 
 Jalankan seluruh service backend (Database PostGIS, Mosquitto Broker, API, MQTT Bridge, dan Seed Data) dengan satu perintah:
 
@@ -201,7 +214,7 @@ Jalankan seluruh service backend (Database PostGIS, Mosquitto Broker, API, MQTT 
 docker compose up --build -d
 ```
 
-### 2. Jalankan frontend
+### 2. Jalankan Frontend
 
 Buka terminal baru untuk memasang dependensi dan menyalakan server frontend:
 
@@ -215,7 +228,7 @@ ARKAMAP_API_TARGET=http://127.0.0.1:8000 npm run dev
 
 ---
 
-### Port dan endpoint service
+### Port dan Endpoint Service
 
 | Service | Alamat URL / Port | Keterangan |
 | :--- | :--- | :--- |
@@ -226,7 +239,7 @@ ARKAMAP_API_TARGET=http://127.0.0.1:8000 npm run dev
 
 ---
 
-### Data contoh dan telemetri demo
+### Data Contoh dan Telemetri Demo
 
 1. **Unduh Data Publik Pertama Kali:** Service `seed` akan otomatis mengunduh dataset nasional pada peluncuran pertama kontainer ke dalam database PostGIS yang kosong. Aplikasi sudah langsung dapat digunakan selama proses ini berlangsung di latar belakang.
 2. **Akun & Perangkat Uji IoT:** Untuk mencoba dashboard multi-versi sensor seketika tanpa alat fisik:
@@ -242,7 +255,7 @@ ARKAMAP_API_TARGET=http://127.0.0.1:8000 npm run dev
 
 ---
 
-## Integrasi sensor IoT (BYOD)
+## Integrasi Sensor IoT (BYOD)
 
 Daftarkan sensor lingkungan milik pengguna, komunitas, atau institusi, lalu kirim pengukuran menggunakan API key perangkat. Panduan pada halaman perangkat menyediakan URL, payload, dan contoh kode sesuai konfigurasinya.
 
@@ -272,7 +285,7 @@ sequenceDiagram
     API-->>UI: Data untuk tabel dan widget
 ```
 
-### Contoh pengiriman telemetri melalui cURL
+### Contoh Pengiriman Telemetri melalui cURL
 
 ```bash
 curl -X POST "http://127.0.0.1:8000/api/ingest" \
@@ -294,7 +307,7 @@ Ganti `<DEVICE_API_KEY>` dan `<WAKTU_UKUR_ISO_8601>` dengan kunci perangkat dan 
 
 ---
 
-## Konfigurasi asisten AI
+## Konfigurasi Asisten AI
 
 Untuk mengaktifkan model bahasa Kodama, sediakan kunci penyedia pada `.env` di root repositori:
 
@@ -309,9 +322,9 @@ Coba pertanyaan seperti *Bagaimana tren titik panas di Kalimantan Barat tiga har
 
 ---
 
-## Pengembangan lokal
+## Pengembangan Lokal
 
-### Frontend dengan hosted API
+### Frontend dengan Hosted API
 
 Bila ingin mengembangkan antarmuka tanpa menyalakan backend lokal, buat file `frontend/.env.hosted.local`:
 
@@ -339,7 +352,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/init-local.ps1
 
 ---
 
-## Pengujian dan kualitas kode
+## Pengujian dan Kualitas Kode
 
 Jalankan pemeriksaan berikut sesuai bagian yang diubah. Hasil dan batas validasi integrasi dicatat di [dokumen validasi](docs/integration/VALIDATION.md).
 
@@ -356,7 +369,7 @@ npm run api:check      # Validasi kesesuaian kontrak OpenAPI backend & tipe Type
 
 ---
 
-## Variabel lingkungan (.env)
+## Variabel Lingkungan (.env)
 
 | Variabel | Default (Compose Evaluasi) | Deskripsi / Penggunaan Produksi |
 | :--- | :--- | :--- |
@@ -370,31 +383,39 @@ npm run api:check      # Validasi kesesuaian kontrak OpenAPI backend & tipe Type
 
 ---
 
-## Batasan dan catatan rilis
+## Batasan dan Catatan Rilis
 
-- **Penyimpanan Awal:** Repositori tidak menyertakan bundel data statis; seluruh data publik diperoleh secara dinamis melalui service `seed` serta background scheduler API, dan layer peta membutuhkan koneksi internet.
-- **Sesi Otentikasi:** Sesi masuk pengguna dikelola per-tab browser (`sessionStorage`): tetap aktif saat tab di-refresh, namun tab peramban baru memerlukan autentikasi ulang.
-- **Penyimpanan Profil IoT:** Backend saat ini menyimpan metadata identitas, kategori, dan koordinat perangkat. Parameter formulir tambahan (nama pemilik, alamat detail, kapasitas baterai) ditampilkan dengan nilai standar.
-- **Modul Eksperimental:** Fitur *Simulator*, *Forensik*, dan *Disposisi Tugas* saat ini berstatus **Preview**.
+| Area | Catatan |
+| :--- | :--- |
+| Data Publik | Data diambil melalui service seed dan penjadwal backend. Kesegaran data mengikuti sumber; layer peta membutuhkan internet. |
+| Sesi Pengguna | Token berada di sessionStorage per tab. Sesi bertahan saat refresh; tab baru memerlukan autentikasi ulang. |
+| Metadata Perangkat | Identitas, kategori, dan koordinat tersimpan di backend. Beberapa isian tambahan pada UI masih memakai nilai standar. |
+| Modul Preview | Simulator, Forensik, dan Disposisi Tugas masih berstatus Preview. |
+
+## Dokumentasi dan Referensi
+
+| Area | Panduan |
+| :--- | :--- |
+| Kontrak API | [Kontrak API](docs/API_CONTRACT.md) · [Matriks Endpoint](docs/integration/API_ENDPOINT_MATRIX.md) · [Audit Kontrak](docs/integration/API_CONTRACT_AUDIT.md) |
+| Integrasi | [Panduan Integrasi](docs/integration/README.md) · [Hasil dan Batas Validasi](docs/integration/VALIDATION.md) |
+| Backend | [API](docs/backend/API.md) · [Akun dan IoT](docs/backend/IOT.md) · [Pemetaan Endpoint](docs/backend/FRONTEND.md) · [Visualisasi dan Agen](docs/backend/VIZ.md) · [Infrastruktur](docs/backend/Infra.md) |
+| Frontend | [Overview](docs/frontend/README.md) · [Arsitektur](docs/frontend/ARCHITECTURE.md) · [Design System](docs/frontend/DESIGN-SYSTEM.md) · [Komponen](docs/frontend/COMPONENTS.md) · [Checklist UI](docs/frontend/UI-CHECKLIST.md) |
+| Kontribusi | [Design Guidelines](DESIGN.md) · [Panduan Kontribusi](CONTRIBUTING.md) |
+| Pemeriksaan CI | [Frontend](https://github.com/ex-machina-org/arkamap/actions/workflows/frontend.yml) · [Integrasi dan Backend](https://github.com/ex-machina-org/arkamap/actions/workflows/integration.yml) |
 
 ---
 
-## Dokumentasi dan referensi
+## Tim Ex Machina
 
-- **Kontrak Antarmuka & Integrasi:**
-  - [Dokumentasi Kontrak API](docs/API_CONTRACT.md)
-  - [Catatan Integrasi & Panduan](docs/integration/README.md) • [Matriks Endpoint](docs/integration/API_ENDPOINT_MATRIX.md) • [Audit Kontrak](docs/integration/API_CONTRACT_AUDIT.md) • [Validasi](docs/integration/VALIDATION.md)
-- **Arsitektur Backend:**
-  - [Panduan Lengkap API](docs/backend/API.md) • [Manajemen Akun & IoT](docs/backend/IOT.md) • [Pemetaan Frontend per Endpoint](docs/backend/FRONTEND.md) • [Komponen Visualisasi & Agen](docs/backend/VIZ.md) • [Infrastruktur & Keamanan](docs/backend/Infra.md)
-- **Arsitektur Frontend:**
-  - [Overview Frontend](docs/frontend/README.md) • [Panduan Arsitektur UI](docs/frontend/ARCHITECTURE.md) • [Design System Tokens](docs/frontend/DESIGN-SYSTEM.md) • [Katalog Komponen](docs/frontend/COMPONENTS.md) • [Checklist Desain](docs/frontend/UI-CHECKLIST.md)
-- **Standar Proyek:**
-  - [Design Guidelines](DESIGN.md) • [Panduan Kontribusi](CONTRIBUTING.md)
+Arkamap dikembangkan oleh **Ex Machina** untuk **JOINTS UGM 2026**.
 
----
+| Anggota | Role | Fokus di Arkamap |
+| :--- | :--- | :--- |
+| [Mahar](https://github.com/spirinity) | PM, Lead, FE Engineer | Arah produk, pengalaman pengguna, frontend, dan integrasi antarmuka. |
+| [Yusma](https://github.com/yusmanata) | ML Engineer | Analisis lingkungan, scoring, dan evaluasi hasil model. |
+| [Dicha](https://github.com/user312982) | Backend Engineer | Backend, API, orkestrasi agen AI, dan integrasi data. |
+| [Marsa](https://github.com/Amertaa) | IoT Engineer | Sensor, gateway IoT, dan integrasi pengukuran lapangan. |
 
-## Tim pengembang dan lisensi
+## Lisensi
 
-Dikembangkan oleh **Ex Machina** untuk **JOINTS UGM 2026**.
-
-Dilisensikan di bawah lisensi [MIT](LICENSE). Copyright 2026 Ex Machina. Komponen turunan BoardUI mengikuti [lisensi aslinya](frontend/LICENSE.boardui).
+[MIT](LICENSE). Copyright 2026 Ex Machina. Komponen turunan BoardUI mengikuti [lisensi aslinya](frontend/LICENSE.boardui).
