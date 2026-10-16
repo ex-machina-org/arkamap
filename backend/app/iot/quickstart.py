@@ -45,7 +45,7 @@ def build(device: dict, key: str | None = None, base: str = PUBLIC_URL) -> dict:
             '"nama" = nama tabel data. Satu API key boleh banyak nama; data beda jenis beri nama beda (mis. "cuaca", "kualitas_udara")',
             'Nama dibandingkan tanpa beda huruf besar/kecil dan spasi: "Cuaca Luar" = "cuaca_luar". Maksimal 10 nama per perangkat',
             "Nama sama dengan field baru = versi baru tabel itu (riwayat sebelum dan sesudah upgrade tetap terlihat); field yang kadang kosong tidak membuat versi baru",
-            '"waktu" = waktu ukur dari sensor, ISO 8601 (tanpa zona = WIB) atau detik Unix',
+            '"waktu" = waktu ukur dari sensor, ISO 8601 (tanpa zona = WIB) atau detik Unix; jam perangkat harus sinkron (NTP), waktu sebelum 2020 ditolak',
             'Masa transisi: kiriman tanpa "nama"/"waktu" masih disimpan (tabel "default", waktu diterima) dengan peringatan',
             "Kiriman yang sama persis dengan \"waktu\" yang sama (atau dalam 1 detik bila tanpa waktu) dianggap kiriman ulang: diterima, tidak disimpan dua kali",
             "Isi data bebas: angka, teks, true/false, list; objek bersarang menjadi 'baterai.volt'",
