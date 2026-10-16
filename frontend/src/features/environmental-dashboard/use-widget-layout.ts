@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { appendLayout, moveWidget, resolveLayout, WIDGET_SIZES, type Placement, type SavedLayout, type WidgetInstance } from "./widget-layout";
+import { appendLayout, limitsOf, moveWidget, resolveLayout, type Placement, type SavedLayout, type WidgetInstance } from "./widget-layout";
 
 /*
  * Kept in this browser only, per profile, until the API stores layouts with the profile.
@@ -59,7 +59,7 @@ export function useWidgetLayout(profileId: number, defaults: WidgetInstance[]) {
      */
     update: (oldId: string, next: WidgetInstance, width?: number) => {
       if (next.id !== oldId && items.some(own => own.id === next.id)) return false;
-      const minW = WIDGET_SIZES[next.type].minW;
+      const minW = limitsOf(next).minW;
       commit(items.map(item => item.id === oldId ? next : item),
         layout.map(place => place.i === oldId ? { ...place, i: next.id, w: Math.max(minW, width ?? place.w) } : place));
       return true;

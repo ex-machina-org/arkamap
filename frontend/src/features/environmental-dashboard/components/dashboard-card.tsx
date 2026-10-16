@@ -29,7 +29,8 @@ export function DashboardCard({ title, value, delta, description, action, footer
   const id = useId();
   return <section aria-labelledby={id} className={cx(cardClass, "h-full", className)}>
     <header className="flex flex-wrap items-start justify-between gap-2">
-      <div className="flex min-w-0 flex-col gap-0.5">
+      {/* Grows beside the action, so a long description keeps the action at the top right. */}
+      <div className="flex min-w-48 flex-1 flex-col gap-0.5">
         {value != null ? <>
           <h3 id={id} className="text-body-medium text-text-secondary">{title}</h3>
           <div className="flex flex-wrap items-center gap-2">
