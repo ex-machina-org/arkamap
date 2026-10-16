@@ -89,7 +89,9 @@ def classify(tags: dict, area: float | None) -> tuple[str, str] | None:
 def sites_from(elements: list[dict]) -> list[dict]:
     out = []
     for e in elements:
-        point = e.get("center") or e
+        # with `bb`, Overpass sends a way's bounds but not its center
+        b = e.get("bounds")
+        point = e.get("center") or (b and {"lat": (b["minlat"] + b["maxlat"]) / 2, "lon": (b["minlon"] + b["maxlon"]) / 2}) or e
         if "lat" not in point:
             continue
         tags = e.get("tags", {})
