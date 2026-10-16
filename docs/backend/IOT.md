@@ -178,10 +178,13 @@ c = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, transport="websockets")
 c.ws_set_options(path="/api/mqtt", headers={"X-API-Key": API_KEY})
 c.tls_set()
 c.username_pw_set("dev42", API_KEY)
+c.on_connect = lambda c, u, f, reason, p: print("login MQTT:", reason)  # Not authorized = username/key salah
 c.connect(DOMAIN, 443, keepalive=60)
 c.loop_start()
-c.publish("ingest/dev42", json.dumps({"nama": "sawah", "waktu": "2026-10-01T08:00:00+07:00",
-                                      "data": {"suhu": 29.4}}), qos=1).wait_for_publish()
+pesan = c.publish("ingest/dev42", json.dumps({"nama": "sawah", "waktu": "2026-10-01T08:00:00+07:00",
+                                              "data": {"suhu": 29.4}}), qos=1)
+pesan.wait_for_publish(10)   # tanpa batas waktu, login yang ditolak membuat program menunggu selamanya
+print("terkirim" if pesan.is_published() else "tidak terkirim; cek login MQTT")
 ```
 
 Aturan broker:
