@@ -406,10 +406,10 @@ Arkamap dikembangkan oleh Ex Machina untuk JOINTS UGM 2026.
 
 | Anggota | Peran | Fokus |
 | :--- | :--- | :--- |
-| [Mahardika Arka](https://github.com/spirinity) | PM, Lead, FE Engineer | Arah produk, pengalaman pengguna, frontend, dan integrasi antarmuka. |
-| [Raditya Yusma Nata](https://github.com/yusmanata) | ML Engineer | Analisis lingkungan, scoring, dan evaluasi model. |
-| [Dicha Wijaya Kusuma](https://github.com/user312982) | Backend Engineer | Backend, API, orkestrasi agen AI, dan integrasi data. |
-| [Marsa Naufal](https://github.com/Amertaa) | IoT Engineer | Sensor, gateway IoT, dan integrasi pengukuran lapangan. |
+| [Mahardika Arka](https://github.com/spirinity) | Product, Platform Experience, dan FE Lead | Produk, pengalaman pengguna, mode pengguna, generative UI, dan frontend. |
+| [Raditya Yusma Nata](https://github.com/yusmanata) | Environmental Intelligence, Analytics, dan Evaluation Lead | Metode analisis lingkungan, scoring, kriteria agen, dan evaluasi hasil. |
+| [Dicha Wijaya Kusuma](https://github.com/user312982) | Agent Platform dan Backend Lead | Agen AI, LangChain, tool calling, backend, dan orkestrasi. |
+| [Marsa Naufal](https://github.com/Amertaa) | IoT dan Live Environmental Data Lead | Sensor, gateway IoT, data lapangan, dan integrasi kondisi nyata. |
 
 ## Lisensi
 
