@@ -2,9 +2,7 @@ import { useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import {
   RiCloseLine,
-  RiDropLine,
   RiFocus3Line,
-  RiHospitalLine,
   RiRouteLine,
   RiShieldCheckLine,
   RiWindyLine,
@@ -13,7 +11,7 @@ import { Button } from "@/components/base/buttons/button";
 import { Badge } from "@/components/base/badges/badge";
 import { StatusDot } from "@/components/base/badges/status-dot";
 import { cx } from "@/utils/cx";
-import type { TacticalPlan } from "./types";
+import { poiStyle, type TacticalPlan } from "./types";
 
 interface ResponderRoutePanelProps {
   plan: TacticalPlan;
@@ -55,9 +53,7 @@ export function ResponderRoutePanel({
               <h2 className="text-body-semibold text-text-primary">
                 Jalur Akses & Evakuasi
               </h2>
-              <Badge color={plan.isLiveRoadNetwork ? "primary" : "neutral"}>
-                {plan.isLiveRoadNetwork ? "Jalur Jalan (OSM)" : "Simulasi"}
-              </Badge>
+              <Badge color="primary">Jalur Jalan (OSM)</Badge>
             </div>
             <p className="flex items-center gap-1 text-caption-1-regular text-text-tertiary">
               <RiShieldCheckLine className="size-3.5 text-status-lime-text" aria-hidden="true" />
@@ -245,33 +241,21 @@ export function ResponderRoutePanel({
           )}
 
           {/* Wind and smoke warning advice */}
-          <div className="flex items-start gap-2 rounded-lg border border-border-button-default bg-background-secondary-default p-2 text-caption-1-regular text-text-secondary">
-            <RiWindyLine
-              className="mt-0.5 size-4 shrink-0 text-status-cyan-text"
-              aria-hidden="true"
-            />
-            <p className="min-w-0 flex-1">{plan.windContext.advice}</p>
-          </div>
+          {plan.windContext && (
+            <div className="flex items-start gap-2 rounded-lg border border-border-button-default bg-background-secondary-default p-2 text-caption-1-regular text-text-secondary">
+              <RiWindyLine
+                className="mt-0.5 size-4 shrink-0 text-status-cyan-text"
+                aria-hidden="true"
+              />
+              <p className="min-w-0 flex-1">{plan.windContext.advice}</p>
+            </div>
+          )}
         </div>
       ) : (
         /* Tactical POI List tab */
         <div className="flex max-h-56 flex-col gap-1.5 overflow-y-auto pr-1">
           {plan.tacticalPois.map((poi) => {
-            const isWater = poi.type === "water_source";
-            const isHospital = poi.type === "hospital";
-            const Icon = isWater
-              ? RiDropLine
-              : isHospital
-              ? RiHospitalLine
-              : poi.type === "shelter"
-              ? RiShieldCheckLine
-              : RiFocus3Line;
-
-            const iconClass = isWater
-              ? "text-status-blue-text"
-              : isHospital
-              ? "text-status-rose-text"
-              : "text-status-lime-text";
+            const { icon: Icon, textClass: iconClass } = poiStyle(poi);
 
             return (
               <div

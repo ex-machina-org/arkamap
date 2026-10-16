@@ -1,14 +1,7 @@
 import type { Feature, LineString } from "geojson";
-import {
-  RiDropLine,
-  RiFocus3Line,
-  RiHospitalLine,
-  RiMapPinLine,
-  RiShieldCheckLine,
-  RiTruckLine,
-} from "@remixicon/react";
+import { RiMapPinLine, RiTruckLine } from "@remixicon/react";
 import { MapGeoJSON, MapMarker, MarkerContent } from "@/components/ui/map";
-import type { TacticalPlan, TacticalPOI } from "./types";
+import { poiStyle, type TacticalPlan, type TacticalPOI } from "./types";
 
 interface ResponderRouteLayersProps {
   plan: TacticalPlan;
@@ -106,17 +99,7 @@ export function ResponderRouteLayers({
 
       {/* Tactical POI Markers */}
       {plan.tacticalPois.map((poi) => {
-        const isWater = poi.type === "water_source";
-        const isHospital = poi.type === "hospital";
-        const Icon = isWater
-          ? RiDropLine
-          : isHospital
-          ? RiHospitalLine
-          : poi.type === "shelter"
-          ? RiShieldCheckLine
-          : RiFocus3Line;
-
-        const pinColor = isWater ? "#0284c7" : isHospital ? "#e11d48" : "#059669";
+        const { icon: Icon, color: pinColor } = poiStyle(poi);
 
         return (
           <MapMarker
