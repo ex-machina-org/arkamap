@@ -661,13 +661,21 @@ export function SiriMapWorkspace() {
         isOpen={isTacticalDialogOpen}
         onClose={() => setIsTacticalDialogOpen(false)}
         onSubmit={async (req) => {
-          const plan = await calculateResponderRoute(req);
-          setTacticalPlan(plan);
-          setTacticalLeg("both");
-          setCamera({ coords: req.incidentCoords, zoom: 12.5, zoomMode: "atLeast" });
-          toast.success("Rute taktis berhasil dihitung", {
-            description: `Akses masuk regu & koridor evakuasi warga siap ditampilkan.`,
-          });
+          // Routing and the OSM facility lookup can take a while; the dialog has already closed.
+          const pending = toast.loading("Menghitung rute taktis…");
+          try {
+            const plan = await calculateResponderRoute(req);
+            setTacticalPlan(plan);
+            setTacticalLeg("both");
+            setCamera({ coords: req.incidentCoords, zoom: 12.5, zoomMode: "atLeast" });
+            const shelters = plan.tacticalPois.filter((poi) => poi.type === "shelter").length;
+            toast.success("Rute taktis berhasil dihitung", {
+              id: pending,
+              description: shelters ? `${shelters} tempat penampungan terdekat ikut ditampilkan.` : "Tidak ada tempat penampungan tercatat di sekitar kejadian.",
+            });
+          } catch (cause) {
+            toast.error("Rute taktis gagal dihitung", { id: pending, description: cause instanceof Error ? cause.message : "Coba lagi nanti." });
+          }
         }}
       />
     </div>
