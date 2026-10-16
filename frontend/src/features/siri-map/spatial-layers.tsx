@@ -205,10 +205,12 @@ function hitsPoint(map: MapLibreMap | null | undefined, event: MapLayerMouseEven
   return Boolean(layers?.length && map!.queryRenderedFeatures(event.point, { layers }).length);
 }
 
-export function SpatialLayers({ warnings, choropleth, layer, layerError, showData, basemap, wind, buildings, events, focus, boundary, nationalMask, status, selectedRegionId, onSelectRegion, onRegionCenter }: {
+export function SpatialLayers({ warnings, choropleth, layer, layerError, showData, basemap, wind, buildings, events, focus, boundary, nationalMask, status, selectedRegionId, onSelectRegion, onRegionCenter, routePanelOpen }: {
   warnings?: FeatureCollection; choropleth: ChoroplethSpec | null; layer?: MapLayer; layerError?: string; showData: boolean; basemap: Basemap; wind: boolean;
   buildings: boolean; events?: FeatureCollection; focus?: number[]; boundary?: FeatureCollection; nationalMask?: Feature<MultiPolygon>; status: DockStatus;
   selectedRegionId?: string | null; onSelectRegion?: (pick: RegionPick) => void;
+  /** The route panel sits bottom-left (400 px wide): the legend moves beside it, or off phones where there is no beside. */
+  routePanelOpen?: boolean;
   /** The selected region's middle, for a selection made outside the map. */
   onRegionCenter?: (center: [number, number]) => void;
 }) {
@@ -350,7 +352,7 @@ export function SpatialLayers({ warnings, choropleth, layer, layerError, showDat
         Data suhu belum siap di server ini. Jalankan ulang ingest.
       </p>
     )}
-    <div className="pointer-events-none absolute bottom-3 left-3 z-20 flex max-w-[calc(100%-4.5rem)] flex-col items-start gap-2">
+    <div className={cx("pointer-events-none absolute bottom-3 left-3 z-20 flex max-w-[calc(100%-4.5rem)] flex-col items-start gap-2", routePanelOpen && "max-md:hidden md:left-[424px]")}>
       <Legend layer={layer} label={choropleth?.label} showData={showData} hotspots={showHotspots} quakes={showQuakes} heat={heat} wind={wind} windTime={grid?.observed_at} note={status.note} />
       {/* The dock already counts every event, so the map only speaks up while loading or when a source is missing. */}
       <AnimatePresence initial={false}>

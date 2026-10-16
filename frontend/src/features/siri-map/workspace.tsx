@@ -498,6 +498,7 @@ export function SiriMapWorkspace() {
             startBounds={startBounds}
             boundary={boundary}
             nationalMask={nationalMask}
+            routePanelOpen={Boolean(tacticalPlan)}
             status={{
               loading: spatial.loading,
               degraded: spatial.errors.length > 0,
