@@ -1879,7 +1879,7 @@
             "$ref": "#/components/schemas/HazardCollection"
           },
           "pois": {
-            "description": "titik kumpul dan tempat penampungan di sekitar alat",
+            "description": "lima faskes terdekat, lalu titik kumpul dan tempat penampungan di sekitar alat",
             "items": {
               "$ref": "#/components/schemas/TacticalPoi"
             },
