@@ -6999,7 +6999,11 @@
             "title": "Note"
           },
           "type": {
-            "const": "hospital",
+            "description": "hospital: rumah sakit/klinik; shelter: tempat ibadah, sekolah, atau balai yang bisa menampung pengungsi",
+            "enum": [
+              "hospital",
+              "shelter"
+            ],
             "title": "Type",
             "type": "string"
           }

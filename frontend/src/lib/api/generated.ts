@@ -141,7 +141,7 @@ export interface components {
     "StreamField": { "category": "cuaca" | "kualitas_udara" | "air" | "tanah" | "energi" | "laut" | "kebencanaan" | "kesehatan" | "lokasi" | "perangkat" | "lainnya"; "category_by": "rule" | "ai" | "user"; "first_seen": string; "key": string; "label": string; "last_seen": string; "type": string; };
     "StreamMerge": { "into": number; };
     "StreamVersion": { "added": Array<string>; "first_seen": string; "id": number; "keys": Array<string>; "last_seen": string; "reading_count": number; "version": number; };
-    "TacticalPoi": { "coords": Array<number>; "distance_meters": number; "id": string; "name": string; "note"?: string | null; "type": "hospital"; };
+    "TacticalPoi": { "coords": Array<number>; "distance_meters": number; "id": string; "name": string; "note"?: string | null; "type": "hospital" | "shelter"; };
     "TokenUsage": { "budget": number; "input": number; "output": number; };
     "ToolCallInfo": { "error"?: string | null; "tool": string; };
     "UserOut": { "email": string; "id": number; "is_admin": boolean; "name": string; };
