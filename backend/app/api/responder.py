@@ -1,4 +1,5 @@
-"""Tactical routes for responders: in to an incident, then out to the nearest safe hospital.
+"""Tactical routes for responders: in to an incident, then out to the nearest safe hospital,
+with the nearby buildings that can shelter evacuees (mosques, schools, halls) listed beside it.
 
 Both legs are routed over the OSM road network (Valhalla), asked to avoid active
 hazards: 800 m around hotspots of the last 24 hours and BMKG warnings in force.
@@ -9,6 +10,7 @@ and the answer came from OSRM instead.
 import json
 import logging
 import math
+import re
 
 import httpx
 from fastapi import APIRouter, HTTPException
@@ -28,6 +30,12 @@ HEADERS = {"User-Agent": "Arkamap/0.6 (environmental monitoring; JOINTS UGM 2026
 FIRE_BUFFER_M = 800
 HAZARD_RADIUS_M = 15_000      # hazards around the incident worth routing around
 HOSPITAL_RADIUS_M = 30_000
+SHELTER_RADIUS_M = 5_000      # evacuees walk or are driven a short way to a shelter
+# Buildings that commonly take in evacuees, with the note the map shows for each.
+SHELTER_AMENITIES = {"place_of_worship": "Tempat ibadah", "school": "Sekolah",
+                     "community_centre": "Balai warga", "townhall": "Balai desa/kantor pemerintahan"}
+# Tagged amenity=clinic in OSM but no place to take a casualty.
+NOT_CARE = re.compile(r"laborator|apotek|optik|farmasi", re.I)
 # Valhalla refuses a request whose exclusion rings add up to more than this
 # perimeter (its default service limit), so the nearest hazards go first.
 MAX_EXCLUDE_PERIMETER_M = 10_000
@@ -215,30 +223,32 @@ def route_leg(start: list[float], end: list[float], zones: list[dict]) -> dict:
             "safety_level": level, "warnings": warnings}
 
 
-# ── hospitals and wind ───────────────────────────────────────────────────
-def hospitals(incident: list[float]) -> list[dict]:
-    """Hospitals and clinics near the incident, nearest first: stored footprints, else OSM."""
+# ── facilities and wind ──────────────────────────────────────────────────
+def _nearby(incident: list[float], amenities: list[str], radius: int, limit: int) -> list[dict]:
+    """Stored footprints with one of `amenities` within `radius`, nearest first."""
+    if not query_one("SELECT to_regclass('building') IS NOT NULL AS ok")["ok"]:
+        return []
     rows = query(
         """
         SELECT osm_id, name, amenity, ST_X(ST_Centroid(geom)) AS lon, ST_Y(ST_Centroid(geom)) AS lat,
                ST_Distance(geom::geography, ST_SetSRID(ST_MakePoint(%(lon)s, %(lat)s), 4326)::geography) AS dist
         FROM building
-        WHERE amenity IN ('hospital', 'clinic')
+        WHERE amenity = ANY(%(amenities)s)
           AND ST_DWithin(geom::geography, ST_SetSRID(ST_MakePoint(%(lon)s, %(lat)s), 4326)::geography, %(r)s)
-        ORDER BY dist LIMIT 8
+        ORDER BY dist LIMIT %(limit)s
         """,
-        {"lon": incident[0], "lat": incident[1], "r": HOSPITAL_RADIUS_M},
-    ) if query_one("SELECT to_regclass('building') IS NOT NULL AS ok")["ok"] else []
-    found = [{"id": f"osm-way-{r['osm_id']}", "name": r["name"], "amenity": r["amenity"],
-              "coords": [round(r["lon"], 6), round(r["lat"], 6)], "distance_meters": round(r["dist"])}
-             for r in rows]
-    return found or _overpass_hospitals(incident)
+        {"lon": incident[0], "lat": incident[1], "r": radius, "amenities": amenities, "limit": limit},
+    )
+    return [{"id": f"osm-way-{r['osm_id']}", "name": r["name"], "amenity": r["amenity"],
+             "coords": [round(r["lon"], 6), round(r["lat"], 6)], "distance_meters": round(r["dist"])}
+            for r in rows]
 
 
-def _overpass_hospitals(incident: list[float]) -> list[dict]:
+def _overpass_nearby(incident: list[float], amenities: list[str], radius: int, limit: int) -> list[dict] | None:
+    """The same from OSM, for areas whose footprints are not stored; None when Overpass is unreachable."""
     lon, lat = incident
-    q = (f'[out:json][timeout:20];nwr["amenity"~"^(hospital|clinic)$"](around:{HOSPITAL_RADIUS_M},{lat},{lon});'
-         "out center 40;")
+    q = (f'[out:json][timeout:20];nwr["amenity"~"^({"|".join(amenities)})$"](around:{radius},{lat},{lon});'
+         "out center 60;")
     elements = None
     for url in OVERPASS_URLS:
         try:
@@ -247,10 +257,9 @@ def _overpass_hospitals(incident: list[float]) -> list[dict]:
             elements = r.json()["elements"]
             break
         except Exception as exc:  # noqa: BLE001
-            log.warning("overpass faskes %s gagal: %s", url.split("/")[2], exc)
+            log.warning("overpass %s %s gagal: %s", ",".join(amenities), url.split("/")[2], exc)
     if elements is None:
-        # "no hospital nearby" would be a false answer; the source is just unreachable
-        raise HTTPException(502, "sumber data faskes (OSM Overpass) sedang tidak merespons; coba lagi nanti")
+        return None
     out = []
     for e in elements:
         c = e.get("center") or e
@@ -262,15 +271,38 @@ def _overpass_hospitals(incident: list[float]) -> list[dict]:
         tags = e.get("tags", {})
         out.append({"id": f"osm-{e['type']}-{e['id']}", "name": tags.get("name"), "amenity": tags.get("amenity"),
                     "coords": coords, "distance_meters": round(dist)})
-    return sorted(out, key=lambda h: h["distance_meters"])[:8]
+    return sorted(out, key=lambda h: h["distance_meters"])[:limit]
+
+
+def hospitals(incident: list[float]) -> list[dict]:
+    """Hospitals and clinics near the incident, nearest first: stored footprints, else OSM.
+    Labs and pharmacies tagged as clinics are left out."""
+    found = _nearby(incident, ["hospital", "clinic"], HOSPITAL_RADIUS_M, 12)
+    if not found:
+        found = _overpass_nearby(incident, ["hospital", "clinic"], HOSPITAL_RADIUS_M, 40)
+        if found is None:
+            # "no hospital nearby" would be a false answer; the source is just unreachable
+            raise HTTPException(502, "sumber data faskes (OSM Overpass) sedang tidak merespons; coba lagi nanti")
+    return [h for h in found if not NOT_CARE.search(h["name"] or "")][:8]
+
+
+def shelters(incident: list[float], zones: list[dict]) -> list[dict]:
+    """Mosques, churches, schools and halls near the incident and outside the hazards, nearest first.
+    Only extra guidance beside the hospital, so an unreachable Overpass gives none rather than an error."""
+    amenities = list(SHELTER_AMENITIES)
+    found = _nearby(incident, amenities, SHELTER_RADIUS_M, 20) or _overpass_nearby(incident, amenities, SHELTER_RADIUS_M, 60) or []
+    return [s for s in found if not any(_contains(z, s["coords"]) for z in zones)][:5]
+
+
+def _safe(incident: list[float], h: dict, zones: list[dict], wind_from: float | None) -> bool:
+    return not is_downwind(incident, h["coords"], wind_from) and not any(_contains(z, h["coords"]) for z in zones)
 
 
 def pick_hospital(incident: list[float], options: list[dict], zones: list[dict], wind_from: float | None) -> dict:
-    """The nearest hospital outside every hazard and not downwind of the incident, else the nearest."""
-    for h in options:
-        if not is_downwind(incident, h["coords"], wind_from) and not any(_contains(z, h["coords"]) for z in zones):
-            return h
-    return options[0]
+    """The nearest safe hospital (outside every hazard, not downwind), then the nearest safe clinic,
+    else the nearest of all: a casualty needs a hospital more than the closest clinic."""
+    safe = [h for h in options if _safe(incident, h, zones, wind_from)]
+    return next((h for h in safe if h["amenity"] == "hospital"), None) or (safe or options)[0]
 
 
 def wind_at(point: list[float]) -> dict | None:
@@ -289,8 +321,12 @@ def wind_at(point: list[float]) -> dict | None:
     return {"speed_kmh": speed, "direction_deg": direction, "is_hazardous": hazardous, "advice": advice}
 
 
+def _note(h: dict) -> str:
+    return SHELTER_AMENITIES.get(h["amenity"]) or ("Klinik" if h["amenity"] == "clinic" else "Rumah sakit")
+
+
 def _label(h: dict) -> str:
-    return h["name"] or ("Klinik" if h["amenity"] == "clinic" else "Rumah sakit") + " tanpa nama"
+    return h["name"] or f"{_note(h)} tanpa nama"
 
 
 # ── endpoint ─────────────────────────────────────────────────────────────
@@ -328,9 +364,11 @@ def responder_route(body: ResponderRouteIn) -> dict:
             if is_downwind(incident, target["coords"], wind["direction_deg"]) else
             "Faskes tujuan berada di sisi berlawanan dari hembusan asap (upwind).")
 
-    pois = [{"id": h["id"], "name": _label(h), "type": "hospital", "coords": h["coords"],
-             "distance_meters": h["distance_meters"],
-             "note": "Klinik" if h["amenity"] == "clinic" else "Rumah sakit"} for h in options[:5]]
+    pois = [{"id": h["id"], "name": _label(h), "type": kind, "coords": h["coords"],
+             "distance_meters": h["distance_meters"], "note": _note(h)}
+            # the target always shows, even when five nearer clinics fill the list
+            for kind, group in (("hospital", options[:5] + ([target] if target not in options[:5] else [])),
+                                ("shelter", shelters(incident, zones))) for h in group]
     hazard_fc = {"type": "FeatureCollection", "features": [
         {"type": "Feature", "geometry": z["geometry"],
          "properties": {"hazard_type": z["kind"], **({"radius_meters": FIRE_BUFFER_M} if z["kind"] == "fire_buffer" else {})}}

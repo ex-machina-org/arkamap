@@ -1145,7 +1145,8 @@ class ResponderRouteIn(BaseModel):
 class TacticalPoi(BaseModel):
     id: str
     name: str
-    type: Literal["hospital"]
+    type: Literal["hospital", "shelter"] = Field(
+        description="hospital: rumah sakit/klinik; shelter: tempat ibadah, sekolah, atau balai yang bisa menampung pengungsi")
     coords: list[float] = Field(description="[lon, lat]")
     distance_meters: int = Field(description="jarak garis lurus dari titik kejadian")
     note: str | None = None

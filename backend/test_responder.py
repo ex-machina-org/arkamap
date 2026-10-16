@@ -1,5 +1,5 @@
 """Responder routing (api/responder.py): polyline decoding, wind side, hazard
-avoidance and hospital choice, with the road routers replaced by stubs.
+avoidance, hospital choice and shelters, with the road routers replaced by stubs.
 
 Needs PostGIS; it adds rows around 116.8 E, 1.25 S and removes them again:
     DATABASE_URL=postgresql://t:t@127.0.0.1:55499/t python test_responder.py
@@ -47,11 +47,14 @@ now = datetime.now(timezone.utc)
 INCIDENT, ORIGIN = [116.865, -1.242], [116.8285, -1.2654]
 WEST_H, EAST_H = [116.835, -1.242], [116.885, -1.242]   # hospitals 3.3 km west and 2.2 km east
 BLOCK = [116.848, -1.2535]                              # a second fire between origin and incident
+WEST_C, LAB = [116.855, -1.242], [116.875, -1.242]      # a clinic 1.1 km upwind, a lab 1.1 km east
+MOSQUE, SCHOOL = [116.865, -1.230], [116.866, -1.2425]  # a mosque 1.3 km north; a school inside the fire
+TEST_IDS = "(990001, 990002, 990003, 990004, 990005, 990006)"
 
 
 def cleanup(cur):
     cur.execute("DELETE FROM observation WHERE metric = 'hotspot' AND attrs->>'test' = 'responder'")
-    cur.execute("DELETE FROM building WHERE osm_id IN (990001, 990002)")
+    cur.execute(f"DELETE FROM building WHERE osm_id IN {TEST_IDS}")
     cur.execute("DELETE FROM wind_grid WHERE lon = 116.86 AND lat = -1.24")
 
 
@@ -69,7 +72,11 @@ with conn() as c, c.cursor() as cur:
                     " ST_SetSRID(ST_MakePoint(%s,%s),4326))", (now - timedelta(hours=2), conf, lon, lat))
     cur.execute(f"INSERT INTO building (osm_id, kind, building, name, amenity, area_m2, geom) VALUES"
                 f" (990001,'kesehatan','hospital','RSUD Barat','hospital',900,{square(*WEST_H)}),"
-                f" (990002,'kesehatan','hospital','RS Timur','hospital',900,{square(*EAST_H)})")
+                f" (990002,'kesehatan','hospital','RS Timur','hospital',900,{square(*EAST_H)}),"
+                f" (990003,'kesehatan','yes','Klinik Barat','clinic',200,{square(*WEST_C)}),"
+                f" (990004,'kesehatan','yes','Laboratorium Klinik Timur','clinic',200,{square(*LAB)}),"
+                f" (990005,'ibadah','mosque','Masjid Utara','place_of_worship',400,{square(*MOSQUE)}),"
+                f" (990006,'fasilitas','school','SD Dekat Api','school',600,{square(*SCHOOL)})")
     # wind from the west: smoke drifts east, so the nearer east hospital is downwind
     cur.execute("INSERT INTO wind_grid (lon, lat, direction, speed, observed_at) VALUES (116.86,-1.24,270,30,%s)", (now,))
 
@@ -91,9 +98,13 @@ try:
     assert calls[0] == 1, calls
     assert out["ingress"]["safety_level"] == "safe", out["ingress"]
     assert any("perlengkapan" in w for w in out["ingress"]["warnings"])
-    assert out["egress"]["target_poi"]["name"] == "RSUD Barat", out["egress"]   # upwind, though farther
+    # upwind and a hospital: farther than the upwind clinic, and the downwind RS Timur is passed over
+    assert out["egress"]["target_poi"]["name"] == "RSUD Barat", out["egress"]
     assert any("upwind" in w for w in out["egress"]["warnings"])
-    assert [p["name"] for p in out["pois"]] == ["RS Timur", "RSUD Barat"]
+    # the lab is no care facility; the school sits in the fire, so only the mosque shelters
+    assert [(p["type"], p["name"]) for p in out["pois"]] == [
+        ("hospital", "Klinik Barat"), ("hospital", "RS Timur"), ("hospital", "RSUD Barat"), ("shelter", "Masjid Utara")], out["pois"]
+    assert out["pois"][-1]["note"] == "Tempat ibadah"
     assert out["wind"]["is_hazardous"] and "Timur" in out["wind"]["advice"]
     assert {f["properties"]["hazard_type"] for f in out["hazard_polygons"]["features"]} == {"fire_buffer"}
 
