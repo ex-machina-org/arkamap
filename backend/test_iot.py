@@ -221,3 +221,15 @@ r = rule_reading("tim SAR", "plan")
 assert r["mode"] == "plan" and r["mode_by"] == "user"
 assert rule_reading("anggota damkar")["mode"] == "protected" and rule_reading("anggota damkar")["mode_by"] == "rule"
 print("modes ok")
+
+# test device: built through create_device with the caller's request (the quickstart domain comes from it)
+from app.api import users
+seen = {}
+saved = users.query, users.execute, users.create_device, users._own_device, users._public
+users.query, users.execute = (lambda *a: []), (lambda *a: None)
+users.create_device = lambda body, request, user: seen.update(request=request) or {"device": {"id": 9}}
+users._own_device, users._public = (lambda u, i: {"id": i}), (lambda d: d)
+req = object()
+assert users.start_test_device(req, {"id": 1})["device"] == {"id": 9} and seen["request"] is req
+users.query, users.execute, users.create_device, users._own_device, users._public = saved
+print("test device ok")
