@@ -179,6 +179,7 @@ try:
     target = out["route"]["target_poi"]
     assert target["type"] == "safe_point" and not rr.is_downwind(INCIDENT, target["coords"], 270), target
     assert out["wind"] and "angin" in out["route"]["summary"], out["route"]["summary"]
+    assert rr.ENTER_FIRE not in out["route"]["warnings"] and "segera keluar" in out["route"]["warnings"][0]
     rr._valhalla, rr._osrm = lambda s, e, rings: None, straight
     east = rr.destination(INCIDENT, 90, 3_000)
     leg = rr.route_leg(INCIDENT, east, [rr.plume_zone(INCIDENT, 270)])

@@ -52,6 +52,8 @@ HAZARDOUS_WIND_KMH = 25       # strong enough to push fire and smoke noticeably
 # ponytail: fixed sector; a spread model (fuel, slope, wind speed) would size it per fire.
 PLUME_START_M, PLUME_END_M, PLUME_HALF_DEG = 200, 2_000, 30
 
+ENTER_FIRE = "Ujung jalur berada di dalam zona titik panas; masuk dengan perlengkapan pelindung."
+
 COMPASS = ["Utara", "Timur Laut", "Timur", "Tenggara", "Selatan", "Barat Daya", "Barat", "Barat Laut"]
 
 
@@ -232,7 +234,7 @@ def route_leg(start: list[float], end: list[float], zones: list[dict]) -> dict:
             warnings.append("Jalur tidak melewati zona titik panas maupun peringatan cuaca aktif."
                             if avoid else "Tidak ada zona bahaya aktif di sekitar jalur.")
     if len(avoid) < len(zones) and any(z["kind"] == "fire_buffer" for z in zones if z not in avoid):
-        warnings.append("Ujung jalur berada di dalam zona titik panas; masuk dengan perlengkapan pelindung.")
+        warnings.append(ENTER_FIRE)
     return {"coordinates": coords, "distance_km": distance_km, "duration_minutes": minutes,
             "safety_level": level, "warnings": warnings}
 
@@ -513,6 +515,9 @@ def evacuate(point: list[float], fire: bool) -> dict:
     route = route_leg(point, target["coords"], zones)
     route["target_poi"] = target
     if fire:
+        # the device sits in its own fire: nobody goes in, people get out
+        route["warnings"] = [w for w in route["warnings"] if w != ENTER_FIRE]
+        route["warnings"].insert(0, "Alat berada di zona api; segera keluar mengikuti jalur ini.")
         route["summary"] = (f"Kebakaran terdeteksi alat: evakuasi menjauhi api dan arah angin ke {target['name']}."
                             if wind else f"Kebakaran terdeteksi alat: evakuasi menjauhi api ke {target['name']}.")
         if not wind:
