@@ -95,7 +95,7 @@ export interface components {
     "PanelPick": { "id": string; "reason": string; };
     "PasswordChange": { "new_password": string; "old_password": string; };
     "PasswordReset": { "temporary_password": string; "user_id": number; };
-    "PoiRef": { "coords": Array<number>; "name": string; "type": "hospital"; };
+    "PoiRef": { "coords": Array<number>; "name": string; "type": "hospital" | "shelter" | "safe_point"; };
     "PointGeometry": { "coordinates": Array<number>; "type"?: "Point"; };
     "ProfileIn": { "goals"?: string | null; "mode"?: "protected" | "responden" | "plan" | null; "region_id"?: string | null; "role": string; };
     "ProfileOut": { "active": boolean; "ai_message"?: string | null; "created_at": string; "field"?: string | null; "field_label"?: string | null; "fit"?: "cocok" | "sebagian" | "tidak_cocok" | null; "goals"?: string | null; "id": number; "metrics": Array<components["schemas"]["MetricPick"]>; "metrics_by"?: "ai" | "rule" | null; "mode": "protected" | "responden" | "plan"; "mode_by": "user" | "ai" | "rule"; "mode_label": string; "mode_title": string; "panels"?: Array<components["schemas"]["PanelPick"]>; "region_id"?: string | null; "region_name"?: string | null; "role": string; "unsupported"?: Array<string>; "updated_at": string; };
@@ -117,7 +117,7 @@ export interface components {
     "RegionReport": { "alerts": Array<components["schemas"]["RegionAlert"]>; "days": number; "disasters": Array<components["schemas"]["DisasterProps"]>; "events": Record<string, components["schemas"]["EventSummary"]>; "generated_at": string; "region": components["schemas"]["RegionSummary"]; "sources": Array<components["schemas"]["SourceFreshness"]>; };
     "RegionSummary": { "area_km2"?: number | null; "composite"?: number | null; "id": string; "indicators"?: Array<components["schemas"]["IndicatorValue"]>; "level": string; "name": string; "population"?: number | null; };
     "ResponderRoute": { "egress": components["schemas"]["EgressLegOut"]; "hazard_polygons": components["schemas"]["HazardCollection"]; "ingress": components["schemas"]["RouteLegOut"]; "pois": Array<components["schemas"]["TacticalPoi"]>; "wind"?: components["schemas"]["WindOut"] | null; };
-    "ResponderRouteIn": { "incident": Array<number>; "incident_id"?: string | null; "incident_title"?: string | null; "origin": Array<number>; };
+    "ResponderRouteIn": { "hazard_type"?: "hotspot" | "flood" | "air_quality" | "seismic" | "iot_sensor" | "disaster" | null; "incident": Array<number>; "incident_id"?: string | null; "incident_title"?: string | null; "origin": Array<number>; };
     "RiskTop": { "name": string; "region_id": string; "score": number; };
     "RouteLegOut": { "coordinates": Array<Array<number>>; "distance_km": number; "duration_minutes": number; "safety_level": "safe" | "caution" | "critical"; "summary": string; "warnings": Array<string>; };
     "ScorePart": { "normalised": number; "value": number; "weight": number; };
