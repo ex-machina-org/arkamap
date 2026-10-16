@@ -1,0 +1,28 @@
+# docker compose (frontend/Dockerfile): one address for the app and its API, like the VPS
+# (frontend/Caddyfile) but plain HTTP and without an app key, since the local backend needs none.
+
+:8080 {
+	encode zstd gzip
+
+	# Devices log in to the broker with their own key (username dev<id>).
+	@mqtt {
+		path /api/mqtt
+		method GET
+	}
+	handle @mqtt {
+		reverse_proxy mosquitto:9001
+	}
+
+	handle /api/* {
+		reverse_proxy api:8000 {
+			# The chat answer streams (SSE): send each chunk as it arrives.
+			flush_interval -1
+		}
+	}
+
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}
