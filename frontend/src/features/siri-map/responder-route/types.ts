@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import type { FeatureCollection, Polygon } from "geojson";
+import type { HazardType } from "../types";
 import { RiCommunityLine, RiGovernmentLine, RiHospitalLine, RiSchoolLine } from "@remixicon/react";
 
 export type RouteSafetyLevel = "safe" | "caution" | "critical";
@@ -52,6 +53,8 @@ export interface TacticalPlan {
 
 export interface TacticalRouteRequest {
   incidentId: string;
+  /** A flood, quake or other disaster becomes a zone the evacuation corridor leaves. */
+  hazardType: HazardType;
   incidentTitle: string;
   incidentCoords: [number, number];
   originCoords: [number, number];

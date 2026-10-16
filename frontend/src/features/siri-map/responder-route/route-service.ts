@@ -25,7 +25,7 @@ function leg(id: "ingress" | "egress", label: string, out: DTO<"RouteLegOut">): 
 export async function calculateResponderRoute(req: TacticalRouteRequest): Promise<TacticalPlan> {
   const data = await api("/responder/route", "ResponderRoute", {
     method: "POST",
-    ...jsonBody({ origin: req.originCoords, incident: req.incidentCoords, incident_id: req.incidentId, incident_title: req.incidentTitle }),
+    ...jsonBody({ origin: req.originCoords, incident: req.incidentCoords, incident_id: req.incidentId, incident_title: req.incidentTitle, hazard_type: req.hazardType }),
   });
   return {
     id: `plan-${Date.now()}`,
