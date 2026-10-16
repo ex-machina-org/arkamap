@@ -80,6 +80,7 @@ export function ResponderDialog({
 
     onSubmit({
       incidentId: incident.id,
+      hazardType: incident.hazardType,
       incidentTitle: incident.title,
       incidentCoords: incident.coords,
       originCoords,

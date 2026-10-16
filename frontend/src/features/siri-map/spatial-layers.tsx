@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Feature, FeatureCollection, MultiPolygon, Position } from "geojson";
-import type { ExpressionSpecification } from "maplibre-gl";
+import type { ExpressionSpecification, Map as MapLibreMap, MapLayerMouseEvent } from "maplibre-gl";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "motion/react";
 import { spring } from "@/lib/springs";
@@ -195,6 +195,16 @@ function Legend({ layer, label, showData, hotspots, quakes, heat, wind, windTime
   );
 }
 
+/**
+ * A click on an event pin or cluster also lands on the region beneath it; the event wins, so the
+ * region card does not open over the event the user meant to pick.
+ */
+function hitsPoint(map: MapLibreMap | null | undefined, event: MapLayerMouseEvent): boolean {
+  if (event.originalEvent.target instanceof Element && event.originalEvent.target.closest(".maplibregl-marker")) return true;
+  const layers = map?.getStyle().layers.filter(({ id }) => id.startsWith("clusters-") || id.startsWith("unclustered-point-")).map(({ id }) => id);
+  return Boolean(layers?.length && map!.queryRenderedFeatures(event.point, { layers }).length);
+}
+
 export function SpatialLayers({ warnings, choropleth, layer, layerError, showData, basemap, wind, buildings, events, focus, boundary, nationalMask, status, selectedRegionId, onSelectRegion, onRegionCenter }: {
   warnings?: FeatureCollection; choropleth: ChoroplethSpec | null; layer?: MapLayer; layerError?: string; showData: boolean; basemap: Basemap; wind: boolean;
   buildings: boolean; events?: FeatureCollection; focus?: number[]; boundary?: FeatureCollection; nationalMask?: Feature<MultiPolygon>; status: DockStatus;
@@ -327,7 +337,7 @@ export function SpatialLayers({ warnings, choropleth, layer, layerError, showDat
     {mask && <MapGeoJSON id="profile-outside" data={mask} fillPaint={{ "fill-color": "#0a0a0a", "fill-opacity": boundary ? 0.45 : 0.7, "fill-antialias": false }} linePaint={false} />}
     {boundary && <MapGeoJSON id="profile-boundary" data={boundary} fillPaint={false} linePaint={{ "line-color": "#3b82f6", "line-width": 2 }} />}
     {warnings && <MapGeoJSON id="api-warnings" data={warnings} fillPaint={{ "fill-opacity": 0.2, "fill-color": ["match", ["get", "severity"], "Severe", "#f43f5e", "Extreme", "#f43f5e", "#f59e0b"] }} interactive onClick={({ feature }) => toast.info(String(feature.properties?.headline ?? "Peringatan BMKG"), { description: String(feature.properties?.description ?? "") })} />}
-    {regions && <MapGeoJSON id="api-choropleth" data={regions} promoteId="region_id" fillPaint={fillPaint} fillHoverPaint={fillHoverPaint} linePaint={linePaint} interactive onClick={({ feature, longitude, latitude }) => pick(feature, [longitude, latitude])} />}
+    {regions && <MapGeoJSON id="api-choropleth" data={regions} promoteId="region_id" fillPaint={fillPaint} fillHoverPaint={fillHoverPaint} linePaint={linePaint} interactive onClick={({ feature, longitude, latitude, originalEvent }) => { if (!hitsPoint(map, originalEvent)) pick(feature, [longitude, latitude]); }} />}
     {selected && <MapGeoJSON id="selected-region" data={{ type: "FeatureCollection", features: [selected] }} fillPaint={false} linePaint={{ "line-color": dark || satellite ? "#ffffff" : "#1f2933", "line-width": 3 }} />}
     <PointOverlays hotspots={showHotspots} quakes={showQuakes} />
     {footprints && <MapGeoJSON id="api-buildings" data={footprints} fillPaint={{ "fill-opacity": 0.55 }} />}

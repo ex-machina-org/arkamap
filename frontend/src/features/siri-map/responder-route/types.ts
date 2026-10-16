@@ -1,7 +1,11 @@
+import type { ComponentType } from "react";
 import type { FeatureCollection, Polygon } from "geojson";
+import type { HazardType } from "../types";
+import { RiCommunityLine, RiGovernmentLine, RiHospitalLine, RiSchoolLine } from "@remixicon/react";
 
 export type RouteSafetyLevel = "safe" | "caution" | "critical";
-export type TacticalPOIKind = "water_source" | "hospital" | "shelter" | "staging_area";
+/** hospital: rumah sakit/klinik; shelter: tempat ibadah, sekolah atau balai that can take in evacuees. */
+export type TacticalPOIKind = "hospital" | "shelter";
 
 export interface TacticalPOI {
   id: string;
@@ -42,15 +46,26 @@ export interface TacticalPlan {
   egressRoute: RouteLeg;
   tacticalPois: TacticalPOI[];
   hazardPolygons: FeatureCollection<Polygon>;
-  windContext: WindContext;
-  isLiveRoadNetwork: boolean;
+  /** null when the backend has no wind reading near the incident. */
+  windContext: WindContext | null;
   createdAt: string;
 }
 
 export interface TacticalRouteRequest {
   incidentId: string;
+  /** A flood, quake or other disaster becomes a zone the evacuation corridor leaves. */
+  hazardType: HazardType;
   incidentTitle: string;
   incidentCoords: [number, number];
   originCoords: [number, number];
   originLabel?: string;
+}
+
+type PoiIcon = ComponentType<{ className?: string; "aria-hidden"?: boolean | "true" | "false" }>;
+
+/** Icon and colour per facility, shared by the map pins and the list. The shelter's note says which building it is. */
+export function poiStyle(poi: TacticalPOI): { icon: PoiIcon; color: string; textClass: string } {
+  if (poi.type === "hospital") return { icon: RiHospitalLine, color: "#e11d48", textClass: "text-status-rose-text" };
+  const icon = poi.note === "Sekolah" ? RiSchoolLine : poi.note?.startsWith("Balai") ? RiGovernmentLine : RiCommunityLine;
+  return { icon, color: "#059669", textClass: "text-status-lime-text" };
 }

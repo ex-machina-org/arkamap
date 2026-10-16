@@ -4775,7 +4775,12 @@
             "type": "string"
           },
           "type": {
-            "const": "hospital",
+            "description": "hospital: rumah sakit umum besar; shelter: titik kumpul atau lapangan; safe_point: titik aman menjauhi bahaya",
+            "enum": [
+              "hospital",
+              "shelter",
+              "safe_point"
+            ],
             "title": "Type",
             "type": "string"
           }
@@ -5987,6 +5992,26 @@
       },
       "ResponderRouteIn": {
         "properties": {
+          "hazard_type": {
+            "anyOf": [
+              {
+                "enum": [
+                  "hotspot",
+                  "flood",
+                  "air_quality",
+                  "seismic",
+                  "iot_sensor",
+                  "disaster"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "jenis kejadian; banjir, gempa, dan bencana lain menjadi zona bahaya yang dijauhi koridor evakuasi",
+            "title": "Hazard Type"
+          },
           "incident": {
             "description": "[lon, lat] lokasi kejadian",
             "items": {
@@ -6999,7 +7024,11 @@
             "title": "Note"
           },
           "type": {
-            "const": "hospital",
+            "description": "hospital: rumah sakit/klinik; shelter: tempat ibadah, sekolah, atau balai yang bisa menampung pengungsi",
+            "enum": [
+              "hospital",
+              "shelter"
+            ],
             "title": "Type",
             "type": "string"
           }
@@ -12494,7 +12523,7 @@
     },
     "/api/responder/route": {
       "post": {
-        "description": "Ingress from the responder's position to the incident, and an evacuation corridor\nfrom the incident to the nearest hospital outside the hazards and upwind of the\nsmoke, with the hazards and the wind used to choose them.",
+        "description": "Ingress from the responder's position to the incident, and an evacuation corridor from\nthe incident to the nearest general hospital outside the hazards and upwind of the smoke;\nwith none, to an assembly point or a safe point away from the hazards. The incident's own\nreach (a flood, a quake) counts as a hazard, so evacuation leaves it for any kind of event.",
         "operationId": "responder_route_api_responder_route_post",
         "requestBody": {
           "content": {
@@ -12526,16 +12555,6 @@
               }
             },
             "description": "Bad Request"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Not Found"
           },
           "422": {
             "content": {
