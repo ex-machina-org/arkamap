@@ -49,12 +49,14 @@ WEST_H, EAST_H = [116.835, -1.242], [116.885, -1.242]   # hospitals 3.3 km west 
 BLOCK = [116.848, -1.2535]                              # a second fire between origin and incident
 WEST_C, LAB = [116.855, -1.242], [116.875, -1.242]      # a clinic 1.1 km upwind, a lab 1.1 km east
 MOSQUE, SCHOOL = [116.865, -1.230], [116.866, -1.2425]  # a mosque 1.3 km north; a school inside the fire
-TEST_IDS = "(990001, 990002, 990003, 990004, 990005, 990006)"
+FIELD = [116.870, -1.250]                              # a field 1 km south-east, farther than the mosque
+TEST_IDS = "(990001, 990002, 990003, 990004)"
 
 
 def cleanup(cur):
     cur.execute("DELETE FROM observation WHERE metric = 'hotspot' AND attrs->>'test' = 'responder'")
     cur.execute(f"DELETE FROM building WHERE osm_id IN {TEST_IDS}")
+    cur.execute("DELETE FROM evac_site WHERE osm_id LIKE 'test/%'")
     cur.execute("DELETE FROM wind_grid WHERE lon = 116.86 AND lat = -1.24")
 
 
@@ -74,9 +76,14 @@ with conn() as c, c.cursor() as cur:
                 f" (990001,'kesehatan','hospital','RSUD Barat','hospital',900,{square(*WEST_H)}),"
                 f" (990002,'kesehatan','hospital','RS Timur','hospital',900,{square(*EAST_H)}),"
                 f" (990003,'kesehatan','yes','Klinik Barat','clinic',200,{square(*WEST_C)}),"
-                f" (990004,'kesehatan','yes','Laboratorium Klinik Timur','clinic',200,{square(*LAB)}),"
-                f" (990005,'ibadah','mosque','Masjid Utara','place_of_worship',400,{square(*MOSQUE)}),"
-                f" (990006,'fasilitas','school','SD Dekat Api','school',600,{square(*SCHOOL)})")
+                f" (990004,'kesehatan','yes','Laboratorium Klinik Timur','clinic',200,{square(*LAB)})")
+    # evac_site: the west hospital again (stored by both tables, listed once), a large mosque,
+    # a school inside the fire, and an official assembly point that outranks the nearer mosque
+    for osm_id, kind, name, note, (lon, lat) in (
+            ("test/1", "hospital", "RSUD Barat", "Rumah sakit", WEST_H), ("test/2", "worship", "Masjid Utara", "Masjid", MOSQUE),
+            ("test/3", "school", "SD Dekat Api", "Sekolah", SCHOOL), ("test/4", "assembly", "Lapangan Desa", "Titik kumpul", FIELD)):
+        cur.execute("INSERT INTO evac_site (osm_id, kind, name, note, fetched_at, geom)"
+                    " VALUES (%s,%s,%s,%s,now(),ST_SetSRID(ST_MakePoint(%s,%s),4326))", (osm_id, kind, name, note, lon, lat))
     # wind from the west: smoke drifts east, so the nearer east hospital is downwind
     cur.execute("INSERT INTO wind_grid (lon, lat, direction, speed, observed_at) VALUES (116.86,-1.24,270,30,%s)", (now,))
 
@@ -101,10 +108,11 @@ try:
     # upwind and a hospital: farther than the upwind clinic, and the downwind RS Timur is passed over
     assert out["egress"]["target_poi"]["name"] == "RSUD Barat", out["egress"]
     assert any("upwind" in w for w in out["egress"]["warnings"])
-    # the lab is no care facility; the school sits in the fire, so only the mosque shelters
+    # the lab is no care facility; the school sits in the fire; the assembly point leads the shelters
     assert [(p["type"], p["name"]) for p in out["pois"]] == [
-        ("hospital", "Klinik Barat"), ("hospital", "RS Timur"), ("hospital", "RSUD Barat"), ("shelter", "Masjid Utara")], out["pois"]
-    assert out["pois"][-1]["note"] == "Tempat ibadah"
+        ("hospital", "Klinik Barat"), ("hospital", "RS Timur"), ("hospital", "RSUD Barat"),
+        ("shelter", "Lapangan Desa"), ("shelter", "Masjid Utara")], out["pois"]
+    assert [p["note"] for p in out["pois"][-2:]] == ["Titik kumpul", "Masjid"]
     assert out["wind"]["is_hazardous"] and "Timur" in out["wind"]["advice"]
     assert {f["properties"]["hazard_type"] for f in out["hazard_polygons"]["features"]} == {"fire_buffer"}
 
