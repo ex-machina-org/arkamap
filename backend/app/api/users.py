@@ -23,9 +23,9 @@ from ..iot import layout as iot_layout
 from ..iot import quickstart
 from ..iot.categories import Category, majority
 from ..iot import relevance
-from . import fieldview, routes
+from . import fieldview, responder, routes
 from .schemas import (
-    AuthOut, CommunityDevice, Dashboard, DeviceAlert, DeviceCreated, DeviceEvent, DeviceOut, ErrorResponse,
+    AuthOut, CommunityDevice, Dashboard, DeviceAlert, DeviceCreated, DeviceEvent, DeviceOut, ErrorResponse, EvacuationRoute,
     IngestOut, KeyRotated, MeOut, ModerationItem, ModerationResult, PasswordReset, Quickstart, Readings,
     ReadingsDeleted, Stream, UserOut, WidgetSpec,
 )
@@ -531,6 +531,20 @@ def rotate_key(device_id: int, request: Request, user: dict = Depends(current_us
     execute("UPDATE device SET key_hash = %s, key_prefix = %s WHERE id = %s",
             (key_hash, prefix, device_id))
     return {"api_key": key, "key_prefix": prefix, "quickstart": quickstart.build(dev, key, _device_base(request))}
+
+
+@router.post("/me/devices/{device_id}/evacuation", response_model=EvacuationRoute,
+             responses={400: {"model": ErrorResponse}, 401: {"model": ErrorResponse}, 502: {"model": ErrorResponse}})
+def device_evacuation(device_id: int, user: dict = Depends(current_user)) -> dict:
+    """Evacuation route from where the device stands. Its own data decides the kind: a fire it
+    reports (latest alert "bahaya", kategori kebakaran) is routed around, away from where the wind
+    carries it; otherwise the best road to the nearest assembly point."""
+    d = _own_device(user, device_id)
+    if d["lat"] is None:
+        raise HTTPException(400, "perangkat belum punya lokasi")
+    fire = query_one("SELECT EXISTS (SELECT 1 FROM device_alert WHERE device_id = %s AND status = 'bahaya'"
+                     " AND category = 'kebakaran') AS fire", (device_id,))["fire"]
+    return responder.evacuate([d["lon"], d["lat"]], fire)
 
 
 @router.get("/me/devices/{device_id}/quickstart", response_model=Quickstart, responses={401: {"model": ErrorResponse}})
