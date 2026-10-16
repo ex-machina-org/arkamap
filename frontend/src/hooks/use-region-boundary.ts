@@ -44,6 +44,35 @@ export function useRegionBoundary(focus?: DTO<"Focus"> | null) {
   return boundary;
 }
 
+function bboxOf(feature: Feature): number[] {
+  const box = [Infinity, Infinity, -Infinity, -Infinity];
+  const rings = feature.geometry.type === "Polygon" ? feature.geometry.coordinates
+    : feature.geometry.type === "MultiPolygon" ? feature.geometry.coordinates.flat() : [];
+  for (const [x, y] of rings.flat()) {
+    box[0] = Math.min(box[0], x); box[1] = Math.min(box[1], y);
+    box[2] = Math.max(box[2], x); box[3] = Math.max(box[3], y);
+  }
+  return box;
+}
+
+/** The province a kab/kota profile sits in, as a focus the map can widen to; undefined while loading. */
+export function useProvinceFocus(provinceId?: string | null) {
+  const [province, setProvince] = useState<DTO<"Focus">>();
+  useEffect(() => {
+    setProvince(undefined);
+    if (!provinceId) return;
+    let active = true;
+    loadLevel("provinsi")
+      .then(all => {
+        const feature = all.features.find(item => item.properties?.region_id === provinceId);
+        if (active && feature) setProvince({ id: provinceId, level: "provinsi", name: String(feature.properties?.name ?? ""), bbox: bboxOf(feature) });
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [provinceId]);
+  return province;
+}
+
 /** Static mask of everything outside Indonesia, cut from the province layer by scripts/build-indonesia-mask.mjs. */
 const INDONESIA_MASK_URL = "/geo/indonesia-outside.json";
 let indonesiaMask: Promise<Feature<MultiPolygon>> | undefined;
