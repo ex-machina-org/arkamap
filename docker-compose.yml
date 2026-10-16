@@ -1,4 +1,4 @@
-# Arkamap stack: docker compose up --build, then open http://localhost:8000/docs
+# Arkamap stack: docker compose up --build, then open http://localhost:8080 (the app; API docs at http://localhost:8000/docs)
 # Defaults are for local evaluation only; set real secrets in .env before exposing it.
 name: arkamap
 
@@ -58,6 +58,15 @@ services:
     command: ["python", "-m", "app.iot.mqtt_bridge"]
     depends_on:
       api: { condition: service_healthy }
+    restart: unless-stopped
+
+  # The app and its /api on one address, like the VPS: http://localhost:8080
+  web:
+    build: { context: ., dockerfile: frontend/Dockerfile }
+    ports: ["127.0.0.1:8080:8080"]
+    depends_on:
+      api: { condition: service_healthy }
+      mosquitto: { condition: service_started }
     restart: unless-stopped
 
   # Chainlit chat for trying the agent internally: docker compose --profile chat up chat, then http://localhost:8001
