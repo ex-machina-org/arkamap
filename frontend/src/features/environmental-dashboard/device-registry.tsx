@@ -192,7 +192,8 @@ export function DeviceRegistry() {
       (d) => d.status !== "online" || (d.battery !== null && d.battery < LOW_BATTERY_THRESHOLD),
     ).length;
     const byod = devices.filter((d) => d.ownership === "byod").length;
-    const pct = (n: number) => `${Math.round((n / total) * 100)}%`;
+    // No devices yet: 0%, not 0/0 = NaN%.
+    const pct = (n: number) => `${total ? Math.round((n / total) * 100) : 0}%`;
 
     return [
       {
