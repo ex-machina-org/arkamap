@@ -139,8 +139,8 @@ export function MapDock({
           onClick={() => onSelectHazard("all")}
         />
         <span aria-hidden className="mx-1 h-5 w-px shrink-0 bg-border-button-default" />
-        {/* A hazard with nothing on the map says nothing, so it leaves the strip; a picked one stays so it can be cleared. */}
-        {HAZARD_ORDER.filter((type) => counts?.[type] !== 0 || activeHazard === type).map((type) => (
+        {/* Every hazard stays, even at 0, so the strip reads as a full legend and an empty one says "nothing here" rather than vanishing. */}
+        {HAZARD_ORDER.map((type) => (
           <FilterChip
             key={type}
             label={HAZARDS[type].label}
