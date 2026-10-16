@@ -138,7 +138,7 @@ Template sama untuk semua protokol; tiga bagian wajib:
 ```
 
 - **`nama` (wajib)**: nama tabel data. Data beda jenis beri nama beda; data yang sama selalu dengan nama yang sama.
-- **`waktu` (wajib)**: waktu ukur dari sensor, ISO 8601 (tanpa zona dianggap WIB) atau detik/milidetik Unix. Waktu lebih dari 10 menit di masa depan ditolak.
+- **`waktu` (wajib)**: waktu ukur dari sensor, ISO 8601 (tanpa zona dianggap WIB) atau detik/milidetik Unix. Waktu lebih dari 10 menit di masa depan ditolak, begitu juga waktu sebelum 2020 (tanda jam perangkat belum sinkron lewat NTP, mis. ESP32 yang mengirim 1970).
 - **`data` (wajib, isinya bebas)**: nama field, jumlah, dan tipe apa saja. Objek bersarang diratakan (`tanah.nitrogen`).
 - `kategori` (opsional) hanya petunjuk bila nama field tidak jelas; tanpa itu, `nama` dipakai sebagai petunjuk.
 - `alert` (opsional): penilaian alat sendiri atas kiriman ini, `"aman"` atau `"bahaya"`, atau `{"status": "bahaya", "pesan": "Asap terdeteksi", "kategori": "kebakaran"}` (pesan maks. 200 karakter). `kategori` opsional: `kebakaran`, `cuaca`, `gempa`, `bencana`, atau `panas` menaruh alert di kategori itu (tetap berlabel Alat IoT); kosong atau `"none"` = alert alat umum, nilai lain ditolak. Hanya status terakhir per alat dan `nama` yang disimpan (`GET /me/alerts`) dan tampil sebagai kartu di halaman Pemantauan & Peringatan; hanya `bahaya` yang memunculkan notifikasi. Nilai lain ditolak 400. Respons ingest memuat `alert` bila dikirim.
